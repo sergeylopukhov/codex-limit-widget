@@ -7,8 +7,8 @@ SOURCE_APP="$SOURCE_DIR/$APP_NAME"
 TARGET_APP="/Applications/$APP_NAME"
 OLD_TARGET_APP="/Applications/CodexLimitWidget.app"
 PREVIOUS_TARGET_APP="/Applications/Codex Limit.app"
-EXTENSION_APP="$TARGET_APP/Contents/PlugIns/Codex Limit Widget Extension.appex"
-OLD_EXTENSION_APP="$TARGET_APP/Contents/PlugIns/CodexLimitWidgetExtension.appex"
+EXTENSION_APP="$TARGET_APP/Contents/PlugIns/CodexLimitWidgetExtension.appex"
+OLD_EXTENSION_APP="$TARGET_APP/Contents/PlugIns/Codex Limit Widget Extension.appex"
 
 if [ ! -d "$SOURCE_APP" ]; then
   osascript -e 'display alert "Codex Limit Widget" message "Codex Limit Widget.app was not found next to install.command."'

@@ -153,7 +153,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
             button.image = MenuBarPercentImageRenderer.image(percent: viewModel.compactMenuBarPercent)
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
-            statusItem?.length = MenuBarPercentImageRenderer.size.width + 8
+            statusItem?.length = MenuBarPercentImageRenderer.size.width
         case .detailed:
             button.image = nil
             button.imageScaling = .scaleProportionallyDown
@@ -162,7 +162,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
                 string: viewModel.menuBarTitle,
                 attributes: [
                     .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
-                    .foregroundColor: NSColor.labelColor
+                    .foregroundColor: NSColor.controlTextColor
                 ]
             )
             statusItem?.length = NSStatusItem.variableLength
@@ -326,7 +326,7 @@ struct MenuBarPercentMeter: View {
 }
 
 private enum MenuBarPercentImageRenderer {
-    static let size = NSSize(width: 34, height: 18)
+    static let size = NSSize(width: 30, height: 18)
 
     static func image(percent: Int) -> NSImage {
         let clampedPercent = max(0, min(100, percent))
@@ -346,14 +346,14 @@ private enum MenuBarPercentImageRenderer {
             in: NSRect(x: 0, y: 6, width: size.width, height: 10),
             withAttributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: 9.5, weight: .semibold),
-                .foregroundColor: NSColor.labelColor,
+                .foregroundColor: NSColor.white,
                 .paragraphStyle: paragraph
             ]
         )
 
-        let trackRect = NSRect(x: 2, y: 2.5, width: size.width - 4, height: 2)
+        let trackRect = NSRect(x: 1, y: 2.5, width: size.width - 2, height: 2)
         let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.25, yRadius: 1.25)
-        NSColor.separatorColor.withAlphaComponent(0.35).setFill()
+        NSColor.white.withAlphaComponent(0.28).setFill()
         track.fill()
 
         let fillWidth = trackRect.width * CGFloat(clampedPercent) / 100
@@ -363,11 +363,11 @@ private enum MenuBarPercentImageRenderer {
                 xRadius: 1.25,
                 yRadius: 1.25
             )
-            NSColor(calibratedRed: 0.52, green: 0.95, blue: 0.43, alpha: 1).setFill()
+            NSColor.white.setFill()
             fill.fill()
         }
 
-        image.isTemplate = false
+        image.isTemplate = true
         return image
     }
 }
