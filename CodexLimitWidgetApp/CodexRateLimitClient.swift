@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 struct CodexRateLimitClient {
@@ -10,20 +11,17 @@ struct CodexRateLimitClient {
 
         let input = Pipe()
         let output = Pipe()
-        let error = Pipe()
         process.standardInput = input
         process.standardOutput = output
-        process.standardError = error
+        process.standardError = FileHandle.nullDevice
 
         try process.run()
+        let reader = JSONLineReader(fileHandle: output.fileHandleForReading)
         defer {
-            if process.isRunning {
-                process.terminate()
-                process.waitUntilExit()
-            }
+            reader.close()
+            stop(process: process, input: input)
         }
 
-        let reader = JSONLineReader(fileHandle: output.fileHandleForReading)
         try send(.initialize, to: input.fileHandleForWriting)
         _ = try await reader.response(id: 1, timeout: 5)
 
@@ -33,18 +31,14 @@ struct CodexRateLimitClient {
         try send(.usageRead, to: input.fileHandleForWriting)
         let usageResponse = try? await reader.response(id: 3, timeout: 15)
 
-        input.fileHandleForWriting.closeFile()
-
         let usage: AccountUsageSnapshot?
         if let usageResponse {
-            let usageData = try JSONSerialization.data(withJSONObject: usageResponse)
-            usage = try? JSONDecoder().decode(AccountUsageEnvelope.self, from: usageData).result.normalizedUsage()
+            usage = try? JSONDecoder().decode(AccountUsageEnvelope.self, from: usageResponse).result.normalizedUsage()
         } else {
             usage = nil
         }
 
-        let data = try JSONSerialization.data(withJSONObject: rateLimitsResponse)
-        let envelope = try JSONDecoder().decode(RateLimitsEnvelope.self, from: data)
+        let envelope = try JSONDecoder().decode(RateLimitsEnvelope.self, from: rateLimitsResponse)
         return try envelope.result.normalizedSnapshot(usage: usage)
     }
 
@@ -52,6 +46,26 @@ struct CodexRateLimitClient {
         let data = try JSONEncoder().encode(request)
         handle.write(data)
         handle.write(Data([0x0A]))
+    }
+
+    private func stop(process: Process, input: Pipe) {
+        try? input.fileHandleForWriting.close()
+        guard process.isRunning else { return }
+
+        process.terminate()
+
+        DispatchQueue.global(qos: .utility).async {
+            let deadline = Date().addingTimeInterval(2)
+            while process.isRunning && Date() < deadline {
+                Thread.sleep(forTimeInterval: 0.05)
+            }
+
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
+
+            process.waitUntilExit()
+        }
     }
 
     private func resolveCodexExecutable() throws -> URL {
@@ -118,44 +132,121 @@ enum CodexRateLimitError: LocalizedError {
     }
 }
 
-private final class JSONLineReader {
+private final class JSONLineReader: @unchecked Sendable {
     private let fileHandle: FileHandle
+    private let queue = DispatchQueue(label: "com.sergeylopukhov.codexlimitwidget.json-line-reader")
+    private let continuation: AsyncThrowingStream<Data, Error>.Continuation
+    private var iterator: AsyncThrowingStream<Data, Error>.Iterator
     private var buffer = Data()
+    private var isClosed = false
 
     init(fileHandle: FileHandle) {
         self.fileHandle = fileHandle
+        var continuation: AsyncThrowingStream<Data, Error>.Continuation!
+        let stream = AsyncThrowingStream<Data, Error> { createdContinuation in
+            continuation = createdContinuation
+        }
+        self.continuation = continuation
+        self.iterator = stream.makeAsyncIterator()
+
+        fileHandle.readabilityHandler = { [weak self] handle in
+            let chunk = handle.availableData
+            guard let reader = self else { return }
+            reader.queue.async {
+                reader.consume(chunk)
+            }
+        }
     }
 
-    func response(id: Int, timeout: TimeInterval) async throws -> [String: Any] {
-        let deadline = Date().addingTimeInterval(timeout)
+    func response(id: Int, timeout: TimeInterval) async throws -> Data {
+        try await withTimeout(timeout) {
+            while let line = try await self.nextLine() {
+                let meta = try JSONDecoder().decode(JSONRPCResponseMeta.self, from: line)
+                guard meta.id == id else { continue }
 
-        while Date() < deadline {
-            if let object = try nextObject(), object["id"] as? Int == id {
-                if let error = object["error"] {
-                    throw NSError(domain: "CodexAppServer", code: id, userInfo: [NSLocalizedDescriptionKey: "\(error)"])
+                if let error = try JSONDecoder().decode(JSONRPCErrorEnvelope.self, from: line).error {
+                    throw NSError(
+                        domain: "CodexAppServer",
+                        code: error.code ?? id,
+                        userInfo: [NSLocalizedDescriptionKey: error.message ?? "Codex app-server returned an error."]
+                    )
                 }
-                return object
+
+                return line
             }
 
-            try await Task.sleep(nanoseconds: 50_000_000)
+            throw CodexRateLimitError.timeout
         }
-
-        throw CodexRateLimitError.timeout
     }
 
-    private func nextObject() throws -> [String: Any]? {
+    func close() {
+        queue.async {
+            guard !self.isClosed else { return }
+            self.isClosed = true
+            self.fileHandle.readabilityHandler = nil
+            self.continuation.finish()
+        }
+    }
+
+    private func consume(_ chunk: Data) {
+        guard !isClosed else { return }
+
+        if chunk.isEmpty {
+            isClosed = true
+            continuation.finish()
+            return
+        }
+
+        buffer.append(chunk)
+
         while let newline = buffer.firstIndex(of: 0x0A) {
             let line = buffer[..<newline]
             buffer.removeSubrange(...newline)
             guard !line.isEmpty else { continue }
-            return try JSONSerialization.jsonObject(with: Data(line)) as? [String: Any]
+            continuation.yield(Data(line))
+        }
+    }
+
+    private func nextLine() async throws -> Data? {
+        try await iterator.next()
+    }
+}
+
+private func withTimeout<T: Sendable>(
+    _ timeout: TimeInterval,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask {
+            try await operation()
         }
 
-        let chunk = fileHandle.availableData
-        if chunk.isEmpty { return nil }
-        buffer.append(chunk)
-        return try nextObject()
+        group.addTask {
+            let nanoseconds = UInt64(max(0, timeout) * 1_000_000_000)
+            try await Task.sleep(nanoseconds: nanoseconds)
+            throw CodexRateLimitError.timeout
+        }
+
+        guard let result = try await group.next() else {
+            throw CodexRateLimitError.timeout
+        }
+
+        group.cancelAll()
+        return result
     }
+}
+
+private struct JSONRPCResponseMeta: Decodable {
+    var id: Int?
+}
+
+private struct JSONRPCErrorEnvelope: Decodable {
+    var error: JSONRPCErrorDTO?
+}
+
+private struct JSONRPCErrorDTO: Decodable {
+    var code: Int?
+    var message: String?
 }
 
 private enum JSONRPCRequest: Encodable {

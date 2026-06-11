@@ -96,6 +96,8 @@ The app uses the `codex` limit bucket:
 
 The menu bar app refreshes every minute and writes a cached snapshot into shared storage. The WidgetKit extension reads that cached snapshot and reloads its timeline.
 
+The Codex app-server connection is treated as unreliable I/O. Each JSON-RPC response wait has a bounded timeout, stdout is read asynchronously, and a stalled child process is terminated off the main app path so one bad refresh cannot permanently block later updates.
+
 This means:
 
 - The Codex desktop app does not need to be open.

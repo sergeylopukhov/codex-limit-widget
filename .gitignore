@@ -20,6 +20,11 @@ release/
 outputs/
 work/
 
+# Local agent documentation
+ARCHITECTURE.md
+CHANGELOG.md
+DEVELOPMENT.md
+
 # SwiftPM / tooling
 .build/
 .swiftpm/
