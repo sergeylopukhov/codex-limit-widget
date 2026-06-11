@@ -217,27 +217,32 @@ private struct TerminalLimitWidgetView: View {
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
         let contentWidth = max(0, width - contentPadding.leading - contentPadding.trailing)
-        let statsColumnWidth = min(136, max(112, contentWidth * 0.36))
-        let percentColumnWidth = max(0, contentWidth - statsColumnWidth - 16)
+        let columnGap: CGFloat = 12
+        let statsColumnWidth = min(126, max(108, contentWidth * 0.34))
+        let percentColumnWidth = max(0, contentWidth - statsColumnWidth - columnGap)
 
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 16) {
+            HStack(alignment: .top, spacing: columnGap) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 92, weight: .black, design: .monospaced))
+                        .font(.system(size: 86, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.65)
+                        .minimumScaleFactor(0.7)
+                        .allowsTightening(true)
+                        .frame(width: percentColumnWidth, alignment: .leading)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
                     Text("5H REMAINING")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .frame(width: percentColumnWidth, alignment: .leading)
                 }
                 .frame(width: percentColumnWidth, alignment: .leading)
+                .clipped()
                 .layoutPriority(1)
-
-                Spacer(minLength: 0)
 
                 VStack(alignment: .leading, spacing: 7) {
                     statRow("USED", "\(metric.window.usedPercent)%", size: 15)
@@ -251,6 +256,8 @@ private struct TerminalLimitWidgetView: View {
                 .layoutPriority(2)
                 .padding(.top, 10)
             }
+            .frame(width: contentWidth, alignment: .leading)
+            .clipped()
 
             fixedGap(6)
             TerminalDivider(color: mutedAccent)
@@ -261,8 +268,10 @@ private struct TerminalLimitWidgetView: View {
                 Spacer(minLength: 8)
                 terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 12)
             }
+            .frame(width: contentWidth, alignment: .leading)
             fixedGap(5)
             TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 24)
+                .frame(width: contentWidth)
 
             fixedGap(8)
             TerminalDivider(color: mutedAccent.opacity(0.65))
@@ -278,9 +287,12 @@ private struct TerminalLimitWidgetView: View {
                     }
                     statRow("MAX TURN", formatDuration(usage.longestRunningTurnSec), size: 13)
                 }
+                .frame(width: contentWidth, alignment: .leading)
             }
         }
-        .frame(maxHeight: .infinity, alignment: .top)
+        .frame(width: contentWidth, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
     }
 
     private func fixedGap(_ height: CGFloat) -> some View {
@@ -387,18 +399,27 @@ private struct TerminalMeter: View {
     var height: CGFloat = 13
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(0..<blockCount, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(index < filledCount ? color : Color(red: 0.17, green: 0.18, blue: 0.14))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 1.5)
-                            .stroke(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(index < filledCount ? 0.4 : 0.24), lineWidth: 0.6)
-                    )
-                    .shadow(color: index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
+        GeometryReader { proxy in
+            let spacing: CGFloat = 4
+            let safeCount = max(1, blockCount)
+            let blockWidth = max(1, (proxy.size.width - spacing * CGFloat(safeCount - 1)) / CGFloat(safeCount))
+
+            HStack(spacing: spacing) {
+                ForEach(0..<safeCount, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(index < filledCount ? color : Color(red: 0.17, green: 0.18, blue: 0.14))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 1.5)
+                                .stroke(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(index < filledCount ? 0.4 : 0.24), lineWidth: 0.6)
+                        )
+                        .shadow(color: index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
+                        .frame(width: blockWidth, height: height)
+                }
             }
+            .frame(width: proxy.size.width, height: height, alignment: .leading)
         }
         .frame(height: height)
+        .clipped()
     }
 
     private var filledCount: Int {
