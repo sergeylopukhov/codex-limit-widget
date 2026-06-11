@@ -220,17 +220,17 @@ private struct TerminalLimitWidgetView: View {
             HStack(alignment: .top, spacing: 18) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 82, weight: .black, design: .monospaced))
+                        .font(.system(size: 102, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.55)
+                        .minimumScaleFactor(0.48)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
                     Text("5H REMAINING")
-                        .font(.system(size: 14, weight: .bold, design: .monospaced))
+                        .font(.system(size: 15, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
-                .frame(width: max(178, width * 0.43), alignment: .leading)
+                .frame(width: max(250, width * 0.49), alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 6) {
                     statRow("USED", "\(metric.window.usedPercent)%")
