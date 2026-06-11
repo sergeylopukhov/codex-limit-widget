@@ -25,6 +25,34 @@ jobs:
       - name: Build release archive
         run: ./scripts/make-release.command
 
+      - name: Prepare release description
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
+
+          if [ "$GITHUB_REF_NAME" = "v1.0.2" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release fixes a long-running refresh hang that could make the menu bar app and widgets stop updating until the app was restarted."
+              echo
+              echo "- Added bounded JSON-RPC response timeouts for \`codex app-server --stdio\`."
+              echo "- Switched stdout handling to asynchronous pipe reads so a stalled Codex response cannot block refresh forever."
+              echo "- Moved child process cleanup off the main refresh path and added a fallback kill after a short grace period."
+              echo "- Kept the last cached snapshot visible when a refresh fails, while allowing later refresh attempts to continue normally."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.2-macOS.dmg\`, open it, and run \`install.command\`."
+            } > release-description.md
+          else
+            {
+              echo "Codex Limit Widget $VERSION macOS release."
+              echo
+              echo "Download the DMG, open it, and run \`install.command\`."
+            } > release-description.md
+          fi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
@@ -37,7 +65,9 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ env.RELEASE_NAME }}
+          body_path: release-description.md
+          overwrite_files: true
           files: |
             release/CodexLimitWidget-*-macOS.dmg
             release/CodexLimitWidget-*-macOS.zip
-          generate_release_notes: true
