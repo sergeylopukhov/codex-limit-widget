@@ -17,9 +17,8 @@
 		A10100000000000000000008 /* LimitModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000004 /* LimitModels.swift */; };
 		A10100000000000000000009 /* LimitViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000005 /* LimitViews.swift */; };
 		A10100000000000000000010 /* Codex Limit Widget Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10200000000000000000009 /* Codex Limit Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		A10100000000000000000011 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
-		A10100000000000000000012 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
 		A10100000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000015 /* Assets.xcassets */; };
+		A10100000000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000015 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -216,7 +215,6 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10100000000000000000011 /* AppIcon.icns in Resources */,
 				A10100000000000000000013 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -225,7 +223,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				A10100000000000000000012 /* AppIcon.icns in Resources */,
+				A10100000000000000000014 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -388,7 +386,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 103;
+				CURRENT_PROJECT_VERSION = 105;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -413,7 +411,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 103;
+				CURRENT_PROJECT_VERSION = 105;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
@@ -433,9 +431,10 @@
 		A10D00000000000000000005 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 103;
+				CURRENT_PROJECT_VERSION = 105;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -455,9 +454,10 @@
 		A10D00000000000000000006 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 103;
+				CURRENT_PROJECT_VERSION = 105;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
