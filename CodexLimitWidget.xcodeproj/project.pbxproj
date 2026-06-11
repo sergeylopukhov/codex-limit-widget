@@ -20,7 +20,6 @@
 		A10100000000000000000011 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
 		A10100000000000000000012 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
 		A10100000000000000000013 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000015 /* Assets.xcassets */; };
-		A10100000000000000000014 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000015 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -227,7 +226,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10100000000000000000012 /* AppIcon.icns in Resources */,
-				A10100000000000000000014 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -390,7 +388,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 102;
+				CURRENT_PROJECT_VERSION = 103;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -415,7 +413,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 102;
+				CURRENT_PROJECT_VERSION = 103;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
@@ -437,8 +435,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 102;
+				CURRENT_PROJECT_VERSION = 103;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -460,8 +457,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CURRENT_PROJECT_VERSION = 102;
+				CURRENT_PROJECT_VERSION = 103;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
