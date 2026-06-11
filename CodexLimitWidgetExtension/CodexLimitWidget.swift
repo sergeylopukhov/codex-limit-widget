@@ -217,20 +217,21 @@ private struct TerminalLimitWidgetView: View {
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topTrailing) {
+            HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 118, weight: .black, design: .monospaced))
+                        .font(.system(size: 104, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.44)
+                        .minimumScaleFactor(0.5)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
                     Text("5H REMAINING")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(width: max(260, width * 0.48), alignment: .leading)
+                .layoutPriority(1)
 
                 VStack(alignment: .leading, spacing: 7) {
                     statRow("USED", "\(metric.window.usedPercent)%", size: 15)
@@ -240,7 +241,7 @@ private struct TerminalLimitWidgetView: View {
                     }
                     statRow("PLAN", (snapshot.planType ?? "--").uppercased(), size: 15)
                 }
-                .frame(width: max(220, width * 0.33), alignment: .trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.top, 10)
             }
 

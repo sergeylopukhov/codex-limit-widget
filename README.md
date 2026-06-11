@@ -18,7 +18,7 @@ It shows the remaining 5-hour and weekly Codex quota, reset time, plan, and acco
 
 ## Install
 
-Download `CodexLimitWidget-1.0.0-macOS.dmg` from the latest GitHub Release, open it, and run:
+Download `CodexLimitWidget-1.0.1-macOS.dmg` from the latest GitHub Release, open it, and run:
 
 ```sh
 ./install.command
@@ -121,8 +121,8 @@ To create release files locally:
 The release files are written to:
 
 ```text
-release/CodexLimitWidget-1.0.0-macOS.dmg
-release/CodexLimitWidget-1.0.0-macOS.zip
+release/CodexLimitWidget-1.0.1-macOS.dmg
+release/CodexLimitWidget-1.0.1-macOS.zip
 ```
 
 ## Signing Notice
