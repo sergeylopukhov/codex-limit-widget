@@ -51,6 +51,10 @@ codesign --force --sign - \
   "$TARGET_APP"
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f -R "$TARGET_APP"
 pluginkit -a "$EXTENSION_APP" 2>/dev/null || true
+touch "$TARGET_APP" "$EXTENSION_APP" 2>/dev/null || true
+/usr/bin/qlmanage -r cache >/dev/null 2>&1 || true
+killall iconservicesagent 2>/dev/null || true
+killall IconServicesAgent 2>/dev/null || true
 killall WidgetKitExtension 2>/dev/null || true
 open "$TARGET_APP"
 
