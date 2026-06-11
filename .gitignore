@@ -1,0 +1,25 @@
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Build products
+*.app
+*.appex
+*.dSYM
+*.ipa
+*.pkg
+*.dmg
+*.zip
+
+# Local release output
+release/
+outputs/
+work/
+
+# SwiftPM / tooling
+.build/
+.swiftpm/

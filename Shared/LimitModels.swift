@@ -1,0 +1,302 @@
+import Foundation
+
+let appGroupIdentifier = "group.com.sergeylopukhov.codexlimitwidget"
+let widgetKindIdentifier = "CodexLimitWidget"
+
+struct LimitSnapshot: Codable, Equatable {
+    var fiveHour: LimitWindowSnapshot
+    var weekly: LimitWindowSnapshot
+    var planType: String?
+    var usage: AccountUsageSnapshot?
+    var updatedAt: Date
+    var errorMessage: String?
+
+    var isStale: Bool {
+        Date().timeIntervalSince(updatedAt) > 300
+    }
+
+    static let placeholder = LimitSnapshot(
+        fiveHour: LimitWindowSnapshot(label: "5 hours", usedPercent: 7, windowDurationMins: 300, resetsAt: Date().addingTimeInterval(3600 * 3)),
+        weekly: LimitWindowSnapshot(label: "Week", usedPercent: 4, windowDurationMins: 10080, resetsAt: Date().addingTimeInterval(3600 * 24 * 6)),
+        planType: "pro",
+        usage: AccountUsageSnapshot(
+            lifetimeTokens: 3_968_663_548,
+            peakDailyTokens: 366_993_630,
+            longestRunningTurnSec: 3_209,
+            currentStreakDays: 25,
+            longestStreakDays: 25,
+            learnedSkillsCount: 26,
+            totalSkillUses: 570,
+            totalThreads: 516,
+            lastDailyTokens: 51_598_090,
+            lastDailyDate: "2026-06-10"
+        ),
+        updatedAt: Date(),
+        errorMessage: nil
+    )
+}
+
+struct LimitWindowSnapshot: Codable, Equatable {
+    var label: String
+    var usedPercent: Int
+    var windowDurationMins: Int?
+    var resetsAt: Date?
+
+    var leftPercent: Int {
+        max(0, min(100, 100 - usedPercent))
+    }
+
+    var resetText: String {
+        guard let resetsAt else { return "reset unknown" }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = Calendar.current.isDateInToday(resetsAt) ? "HH:mm" : "MMM d, HH:mm"
+        return formatter.string(from: resetsAt)
+    }
+}
+
+struct AccountUsageSnapshot: Codable, Equatable {
+    var lifetimeTokens: Int64?
+    var peakDailyTokens: Int64?
+    var longestRunningTurnSec: Int64?
+    var currentStreakDays: Int64?
+    var longestStreakDays: Int64?
+    var learnedSkillsCount: Int64?
+    var totalSkillUses: Int64?
+    var totalThreads: Int64?
+    var lastDailyTokens: Int64?
+    var lastDailyDate: String?
+}
+
+struct LimitPreferences: Codable, Equatable {
+    var widgetShowsFiveHour = true
+    var widgetShowsWeekly = true
+    var widgetShowsResetTimes = true
+    var widgetShowsLastUpdated = true
+    var widgetShowsStaleWarning = true
+    var showsMenuBarItem = true
+    var menuBarMode = MenuBarMode.detailed
+    var compactMenuBarMetric = MenuBarCompactMetric.fiveHour
+
+    static let `default` = LimitPreferences()
+
+    enum CodingKeys: String, CodingKey {
+        case widgetShowsFiveHour
+        case widgetShowsWeekly
+        case widgetShowsResetTimes
+        case widgetShowsLastUpdated
+        case widgetShowsStaleWarning
+        case showsMenuBarItem
+        case menuBarMode
+        case compactMenuBarMetric
+    }
+
+    init() {}
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        widgetShowsFiveHour = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsFiveHour) ?? true
+        widgetShowsWeekly = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsWeekly) ?? true
+        widgetShowsResetTimes = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsResetTimes) ?? true
+        widgetShowsLastUpdated = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsLastUpdated) ?? true
+        widgetShowsStaleWarning = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsStaleWarning) ?? true
+        showsMenuBarItem = try container.decodeIfPresent(Bool.self, forKey: .showsMenuBarItem) ?? true
+        menuBarMode = (try? container.decodeIfPresent(MenuBarMode.self, forKey: .menuBarMode)) ?? .detailed
+        compactMenuBarMetric = try container.decodeIfPresent(MenuBarCompactMetric.self, forKey: .compactMenuBarMetric) ?? .fiveHour
+    }
+}
+
+enum MenuBarMode: String, Codable, CaseIterable, Identifiable {
+    case detailed
+    case percentOnly
+
+    var id: String { rawValue }
+
+    static var allCases: [MenuBarMode] {
+        [.detailed, .percentOnly]
+    }
+
+    var title: String {
+        switch self {
+        case .detailed:
+            return "Detailed"
+        case .percentOnly:
+            return "Percent"
+        }
+    }
+}
+
+enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
+    case fiveHour
+    case weekly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .fiveHour:
+            return "5 hours"
+        case .weekly:
+            return "Weekly"
+        }
+    }
+}
+
+enum LimitStore {
+    static let filename = "codex-limit-snapshot.json"
+    static let widgetExtensionBundleIdentifier = "com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension"
+
+    static func read() -> LimitSnapshot? {
+        for url in storageURLs(filename: filename) {
+            do {
+                let data = try Data(contentsOf: url)
+                return try JSONDecoder.codexLimitDecoder.decode(LimitSnapshot.self, from: data)
+            } catch {
+                continue
+            }
+        }
+        return nil
+    }
+
+    static func write(_ snapshot: LimitSnapshot) throws {
+        let data = try JSONEncoder.codexLimitEncoder.encode(snapshot)
+        let urls = storageURLs(filename: filename)
+        guard !urls.isEmpty else { throw LimitStoreError.unavailableContainer }
+
+        var lastError: Error?
+        var didWrite = false
+        for url in urls {
+            do {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: url, options: [.atomic])
+                didWrite = true
+            } catch {
+                lastError = error
+            }
+        }
+
+        if !didWrite, let lastError {
+            throw lastError
+        }
+    }
+
+    static func storageURLs(filename: String) -> [URL] {
+        var urls: [URL] = []
+
+        if let widgetContainerURL = widgetContainerURL(filename: filename) {
+            urls.append(widgetContainerURL)
+        }
+
+        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
+            urls.append(groupURL.appendingPathComponent(filename))
+        }
+
+        if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
+            urls.append(
+                support
+                    .appendingPathComponent("CodexLimitWidget", isDirectory: true)
+                    .appendingPathComponent(filename)
+            )
+        }
+
+        return uniqueURLs(urls)
+    }
+
+    private static func widgetContainerURL(filename: String) -> URL? {
+        guard let home = realUserHomeDirectory() else { return nil }
+        return home
+            .appendingPathComponent("Library/Containers", isDirectory: true)
+            .appendingPathComponent(widgetExtensionBundleIdentifier, isDirectory: true)
+            .appendingPathComponent("Data/Library/Application Support/CodexLimitWidget", isDirectory: true)
+            .appendingPathComponent(filename)
+    }
+
+    private static func uniqueURLs(_ urls: [URL]) -> [URL] {
+        var seen = Set<String>()
+        var result: [URL] = []
+
+        for url in urls {
+            let path = url.standardizedFileURL.path
+            guard seen.insert(path).inserted else { continue }
+            result.append(url)
+        }
+
+        return result
+    }
+
+    private static func realUserHomeDirectory() -> URL? {
+        if let home = ProcessInfo.processInfo.environment["HOME"], home.hasPrefix("/Users/") {
+            if let range = home.range(of: "/Library/Containers/") {
+                return URL(fileURLWithPath: String(home[..<range.lowerBound]), isDirectory: true)
+            }
+            return URL(fileURLWithPath: home, isDirectory: true)
+        }
+
+        let currentHome = FileManager.default.homeDirectoryForCurrentUser.path
+        if let range = currentHome.range(of: "/Library/Containers/") {
+            return URL(fileURLWithPath: String(currentHome[..<range.lowerBound]), isDirectory: true)
+        }
+
+        return FileManager.default.homeDirectoryForCurrentUser
+    }
+}
+
+enum LimitPreferencesStore {
+    static let filename = "codex-limit-settings.json"
+
+    static func read() -> LimitPreferences {
+        for url in LimitStore.storageURLs(filename: filename) {
+            do {
+                let data = try Data(contentsOf: url)
+                return try JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data)
+            } catch {
+                continue
+            }
+        }
+        return .default
+    }
+
+    static func write(_ preferences: LimitPreferences) throws {
+        let data = try JSONEncoder.codexLimitEncoder.encode(preferences)
+        let urls = LimitStore.storageURLs(filename: filename)
+        guard !urls.isEmpty else { throw LimitStoreError.unavailableContainer }
+
+        var lastError: Error?
+        var didWrite = false
+        for url in urls {
+            do {
+                try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try data.write(to: url, options: [.atomic])
+                didWrite = true
+            } catch {
+                lastError = error
+            }
+        }
+
+        if !didWrite, let lastError {
+            throw lastError
+        }
+    }
+}
+
+enum LimitStoreError: Error {
+    case unavailableContainer
+}
+
+extension JSONDecoder {
+    static var codexLimitDecoder: JSONDecoder {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        return decoder
+    }
+}
+
+extension JSONEncoder {
+    static var codexLimitEncoder: JSONEncoder {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return encoder
+    }
+}

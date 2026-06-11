@@ -1,0 +1,506 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10100000000000000000001 /* CodexLimitWidgetApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000001 /* CodexLimitWidgetApp.swift */; };
+		A10100000000000000000002 /* LimitViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000002 /* LimitViewModel.swift */; };
+		A10100000000000000000003 /* CodexRateLimitClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000003 /* CodexRateLimitClient.swift */; };
+		A10100000000000000000004 /* LimitModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000004 /* LimitModels.swift */; };
+		A10100000000000000000005 /* LimitViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000005 /* LimitViews.swift */; };
+		A10100000000000000000006 /* CodexLimitWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000006 /* CodexLimitWidgetBundle.swift */; };
+		A10100000000000000000007 /* CodexLimitWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000007 /* CodexLimitWidget.swift */; };
+		A10100000000000000000008 /* LimitModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000004 /* LimitModels.swift */; };
+		A10100000000000000000009 /* LimitViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000005 /* LimitViews.swift */; };
+		A10100000000000000000010 /* CodexLimitWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10200000000000000000009 /* CodexLimitWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10100000000000000000011 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
+		A10100000000000000000012 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A10300000000000000000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10900000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10800000000000000000002;
+			remoteInfo = CodexLimitWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A10400000000000000000001 /* Embed App Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				A10100000000000000000010 /* CodexLimitWidgetExtension.appex in Embed App Extensions */,
+			);
+			name = "Embed App Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		A10200000000000000000001 /* CodexLimitWidgetApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLimitWidgetApp.swift; sourceTree = "<group>"; };
+		A10200000000000000000002 /* LimitViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitViewModel.swift; sourceTree = "<group>"; };
+		A10200000000000000000003 /* CodexRateLimitClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexRateLimitClient.swift; sourceTree = "<group>"; };
+		A10200000000000000000004 /* LimitModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitModels.swift; sourceTree = "<group>"; };
+		A10200000000000000000005 /* LimitViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LimitViews.swift; sourceTree = "<group>"; };
+		A10200000000000000000006 /* CodexLimitWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLimitWidgetBundle.swift; sourceTree = "<group>"; };
+		A10200000000000000000007 /* CodexLimitWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLimitWidget.swift; sourceTree = "<group>"; };
+		A10200000000000000000008 /* Codex Limit Widget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Limit Widget.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10200000000000000000009 /* CodexLimitWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CodexLimitWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10200000000000000000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10200000000000000000011 /* CodexLimitWidgetApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodexLimitWidgetApp.entitlements; sourceTree = "<group>"; };
+		A10200000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A10200000000000000000013 /* CodexLimitWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodexLimitWidgetExtension.entitlements; sourceTree = "<group>"; };
+		A10200000000000000000014 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10500000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10500000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10600000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A10600000000000000000002 /* CodexLimitWidgetApp */,
+				A10600000000000000000003 /* CodexLimitWidgetExtension */,
+				A10600000000000000000004 /* Shared */,
+				A10600000000000000000005 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10600000000000000000002 /* CodexLimitWidgetApp */ = {
+			isa = PBXGroup;
+			children = (
+				A10200000000000000000001 /* CodexLimitWidgetApp.swift */,
+				A10200000000000000000002 /* LimitViewModel.swift */,
+				A10200000000000000000003 /* CodexRateLimitClient.swift */,
+				A10200000000000000000014 /* AppIcon.icns */,
+				A10200000000000000000010 /* Info.plist */,
+				A10200000000000000000011 /* CodexLimitWidgetApp.entitlements */,
+			);
+			path = CodexLimitWidgetApp;
+			sourceTree = "<group>";
+		};
+		A10600000000000000000003 /* CodexLimitWidgetExtension */ = {
+			isa = PBXGroup;
+			children = (
+				A10200000000000000000006 /* CodexLimitWidgetBundle.swift */,
+				A10200000000000000000007 /* CodexLimitWidget.swift */,
+				A10200000000000000000012 /* Info.plist */,
+				A10200000000000000000013 /* CodexLimitWidgetExtension.entitlements */,
+			);
+			path = CodexLimitWidgetExtension;
+			sourceTree = "<group>";
+		};
+		A10600000000000000000004 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A10200000000000000000004 /* LimitModels.swift */,
+				A10200000000000000000005 /* LimitViews.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A10600000000000000000005 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10200000000000000000008 /* Codex Limit Widget.app */,
+				A10200000000000000000009 /* CodexLimitWidgetExtension.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10800000000000000000001 /* CodexLimitWidget */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10C00000000000000000001 /* Build configuration list for PBXNativeTarget "CodexLimitWidget" */;
+			buildPhases = (
+				A10A00000000000000000001 /* Sources */,
+				A10500000000000000000001 /* Frameworks */,
+				A10E00000000000000000001 /* Resources */,
+				A10400000000000000000001 /* Embed App Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10B00000000000000000001 /* PBXTargetDependency */,
+			);
+			name = CodexLimitWidget;
+			productName = CodexLimitWidget;
+			productReference = A10200000000000000000008 /* Codex Limit Widget.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A10800000000000000000002 /* CodexLimitWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10C00000000000000000002 /* Build configuration list for PBXNativeTarget "CodexLimitWidgetExtension" */;
+			buildPhases = (
+				A10A00000000000000000002 /* Sources */,
+				A10500000000000000000002 /* Frameworks */,
+				A10E00000000000000000002 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CodexLimitWidgetExtension;
+			productName = CodexLimitWidgetExtension;
+			productReference = A10200000000000000000009 /* CodexLimitWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10900000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10800000000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+					A10800000000000000000002 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A10C00000000000000000003 /* Build configuration list for PBXProject "CodexLimitWidget" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10600000000000000000001;
+			productRefGroup = A10600000000000000000005 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10800000000000000000001 /* CodexLimitWidget */,
+				A10800000000000000000002 /* CodexLimitWidgetExtension */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A10E00000000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100000000000000000011 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10E00000000000000000002 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100000000000000000012 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10A00000000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100000000000000000001 /* CodexLimitWidgetApp.swift in Sources */,
+				A10100000000000000000002 /* LimitViewModel.swift in Sources */,
+				A10100000000000000000003 /* CodexRateLimitClient.swift in Sources */,
+				A10100000000000000000004 /* LimitModels.swift in Sources */,
+				A10100000000000000000005 /* LimitViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10A00000000000000000002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100000000000000000006 /* CodexLimitWidgetBundle.swift in Sources */,
+				A10100000000000000000007 /* CodexLimitWidget.swift in Sources */,
+				A10100000000000000000008 /* LimitModels.swift in Sources */,
+				A10100000000000000000009 /* LimitViews.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10B00000000000000000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10800000000000000000002 /* CodexLimitWidgetExtension */;
+			targetProxy = A10300000000000000000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A10D00000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A10D00000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES_AGGRESSIVE;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+			};
+			name = Release;
+		};
+		A10D00000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 100;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
+				PRODUCT_NAME = "Codex Limit Widget";
+				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10D00000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 100;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
+				PRODUCT_NAME = "Codex Limit Widget";
+				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		A10D00000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 100;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10D00000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 100;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10C00000000000000000001 /* Build configuration list for PBXNativeTarget "CodexLimitWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10D00000000000000000003 /* Debug */,
+				A10D00000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10C00000000000000000002 /* Build configuration list for PBXNativeTarget "CodexLimitWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10D00000000000000000005 /* Debug */,
+				A10D00000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10C00000000000000000003 /* Build configuration list for PBXProject "CodexLimitWidget" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10D00000000000000000001 /* Debug */,
+				A10D00000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A10900000000000000000001 /* Project object */;
+}
