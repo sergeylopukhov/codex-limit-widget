@@ -30,7 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.0.2" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.0.3" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release fixes the missing Codex Limit Widget app icon in the macOS widget picker."
+              echo
+              echo "- Bundled \`AppIcon.icns\` inside both the host app and WidgetKit extension."
+              echo "- Declared \`CFBundleIconFile\` for both bundles so macOS can resolve the icon when showing widget options."
+              echo "- Kept the existing asset catalog icons in place for normal app icon handling."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.3-macOS.dmg\`, open it, and run \`install.command\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.0.2" ]; then
             {
               echo "## Release Notes"
               echo
