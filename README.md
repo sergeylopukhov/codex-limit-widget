@@ -48,6 +48,10 @@ If the Codex CLI is missing or logged out, the widget can still show the last ca
 
 Small, medium, and large widgets are designed for quick scanning on the desktop.
 
+![Desktop widgets, light style](assets/screenshots/desktop-light-showcase.png)
+
+![Desktop widgets, dark style](assets/screenshots/desktop-dark-showcase.png)
+
 ![Small widget](assets/screenshots/widget-small.png)
 
 ![Medium widget](assets/screenshots/widget-medium.png)

@@ -16,7 +16,7 @@
 		A10100000000000000000007 /* CodexLimitWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000007 /* CodexLimitWidget.swift */; };
 		A10100000000000000000008 /* LimitModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000004 /* LimitModels.swift */; };
 		A10100000000000000000009 /* LimitViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000005 /* LimitViews.swift */; };
-		A10100000000000000000010 /* CodexLimitWidgetExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10200000000000000000009 /* CodexLimitWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A10100000000000000000010 /* Codex Limit Widget Extension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A10200000000000000000009 /* Codex Limit Widget Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A10100000000000000000011 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
 		A10100000000000000000012 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000014 /* AppIcon.icns */; };
 /* End PBXBuildFile section */
@@ -38,7 +38,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 13;
 			files = (
-				A10100000000000000000010 /* CodexLimitWidgetExtension.appex in Embed App Extensions */,
+				A10100000000000000000010 /* Codex Limit Widget Extension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -54,7 +54,7 @@
 		A10200000000000000000006 /* CodexLimitWidgetBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLimitWidgetBundle.swift; sourceTree = "<group>"; };
 		A10200000000000000000007 /* CodexLimitWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexLimitWidget.swift; sourceTree = "<group>"; };
 		A10200000000000000000008 /* Codex Limit Widget.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Codex Limit Widget.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10200000000000000000009 /* CodexLimitWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CodexLimitWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10200000000000000000009 /* Codex Limit Widget Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Codex Limit Widget Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A10200000000000000000010 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A10200000000000000000011 /* CodexLimitWidgetApp.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CodexLimitWidgetApp.entitlements; sourceTree = "<group>"; };
 		A10200000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -127,7 +127,7 @@
 			isa = PBXGroup;
 			children = (
 				A10200000000000000000008 /* Codex Limit Widget.app */,
-				A10200000000000000000009 /* CodexLimitWidgetExtension.appex */,
+				A10200000000000000000009 /* Codex Limit Widget Extension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -168,7 +168,7 @@
 			);
 			name = CodexLimitWidgetExtension;
 			productName = CodexLimitWidgetExtension;
-			productReference = A10200000000000000000009 /* CodexLimitWidgetExtension.appex */;
+			productReference = A10200000000000000000009 /* Codex Limit Widget Extension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
@@ -440,8 +440,8 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
+				PRODUCT_NAME = "Codex Limit Widget Extension";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;
@@ -462,8 +462,8 @@
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
+				PRODUCT_NAME = "Codex Limit Widget Extension";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 6.0;

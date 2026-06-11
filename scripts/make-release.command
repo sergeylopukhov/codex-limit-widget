@@ -31,7 +31,7 @@ chmod +x "$RELEASE_DIR/install.command"
 
 codesign --force --sign - \
   --entitlements "$PROJECT_DIR/CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements" \
-  "$RELEASE_DIR/$APP_NAME/Contents/PlugIns/CodexLimitWidgetExtension.appex"
+  "$RELEASE_DIR/$APP_NAME/Contents/PlugIns/Codex Limit Widget Extension.appex"
 codesign --force --sign - \
   --entitlements "$PROJECT_DIR/CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements" \
   "$RELEASE_DIR/$APP_NAME"

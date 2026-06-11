@@ -217,47 +217,48 @@ private struct TerminalLimitWidgetView: View {
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 18) {
+            ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 102, weight: .black, design: .monospaced))
+                        .font(.system(size: 118, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.48)
+                        .minimumScaleFactor(0.44)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
                     Text("5H REMAINING")
-                        .font(.system(size: 15, weight: .bold, design: .monospaced))
+                        .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
-                .frame(width: max(250, width * 0.49), alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    statRow("USED", "\(metric.window.usedPercent)%")
-                    statRow("LIMIT", metric.id)
+                VStack(alignment: .leading, spacing: 7) {
+                    statRow("USED", "\(metric.window.usedPercent)%", size: 15)
+                    statRow("LIMIT", metric.id, size: 15)
                     if let secondary = secondaryMetric(excluding: metric.id) {
-                        statRow(secondary.id, "\(secondary.window.leftPercent)%")
+                        statRow(secondary.id, "\(secondary.window.leftPercent)%", size: 15)
                     }
-                    statRow("PLAN", (snapshot.planType ?? "--").uppercased())
+                    statRow("PLAN", (snapshot.planType ?? "--").uppercased(), size: 15)
                 }
-                .padding(.top, 5)
+                .frame(width: max(220, width * 0.33), alignment: .trailing)
+                .padding(.top, 10)
             }
 
-            Spacer(minLength: 8)
+            fixedGap(6)
             TerminalDivider(color: mutedAccent)
-            Spacer(minLength: 8)
+            fixedGap(8)
 
             HStack {
                 terminalLine("WEEKLY LIMIT", color: dimText, size: 12)
-                Spacer()
+                Spacer(minLength: 8)
                 terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 12)
             }
-            Spacer(minLength: 5)
+            fixedGap(5)
             TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 24)
 
-            Spacer(minLength: 8)
+            fixedGap(8)
             TerminalDivider(color: mutedAccent.opacity(0.65))
-            Spacer(minLength: 8)
+            fixedGap(8)
 
             if let usage = snapshot.usage {
                 VStack(alignment: .leading, spacing: 5) {
@@ -272,6 +273,12 @@ private struct TerminalLimitWidgetView: View {
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    private func fixedGap(_ height: CGFloat) -> some View {
+        Color.clear
+            .frame(height: height)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     private func secondaryMetric(excluding id: String) -> TerminalMetric? {

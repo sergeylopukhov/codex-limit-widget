@@ -1,7 +1,7 @@
 import Foundation
 
 let appGroupIdentifier = "group.com.sergeylopukhov.codexlimitwidget"
-let widgetKindIdentifier = "CodexLimitWidget"
+let widgetKindIdentifier = "Codex Limit Widget"
 
 struct LimitSnapshot: Codable, Equatable {
     var fiveHour: LimitWindowSnapshot
@@ -145,7 +145,7 @@ enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
 
 enum LimitStore {
     static let filename = "codex-limit-snapshot.json"
-    static let widgetExtensionBundleIdentifier = "com.sergeylopukhov.CodexLimitWidget.CodexLimitWidgetExtension"
+    static let widgetExtensionBundleIdentifier = "com.sergeylopukhov.CodexLimitWidget.WidgetExtension"
 
     static func read() -> LimitSnapshot? {
         for url in storageURLs(filename: filename) {
