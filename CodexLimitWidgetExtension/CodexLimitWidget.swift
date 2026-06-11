@@ -216,22 +216,28 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
+        let contentWidth = max(0, width - contentPadding.leading - contentPadding.trailing)
+        let statsColumnWidth = min(136, max(112, contentWidth * 0.36))
+        let percentColumnWidth = max(0, contentWidth - statsColumnWidth - 16)
+
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 104, weight: .black, design: .monospaced))
+                        .font(.system(size: 92, weight: .black, design: .monospaced))
                         .foregroundStyle(accent)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.5)
+                        .minimumScaleFactor(0.65)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
                     Text("5H REMAINING")
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
-                .frame(width: max(260, width * 0.48), alignment: .leading)
+                .frame(width: percentColumnWidth, alignment: .leading)
                 .layoutPriority(1)
+
+                Spacer(minLength: 0)
 
                 VStack(alignment: .leading, spacing: 7) {
                     statRow("USED", "\(metric.window.usedPercent)%", size: 15)
@@ -241,7 +247,8 @@ private struct TerminalLimitWidgetView: View {
                     }
                     statRow("PLAN", (snapshot.planType ?? "--").uppercased(), size: 15)
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(width: statsColumnWidth, alignment: .trailing)
+                .layoutPriority(2)
                 .padding(.top, 10)
             }
 
@@ -263,13 +270,13 @@ private struct TerminalLimitWidgetView: View {
 
             if let usage = snapshot.usage {
                 VStack(alignment: .leading, spacing: 5) {
-                    statRow("TOKENS", formatTokenCount(usage.lifetimeTokens))
-                    statRow("PEAK DAY", formatTokenCount(usage.peakDailyTokens))
-                    statRow("LAST DAY", formatTokenCount(usage.lastDailyTokens))
+                    statRow("TOKENS", formatTokenCount(usage.lifetimeTokens), size: 13)
+                    statRow("PEAK DAY", formatTokenCount(usage.peakDailyTokens), size: 13)
+                    statRow("LAST DAY", formatTokenCount(usage.lastDailyTokens), size: 13)
                     if let currentStreakDays = usage.currentStreakDays {
-                        statRow("STREAK", "\(currentStreakDays)d")
+                        statRow("STREAK", "\(currentStreakDays)d", size: 13)
                     }
-                    statRow("MAX TURN", formatDuration(usage.longestRunningTurnSec))
+                    statRow("MAX TURN", formatDuration(usage.longestRunningTurnSec), size: 13)
                 }
             }
         }
@@ -301,13 +308,18 @@ private struct TerminalLimitWidgetView: View {
             Text(label)
                 .font(.system(size: size, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+                .layoutPriority(1)
             Spacer(minLength: 8)
             Text(value)
                 .font(.system(size: size, weight: .bold, design: .monospaced))
                 .foregroundStyle(accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
+                .layoutPriority(1)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func compactStat(_ label: String, _ value: String) -> some View {
