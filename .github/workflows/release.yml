@@ -25,13 +25,16 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: CodexLimit-macOS
-          path: release/CodexLimit-*-macOS.zip
+          name: CodexLimitWidget-macOS
+          path: |
+            release/CodexLimitWidget-*-macOS.dmg
+            release/CodexLimitWidget-*-macOS.zip
 
       - name: Publish GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/CodexLimit-*-macOS.zip
+          files: |
+            release/CodexLimitWidget-*-macOS.dmg
+            release/CodexLimitWidget-*-macOS.zip
           generate_release_notes: true
-
