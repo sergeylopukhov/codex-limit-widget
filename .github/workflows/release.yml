@@ -30,7 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.0.3" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.0.4" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release stops macOS from repeatedly asking Codex Limit Widget for access to data from other apps."
+              echo
+              echo "- Removed direct reads and writes to the WidgetKit extension container under \`~/Library/Containers\`."
+              echo "- Kept widget sharing on the App Group container, which is the intended shared storage path."
+              echo "- Preserved the normal Application Support fallback for non-widget app data."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.4-macOS.dmg\`, open it, and run \`install.command\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.0.3" ]; then
             {
               echo "## Release Notes"
               echo

@@ -145,7 +145,6 @@ enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
 
 enum LimitStore {
     static let filename = "codex-limit-snapshot.json"
-    static let widgetExtensionBundleIdentifier = "com.sergeylopukhov.CodexLimitWidget.WidgetExtension"
 
     static func read() -> LimitSnapshot? {
         for url in storageURLs(filename: filename) {
@@ -184,10 +183,6 @@ enum LimitStore {
     static func storageURLs(filename: String) -> [URL] {
         var urls: [URL] = []
 
-        if let widgetContainerURL = widgetContainerURL(filename: filename) {
-            urls.append(widgetContainerURL)
-        }
-
         if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
             urls.append(groupURL.appendingPathComponent(filename))
         }
@@ -203,15 +198,6 @@ enum LimitStore {
         return uniqueURLs(urls)
     }
 
-    private static func widgetContainerURL(filename: String) -> URL? {
-        guard let home = realUserHomeDirectory() else { return nil }
-        return home
-            .appendingPathComponent("Library/Containers", isDirectory: true)
-            .appendingPathComponent(widgetExtensionBundleIdentifier, isDirectory: true)
-            .appendingPathComponent("Data/Library/Application Support/CodexLimitWidget", isDirectory: true)
-            .appendingPathComponent(filename)
-    }
-
     private static func uniqueURLs(_ urls: [URL]) -> [URL] {
         var seen = Set<String>()
         var result: [URL] = []
@@ -223,22 +209,6 @@ enum LimitStore {
         }
 
         return result
-    }
-
-    private static func realUserHomeDirectory() -> URL? {
-        if let home = ProcessInfo.processInfo.environment["HOME"], home.hasPrefix("/Users/") {
-            if let range = home.range(of: "/Library/Containers/") {
-                return URL(fileURLWithPath: String(home[..<range.lowerBound]), isDirectory: true)
-            }
-            return URL(fileURLWithPath: home, isDirectory: true)
-        }
-
-        let currentHome = FileManager.default.homeDirectoryForCurrentUser.path
-        if let range = currentHome.range(of: "/Library/Containers/") {
-            return URL(fileURLWithPath: String(currentHome[..<range.lowerBound]), isDirectory: true)
-        }
-
-        return FileManager.default.homeDirectoryForCurrentUser
     }
 }
 
