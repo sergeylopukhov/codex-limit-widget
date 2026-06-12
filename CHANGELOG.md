@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5
+
+- Replaced the installer script in release archives with a standard drag-to-Applications DMG layout.
+- Added a custom DMG background with an arrow from the app icon to the Applications shortcut.
+
 ## 1.0.4
 
 - Removed direct reads and writes to the WidgetKit extension container to stop macOS from repeatedly asking for access to data from other apps.
