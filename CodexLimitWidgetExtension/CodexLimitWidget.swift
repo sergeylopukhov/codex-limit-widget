@@ -4,18 +4,20 @@ import SwiftUI
 struct CodexLimitEntry: TimelineEntry {
     let date: Date
     let snapshot: LimitSnapshot?
+    let preferences: LimitPreferences
 }
 
 struct CodexLimitProvider: TimelineProvider {
     func placeholder(in context: Context) -> CodexLimitEntry {
-        CodexLimitEntry(date: Date(), snapshot: .placeholder)
+        CodexLimitEntry(date: Date(), snapshot: .placeholder, preferences: .default)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (CodexLimitEntry) -> Void) {
         completion(
             CodexLimitEntry(
                 date: Date(),
-                snapshot: LimitStore.read() ?? .placeholder
+                snapshot: LimitStore.read() ?? .placeholder,
+                preferences: LimitPreferencesStore.read()
             )
         )
     }
@@ -23,7 +25,8 @@ struct CodexLimitProvider: TimelineProvider {
     func getTimeline(in context: Context, completion: @escaping (Timeline<CodexLimitEntry>) -> Void) {
         let entry = CodexLimitEntry(
             date: Date(),
-            snapshot: LimitStore.read()
+            snapshot: LimitStore.read(),
+            preferences: LimitPreferencesStore.read()
         )
         let next = Calendar.current.date(byAdding: .minute, value: 1, to: Date()) ?? Date().addingTimeInterval(60)
         completion(Timeline(entries: [entry], policy: .after(next)))
@@ -37,6 +40,7 @@ struct CodexLimitWidgetEntryView: View {
     var body: some View {
         TerminalLimitWidgetView(
             snapshot: entry.snapshot,
+            preferences: entry.preferences,
             family: family
         )
         .containerBackground(for: .widget) {
@@ -47,6 +51,7 @@ struct CodexLimitWidgetEntryView: View {
 
 private struct TerminalLimitWidgetView: View {
     let snapshot: LimitSnapshot?
+    let preferences: LimitPreferences
     let family: WidgetFamily
 
     private var accent: Color { Color(red: 0.52, green: 0.95, blue: 0.43) }
@@ -109,7 +114,13 @@ private struct TerminalLimitWidgetView: View {
 
     private var activeMetric: TerminalMetric? {
         guard let snapshot else { return nil }
-        return TerminalMetric(id: "5H", title: "5-hour quota", window: snapshot.fiveHour)
+        if preferences.widgetShowsFiveHour {
+            return TerminalMetric(id: "5H", title: "5-hour quota", window: snapshot.fiveHour)
+        }
+        if preferences.widgetShowsWeekly {
+            return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: snapshot.weekly)
+        }
+        return nil
     }
 
     private func header(metric: TerminalMetric?, compact: Bool) -> some View {
@@ -122,7 +133,7 @@ private struct TerminalLimitWidgetView: View {
 
             Spacer(minLength: 8)
 
-            if let metric {
+            if let metric, preferences.widgetShowsResetTimes {
                 Text(compact ? metric.window.resetClockText : "resets at \(metric.window.resetClockText)")
                     .font(.system(size: compact ? 9 : (family == .systemMedium ? 12 : 13), weight: .semibold, design: .monospaced))
                     .foregroundStyle(dimText)
@@ -163,13 +174,25 @@ private struct TerminalLimitWidgetView: View {
 
             TerminalDivider(color: mutedAccent)
 
-            HStack {
-                terminalLine("WEEKLY LIMIT", color: dimText, size: 11)
-                Spacer()
-                terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 11)
+            if preferences.widgetShowsLastUpdated || shouldShowStaleWarning(snapshot) {
+                HStack {
+                    terminalLine(shouldShowStaleWarning(snapshot) ? "STALE DATA" : "UPDATED", color: dimText, size: 11)
+                    Spacer()
+                    terminalLine(snapshot.updatedClockText, color: accent, size: 11)
+                }
             }
 
-            TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, height: 12)
+            HStack {
+                if preferences.widgetShowsWeekly {
+                    terminalLine("WEEKLY LIMIT", color: dimText, size: 11)
+                    Spacer()
+                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 11)
+                }
+            }
+
+            if preferences.widgetShowsWeekly {
+                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, height: 12)
+            }
         }
     }
 
@@ -198,19 +221,27 @@ private struct TerminalLimitWidgetView: View {
 
             Spacer(minLength: 4)
 
-            HStack {
-                terminalLine("WEEKLY LIMIT", color: dimText, size: 9.5)
-                Spacer(minLength: 6)
-                terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 9.5)
+            if preferences.widgetShowsWeekly {
+                HStack {
+                    terminalLine("WEEKLY LIMIT", color: dimText, size: 9.5)
+                    Spacer(minLength: 6)
+                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 9.5)
+                }
+
+                Spacer(minLength: 3)
+
+                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 12, height: 10)
             }
-
-            Spacer(minLength: 3)
-
-            TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 12, height: 10)
 
             Spacer(minLength: 4)
 
-            statRow("RESET", metric.window.resetClockText, size: 10)
+            if shouldShowStaleWarning(snapshot) {
+                statRow("STALE", snapshot.updatedClockText, size: 10)
+            } else if preferences.widgetShowsLastUpdated {
+                statRow("UPD", snapshot.updatedClockText, size: 10)
+            } else if preferences.widgetShowsResetTimes {
+                statRow("RESET", metric.window.resetClockText, size: 10)
+            }
         }
         .frame(maxHeight: .infinity, alignment: .top)
     }
@@ -251,6 +282,11 @@ private struct TerminalLimitWidgetView: View {
                         statRow(secondary.id, "\(secondary.window.leftPercent)%", size: 15)
                     }
                     statRow("PLAN", (snapshot.planType ?? "--").uppercased(), size: 15)
+                    if shouldShowStaleWarning(snapshot) {
+                        statRow("STALE", snapshot.updatedClockText, size: 15)
+                    } else if preferences.widgetShowsLastUpdated {
+                        statRow("UPDATED", snapshot.updatedClockText, size: 15)
+                    }
                 }
                 .frame(width: statsColumnWidth, alignment: .trailing)
                 .layoutPriority(2)
@@ -263,15 +299,17 @@ private struct TerminalLimitWidgetView: View {
             TerminalDivider(color: mutedAccent)
             fixedGap(8)
 
-            HStack {
-                terminalLine("WEEKLY LIMIT", color: dimText, size: 12)
-                Spacer(minLength: 8)
-                terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 12)
+            if preferences.widgetShowsWeekly {
+                HStack {
+                    terminalLine("WEEKLY LIMIT", color: dimText, size: 12)
+                    Spacer(minLength: 8)
+                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 12)
+                }
+                .frame(width: contentWidth, alignment: .leading)
+                fixedGap(5)
+                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 24)
+                    .frame(width: contentWidth)
             }
-            .frame(width: contentWidth, alignment: .leading)
-            fixedGap(5)
-            TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 24)
-                .frame(width: contentWidth)
 
             fixedGap(8)
             TerminalDivider(color: mutedAccent.opacity(0.65))
@@ -305,14 +343,20 @@ private struct TerminalLimitWidgetView: View {
         guard let snapshot else { return nil }
 
         if id != "5H" {
+            guard preferences.widgetShowsFiveHour else { return nil }
             return TerminalMetric(id: "5H", title: "5-hour quota", window: snapshot.fiveHour)
         }
 
         if id != "WEEKLY" {
+            guard preferences.widgetShowsWeekly else { return nil }
             return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: snapshot.weekly)
         }
 
         return nil
+    }
+
+    private func shouldShowStaleWarning(_ snapshot: LimitSnapshot) -> Bool {
+        preferences.widgetShowsStaleWarning && snapshot.isStale
     }
 
     private func statRow(_ label: String, _ value: String, size: CGFloat = 13) -> some View {
@@ -468,6 +512,15 @@ private extension LimitWindowSnapshot {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: resetsAt)
+    }
+}
+
+private extension LimitSnapshot {
+    var updatedClockText: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter.string(from: updatedAt)
     }
 }
 

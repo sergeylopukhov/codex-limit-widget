@@ -30,7 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.0.5" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.0.6" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release makes widget refreshes visible and applies the saved widget display settings in the WidgetKit extension."
+              echo
+              echo "- Added an \`UPDATED HH:mm:ss\` indicator to the widget."
+              echo "- Made the widget read saved options for 5-hour, weekly, reset time, last updated, and stale warning display."
+              echo "- Reloaded WidgetKit timelines after successful refreshes and cached error updates."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.6-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.0.5" ]; then
             {
               echo "## Release Notes"
               echo

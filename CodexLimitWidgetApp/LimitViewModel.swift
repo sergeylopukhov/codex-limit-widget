@@ -41,13 +41,14 @@ final class LimitViewModel: ObservableObject {
             let fresh = try await client.fetch()
             snapshot = fresh
             try? LimitStore.write(fresh)
-            WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
+            reloadWidgets()
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             if var current = snapshot {
                 current.errorMessage = message
                 snapshot = current
                 try? LimitStore.write(current)
+                reloadWidgets()
             }
         }
     }
@@ -57,7 +58,7 @@ final class LimitViewModel: ObservableObject {
         update(&next)
         preferences = next
         try? LimitPreferencesStore.write(next)
-        WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
+        reloadWidgets()
     }
 
     var menuBarTitle: String {
@@ -86,5 +87,10 @@ final class LimitViewModel: ObservableObject {
         if #available(macOS 13.0, *) {
             try? SMAppService.mainApp.register()
         }
+    }
+
+    private func reloadWidgets() {
+        WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

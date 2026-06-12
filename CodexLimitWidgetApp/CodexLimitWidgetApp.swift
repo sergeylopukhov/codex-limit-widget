@@ -387,14 +387,14 @@ final class SettingsWindowPresenter: ObservableObject {
         }
 
         let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 500, height: 280),
+            contentRect: NSRect(x: 0, y: 0, width: 500, height: 420),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Codex Limit Widget Settings"
         window.contentViewController = NSHostingController(rootView: contentView)
-        window.minSize = NSSize(width: 460, height: 250)
+        window.minSize = NSSize(width: 460, height: 360)
         window.isReleasedWhenClosed = false
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -417,54 +417,73 @@ struct AppSettingsView: View {
     @ObservedObject var viewModel: LimitViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Application")
-                    .font(.headline)
-
-                Toggle("Show menu bar item", isOn: binding(\.showsMenuBarItem))
-                    .toggleStyle(.switch)
-
-                Picker("Menu bar", selection: binding(\.menuBarMode)) {
-                    ForEach(MenuBarMode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .disabled(!viewModel.preferences.showsMenuBarItem)
-
-                Picker("Percent source", selection: binding(\.compactMenuBarMetric)) {
-                    ForEach(MenuBarCompactMetric.allCases) { metric in
-                        Text(metric.title).tag(metric)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .disabled(!viewModel.preferences.showsMenuBarItem)
-
-                Text("Widgets keep refreshing while the app is running, even when the menu bar item is hidden.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Auto refresh")
+        ScrollView {
+            VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Application")
                         .font(.headline)
-                    Text("Runs every minute while the app is open.")
+
+                    Toggle("Show menu bar item", isOn: binding(\.showsMenuBarItem))
+                        .toggleStyle(.switch)
+
+                    Picker("Menu bar", selection: binding(\.menuBarMode)) {
+                        ForEach(MenuBarMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(!viewModel.preferences.showsMenuBarItem)
+
+                    Picker("Percent source", selection: binding(\.compactMenuBarMetric)) {
+                        ForEach(MenuBarCompactMetric.allCases) { metric in
+                            Text(metric.title).tag(metric)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .disabled(!viewModel.preferences.showsMenuBarItem)
+
+                    Text("Widgets keep refreshing while the app is running, even when the menu bar item is hidden.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                Spacer()
-                Button("Refresh now") {
-                    Task { await viewModel.refresh() }
-                }
-                .disabled(viewModel.isRefreshing)
-            }
 
-            Spacer(minLength: 0)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Widget")
+                        .font(.headline)
+
+                    Toggle("Show 5-hour limit", isOn: binding(\.widgetShowsFiveHour))
+                        .toggleStyle(.switch)
+                    Toggle("Show weekly limit", isOn: binding(\.widgetShowsWeekly))
+                        .toggleStyle(.switch)
+                    Toggle("Show reset time", isOn: binding(\.widgetShowsResetTimes))
+                        .toggleStyle(.switch)
+                    Toggle("Show last updated time", isOn: binding(\.widgetShowsLastUpdated))
+                        .toggleStyle(.switch)
+                    Toggle("Show stale warning", isOn: binding(\.widgetShowsStaleWarning))
+                        .toggleStyle(.switch)
+                }
+
+                HStack {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Auto refresh")
+                            .font(.headline)
+                        Text("Runs every minute while the app is open.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button("Refresh now") {
+                        Task { await viewModel.refresh() }
+                    }
+                    .disabled(viewModel.isRefreshing)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(24)
+            .frame(minWidth: 440, alignment: .topLeading)
         }
-        .padding(24)
-        .frame(minWidth: 440, minHeight: 250, alignment: .topLeading)
+        .frame(minWidth: 440, minHeight: 360, alignment: .topLeading)
     }
 
     private func binding<Value>(_ keyPath: WritableKeyPath<LimitPreferences, Value>) -> Binding<Value> {

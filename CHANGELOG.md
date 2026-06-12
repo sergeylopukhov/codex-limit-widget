@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+- Fixed widget refresh visibility by showing the last successful snapshot update time directly on the widget.
+- Made WidgetKit extension read and apply saved widget display preferences.
+- Reloaded widget timelines after both successful refreshes and cached error updates.
+
 ## 1.0.5
 
 - Replaced the installer script in release archives with a standard drag-to-Applications DMG layout.
