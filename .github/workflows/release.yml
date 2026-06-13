@@ -30,7 +30,20 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.0.8" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.0.9" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release simplifies Widget settings."
+              echo
+              echo "- Keeps only the \`Show last updated time\` toggle in the Widget section."
+              echo "- Keeps core widget lines enabled internally for existing installs."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.9-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.0.8" ]; then
             {
               echo "## Release Notes"
               echo

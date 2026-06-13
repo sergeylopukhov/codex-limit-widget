@@ -94,6 +94,15 @@ struct LimitPreferences: Codable, Equatable {
 
     init() {}
 
+    var normalizedForCurrentUI: LimitPreferences {
+        var preferences = self
+        preferences.widgetShowsFiveHour = true
+        preferences.widgetShowsWeekly = true
+        preferences.widgetShowsResetTimes = true
+        preferences.widgetShowsStaleWarning = true
+        return preferences
+    }
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         widgetShowsFiveHour = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsFiveHour) ?? true
@@ -238,14 +247,14 @@ enum LimitPreferencesStore {
         for url in LimitStore.storageURLs(filename: filename) {
             do {
                 let data = try Data(contentsOf: url)
-                return try JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data)
+                return try JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data).normalizedForCurrentUI
             } catch {
                 continue
             }
         }
         if let data = sharedDefaults()?.data(forKey: defaultsKey),
            let preferences = try? JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data) {
-            return preferences
+            return preferences.normalizedForCurrentUI
         }
         return .default
     }

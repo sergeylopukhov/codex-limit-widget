@@ -451,15 +451,7 @@ struct AppSettingsView: View {
                     Text("Widget")
                         .font(.headline)
 
-                    Toggle("Show 5-hour limit", isOn: binding(\.widgetShowsFiveHour))
-                        .toggleStyle(.switch)
-                    Toggle("Show weekly limit", isOn: binding(\.widgetShowsWeekly))
-                        .toggleStyle(.switch)
-                    Toggle("Show reset time", isOn: binding(\.widgetShowsResetTimes))
-                        .toggleStyle(.switch)
                     Toggle("Show last updated time", isOn: binding(\.widgetShowsLastUpdated))
-                        .toggleStyle(.switch)
-                    Toggle("Show stale warning", isOn: binding(\.widgetShowsStaleWarning))
                         .toggleStyle(.switch)
                 }
 

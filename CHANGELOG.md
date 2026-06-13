@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.9
+
+- Simplified Widget settings to keep only the `Show last updated time` toggle.
+- Normalized removed widget display settings back to enabled so existing installs cannot get stuck with hidden limits.
+
 ## 1.0.8
 
 - Fixed empty widgets in ad-hoc builds by writing the cached snapshot and settings to the WidgetKit extension support container as a local fallback.
