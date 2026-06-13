@@ -689,6 +689,7 @@ private struct EditorialLimitWidgetView: View {
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
         let metric = snapshot.fiveHour
+        let leftWidth = min(290, max(250, size.width * 0.40))
 
         return VStack(alignment: .leading, spacing: 15) {
             HStack(alignment: .top) {
@@ -725,6 +726,7 @@ private struct EditorialLimitWidgetView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
+                .frame(width: leftWidth, alignment: .leading)
                 .layoutPriority(2)
 
                 EditorialVerticalRule()
@@ -748,7 +750,7 @@ private struct EditorialLimitWidgetView: View {
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(3)
+                .layoutPriority(1)
             }
 
             weeklyMeter(snapshot.weekly.leftPercent, height: 12, labelSize: 12)
