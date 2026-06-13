@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1
+
+- Tightened editorial widget layouts: smaller small-widget title, small-widget `PLAN` stat instead of repeated weekly stat, and higher large-widget percent block.
+- Removed the duplicate plan label from the large editorial message area and shortened the status message to avoid truncation.
+
 ## 1.1.0
 
 - Added three new warm editorial widget variants using paper tones, serif typography, thin dividers, and muted progress bars.

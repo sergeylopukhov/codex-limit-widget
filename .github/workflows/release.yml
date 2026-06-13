@@ -30,20 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.1.0" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.1.1" ]; then
             {
               echo "## Release Notes"
               echo
-              echo "This release adds three new editorial-style widgets."
+              echo "This release fixes the new editorial widget layouts."
               echo
-              echo "- Adds separate small, medium, and large warm paper widgets with serif typography."
-              echo "- Keeps the same Codex limit data source and refresh behavior as the existing widget."
-              echo "- Shows remaining 5-hour limit, exact 5-hour reset time, and an explicitly labeled weekly limit bar."
-              echo "- Removes request counts from the editorial widgets."
+              echo "- Reduces the small editorial widget title size so \`Codex Limit\` fits."
+              echo "- Replaces the repeated small-widget weekly stat with \`PLAN\`."
+              echo "- Moves the large-widget percent block higher."
+              echo "- Removes the duplicate plan label from the large-widget message area."
+              echo "- Shortens the large-widget status message so it does not truncate."
               echo
               echo "## Installation"
               echo
-              echo "Download \`CodexLimitWidget-1.1.0-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+              echo "Download \`CodexLimitWidget-1.1.1-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
             } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.0.9" ]; then
             {

@@ -563,10 +563,10 @@ private struct EditorialLimitWidgetView: View {
         let padding: CGFloat = 16
         let metric = snapshot.fiveHour
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Codex Limit")
-                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .font(.system(size: 14, weight: .regular, design: .serif))
                     .foregroundStyle(EditorialPalette.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -599,7 +599,7 @@ private struct EditorialLimitWidgetView: View {
             HStack(spacing: 10) {
                 editorialStat("USED", "\(metric.usedPercent)%")
                 EditorialVerticalRule()
-                editorialStat("WEEK", "\(snapshot.weekly.leftPercent)%")
+                editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
             }
 
             if preferences.widgetShowsLastUpdated {
@@ -711,7 +711,7 @@ private struct EditorialLimitWidgetView: View {
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .center, spacing: 22) {
+            HStack(alignment: .top, spacing: 22) {
                 VStack(alignment: .leading, spacing: -8) {
                     Text("\(metric.leftPercent)%")
                         .font(.system(size: 104, weight: .regular, design: .serif))
@@ -732,13 +732,12 @@ private struct EditorialLimitWidgetView: View {
 
                 VStack(alignment: .leading, spacing: 10) {
                     Text(editorialMessage(for: metric.leftPercent))
-                        .font(.system(size: 21, weight: .regular, design: .serif))
+                        .font(.system(size: 20, weight: .regular, design: .serif))
                         .italic()
-                        .lineLimit(4)
-
-                    Text((snapshot.planType ?? "plan unknown").capitalized)
-                        .font(.system(size: 14, weight: .semibold))
-                        .lineLimit(1)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.76)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     if preferences.widgetShowsLastUpdated {
                         Text("Updated \(snapshot.updatedClockText)")
@@ -749,6 +748,7 @@ private struct EditorialLimitWidgetView: View {
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .layoutPriority(3)
             }
 
             weeklyMeter(snapshot.weekly.leftPercent, height: 12, labelSize: 12)
@@ -861,7 +861,7 @@ private struct EditorialLimitWidgetView: View {
 
     private func editorialMessage(for percent: Int) -> String {
         if percent >= 60 {
-            return "Stay in your flow. You're well within your limit."
+            return "Plenty of limit remains."
         }
         if percent >= 30 {
             return "Keep an eye on pace. You still have room to work."
