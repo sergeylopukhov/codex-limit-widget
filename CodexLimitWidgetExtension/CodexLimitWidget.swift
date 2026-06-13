@@ -573,7 +573,7 @@ private struct EditorialLimitWidgetView: View {
 
                 Spacer(minLength: 8)
 
-                Text(metric.resetCountdownText)
+                Text("5H \(metric.resetClockText)")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -594,7 +594,7 @@ private struct EditorialLimitWidgetView: View {
                     .minimumScaleFactor(0.7)
             }
 
-            EditorialMeter(percent: metric.leftPercent, height: 10)
+            weeklyMeter(snapshot.weekly.leftPercent, height: 8, labelSize: 9)
 
             HStack(spacing: 10) {
                 editorialStat("USED", "\(metric.usedPercent)%")
@@ -615,13 +615,14 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
-        let padding = EdgeInsets(top: 17, leading: 20, bottom: 16, trailing: 20)
+        let padding = EdgeInsets(top: 8, leading: 20, bottom: 7, trailing: 20)
         let metric = snapshot.fiveHour
+        let leftWidth = min(118, max(104, size.width * 0.34))
 
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top) {
                 Text("Codex Limit")
-                    .font(.system(size: 25, weight: .regular, design: .serif))
+                    .font(.system(size: 20, weight: .regular, design: .serif))
                     .foregroundStyle(EditorialPalette.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -629,53 +630,56 @@ private struct EditorialLimitWidgetView: View {
                 Spacer(minLength: 12)
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("Resets in")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(metric.resetCountdownText)
-                        .font(.system(size: 18, weight: .regular, design: .serif))
+                    Text("5H RESET")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(metric.resetClockText)
+                        .font(.system(size: 13, weight: .regular, design: .serif))
                 }
                 .foregroundStyle(EditorialPalette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .center, spacing: 18) {
-                VStack(alignment: .leading, spacing: -5) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: -6) {
                     Text("\(metric.leftPercent)%")
-                        .font(.system(size: 70, weight: .regular, design: .serif))
+                        .font(.system(size: 48, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
                     Text("Remaining")
-                        .font(.system(size: 28, weight: .regular, design: .serif))
+                        .font(.system(size: 20, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
+                .frame(width: leftWidth, alignment: .leading)
                 .layoutPriority(2)
 
                 EditorialVerticalRule()
-                    .frame(height: 84)
+                    .frame(height: 56)
 
                 Text(editorialMessage(for: metric.leftPercent))
-                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .font(.system(size: 13, weight: .regular, design: .serif))
                     .italic()
                     .foregroundStyle(EditorialPalette.mutedInk)
-                    .lineLimit(4)
+                    .lineLimit(2)
                     .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(1)
+                    .layoutPriority(3)
             }
+            .frame(height: 56)
 
-            EditorialMeter(percent: metric.leftPercent, height: 13)
+            weeklyMeter(snapshot.weekly.leftPercent, height: 7, labelSize: 7.8)
 
             HStack(spacing: 16) {
                 editorialStat("USED", "\(metric.usedPercent)%")
                 EditorialVerticalRule()
                 editorialStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
                 EditorialVerticalRule()
-                editorialStat("REQUESTS", requestCount(from: snapshot.usage))
+                editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
             }
         }
         .padding(padding)
@@ -697,9 +701,9 @@ private struct EditorialLimitWidgetView: View {
                 Spacer(minLength: 16)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("Resets in")
+                    Text("5H RESET")
                         .font(.system(size: 13, weight: .semibold))
-                    Text(metric.resetCountdownText)
+                    Text(metric.resetClockText)
                         .font(.system(size: 22, weight: .regular, design: .serif))
                 }
                 .foregroundStyle(EditorialPalette.ink)
@@ -747,7 +751,7 @@ private struct EditorialLimitWidgetView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            EditorialMeter(percent: metric.leftPercent, height: 15)
+            weeklyMeter(snapshot.weekly.leftPercent, height: 12, labelSize: 12)
 
             HStack(spacing: 18) {
                 editorialStat("USED", "\(metric.usedPercent)%")
@@ -756,7 +760,7 @@ private struct EditorialLimitWidgetView: View {
                 EditorialVerticalRule()
                 editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens))
                 EditorialVerticalRule()
-                editorialStat("REQUESTS", requestCount(from: snapshot.usage))
+                editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
             }
 
             HStack(spacing: 18) {
@@ -801,20 +805,58 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func editorialStat(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
+        let labelSize: CGFloat = {
+            switch variant {
+            case .small: return 9
+            case .medium: return 7.5
+            case .large: return 12
+            }
+        }()
+        let valueSize: CGFloat = {
+            switch variant {
+            case .small: return 15
+            case .medium: return 12
+            case .large: return 20
+            }
+        }()
+        let spacing: CGFloat = variant == .medium ? 1 : 5
+
+        return VStack(alignment: .leading, spacing: spacing) {
             Text(label)
-                .font(.system(size: variant == .small ? 9 : 12, weight: .semibold))
+                .font(.system(size: labelSize, weight: .semibold))
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
             Text(value)
-                .font(.system(size: variant == .small ? 15 : 20, weight: .regular, design: .serif))
+                .font(.system(size: valueSize, weight: .regular, design: .serif))
                 .foregroundStyle(EditorialPalette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.62)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func weeklyMeter(_ percent: Int, height: CGFloat, labelSize: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("WEEKLY LIMIT")
+                    .font(.system(size: labelSize, weight: .semibold))
+                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+
+                Spacer(minLength: 8)
+
+                Text("\(percent)% REMAINING")
+                    .font(.system(size: labelSize, weight: .semibold))
+                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.72)
+            }
+
+            EditorialMeter(percent: percent, height: height)
+        }
     }
 
     private func editorialMessage(for percent: Int) -> String {
@@ -825,13 +867,6 @@ private struct EditorialLimitWidgetView: View {
             return "Keep an eye on pace. You still have room to work."
         }
         return "Slow the pace. Your limit is getting close."
-    }
-
-    private func requestCount(from usage: AccountUsageSnapshot?) -> String {
-        if let totalThreads = usage?.totalThreads {
-            return formatPlainCount(totalThreads)
-        }
-        return formatPlainCount(usage?.totalSkillUses)
     }
 
     private func streakText(_ usage: AccountUsageSnapshot?) -> String {
@@ -925,17 +960,6 @@ private extension LimitWindowSnapshot {
         return formatter.string(from: resetsAt)
     }
 
-    var resetCountdownText: String {
-        guard let resetsAt else { return "--" }
-        let seconds = max(0, Int(resetsAt.timeIntervalSince(Date())))
-        let hours = seconds / 3_600
-        let minutes = (seconds % 3_600) / 60
-
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
-    }
 }
 
 private extension LimitSnapshot {

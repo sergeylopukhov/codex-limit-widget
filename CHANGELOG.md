@@ -1,9 +1,10 @@
 # Changelog
 
-## 1.0.10
+## 1.1.0
 
 - Added three new warm editorial widget variants using paper tones, serif typography, thin dividers, and muted progress bars.
 - Kept the widget data source unchanged: the new widgets read the same cached Codex limit snapshot as the existing widget.
+- Made the editorial progress bar explicitly show the weekly limit, removed request counts, and show the exact 5-hour reset time.
 
 ## 1.0.9
 
