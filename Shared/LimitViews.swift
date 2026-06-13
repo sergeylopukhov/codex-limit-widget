@@ -91,7 +91,6 @@ private struct TerminalSnapshotDetailView: View {
                 LimitGaugeView(window: snapshot.weekly, compact: true)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Updated: \(Self.dateTimeFormatter.string(from: snapshot.updatedAt))")
                     if let planType = snapshot.planType {
                         Text("Plan: \(planType)")
                     }
@@ -125,12 +124,6 @@ private struct TerminalSnapshotDetailView: View {
     private let mutedAccent = Color(red: 0.32, green: 0.56, blue: 0.28)
     private let dimText = Color(red: 0.64, green: 0.86, blue: 0.58)
 
-    private static let dateTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "MMM d, HH:mm:ss"
-        return formatter
-    }()
 }
 
 private struct EditorialSnapshotDetailView: View {
@@ -196,8 +189,6 @@ private struct EditorialSnapshotDetailView: View {
                 EditorialPopupMeter(title: "WEEK", percent: snapshot.weekly.leftPercent)
 
                 HStack(spacing: 10) {
-                    editorialCompactStat("UPDATED", Self.dateTimeFormatter.string(from: snapshot.updatedAt))
-                    EditorialPopupVerticalRule()
                     editorialCompactStat("USED", "\(snapshot.fiveHour.usedPercent)%")
                     EditorialPopupVerticalRule()
                     editorialCompactStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
@@ -251,12 +242,6 @@ private struct EditorialSnapshotDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private static let dateTimeFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "MMM d, HH:mm:ss"
-        return formatter
-    }()
 }
 
 private struct TerminalPopupMeter: View {

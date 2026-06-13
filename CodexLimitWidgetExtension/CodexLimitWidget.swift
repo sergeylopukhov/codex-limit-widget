@@ -187,11 +187,10 @@ private struct TerminalLimitWidgetView: View {
 
             TerminalDivider(color: mutedAccent)
 
-            if preferences.widgetShowsLastUpdated || shouldShowStaleWarning(snapshot) {
+            if shouldShowStaleWarning(snapshot) {
                 HStack {
-                    terminalLine(shouldShowStaleWarning(snapshot) ? "STALE DATA" : "UPDATED", color: dimText, size: 11)
+                    terminalLine("STALE DATA", color: dimText, size: 11)
                     Spacer()
-                    terminalLine(snapshot.updatedClockText, color: accent, size: 11)
                 }
             }
 
@@ -249,9 +248,7 @@ private struct TerminalLimitWidgetView: View {
             Spacer(minLength: 4)
 
             if shouldShowStaleWarning(snapshot) {
-                statRow("STALE", snapshot.updatedClockText, size: 10)
-            } else if preferences.widgetShowsLastUpdated {
-                statRow("UPD", snapshot.updatedClockText, size: 10)
+                statRow("STALE", "DATA", size: 10)
             } else if preferences.widgetShowsResetTimes {
                 statRow("RESET", metric.window.resetClockText, size: 10)
             }
@@ -296,9 +293,7 @@ private struct TerminalLimitWidgetView: View {
                     }
                     statRow("PLAN", (snapshot.planType ?? "--").uppercased(), size: 15)
                     if shouldShowStaleWarning(snapshot) {
-                        statRow("STALE", snapshot.updatedClockText, size: 15)
-                    } else if preferences.widgetShowsLastUpdated {
-                        statRow("UPDATED", snapshot.updatedClockText, size: 15)
+                        statRow("STALE", "DATA", size: 15)
                     }
                 }
                 .frame(width: statsColumnWidth, alignment: .trailing)
@@ -610,13 +605,6 @@ private struct EditorialLimitWidgetView: View {
                 editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
             }
 
-            if preferences.widgetShowsLastUpdated {
-                Text("Updated \(snapshot.updatedClockText)")
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(EditorialPalette.mutedInk)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-            }
         }
         .padding(padding)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
@@ -750,12 +738,6 @@ private struct EditorialLimitWidgetView: View {
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if preferences.widgetShowsLastUpdated {
-                        Text("Updated \(snapshot.updatedClockText)")
-                            .font(.system(size: 11, weight: .medium))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                    }
                 }
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -972,15 +954,6 @@ private extension LimitWindowSnapshot {
         return formatter.string(from: resetsAt)
     }
 
-}
-
-private extension LimitSnapshot {
-    var updatedClockText: String {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter.string(from: updatedAt)
-    }
 }
 
 struct CodexLimitWidget: Widget {

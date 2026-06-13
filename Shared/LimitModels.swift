@@ -73,7 +73,7 @@ struct LimitPreferences: Codable, Equatable {
     var widgetShowsFiveHour = true
     var widgetShowsWeekly = true
     var widgetShowsResetTimes = true
-    var widgetShowsLastUpdated = true
+    var widgetShowsLastUpdated = false
     var widgetShowsStaleWarning = true
     var showsMenuBarItem = true
     var menuBarMode = MenuBarMode.detailed
@@ -101,7 +101,7 @@ struct LimitPreferences: Codable, Equatable {
         preferences.widgetShowsFiveHour = true
         preferences.widgetShowsWeekly = true
         preferences.widgetShowsResetTimes = true
-        preferences.widgetShowsLastUpdated = true
+        preferences.widgetShowsLastUpdated = false
         preferences.widgetShowsStaleWarning = true
         return preferences
     }
@@ -111,7 +111,7 @@ struct LimitPreferences: Codable, Equatable {
         widgetShowsFiveHour = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsFiveHour) ?? true
         widgetShowsWeekly = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsWeekly) ?? true
         widgetShowsResetTimes = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsResetTimes) ?? true
-        widgetShowsLastUpdated = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsLastUpdated) ?? true
+        widgetShowsLastUpdated = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsLastUpdated) ?? false
         widgetShowsStaleWarning = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsStaleWarning) ?? true
         showsMenuBarItem = try container.decodeIfPresent(Bool.self, forKey: .showsMenuBarItem) ?? true
         menuBarMode = (try? container.decodeIfPresent(MenuBarMode.self, forKey: .menuBarMode)) ?? .detailed
