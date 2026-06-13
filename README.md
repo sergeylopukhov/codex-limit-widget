@@ -1,123 +1,167 @@
 # Codex Limit Widget
 
-Codex Limit Widget is a small macOS menu bar app and WidgetKit widget for tracking your Codex subscription limits.
+<div align="center">
+  <img src="assets/screenshots/readme/editorial-large.png" width="520" alt="Codex Limit Widget large editorial widget">
 
-It shows the remaining 5-hour and weekly Codex quota, reset time, plan, and account usage stats without keeping the Codex desktop app open.
+  <p>
+    A macOS menu bar app and WidgetKit widget for keeping Codex quota visible at a glance.
+  </p>
 
-![Large widget](assets/screenshots/widget-large.png)
+  <p>
+    <a href="https://github.com/sergeylopukhov/codex-limit-widget/releases/latest"><img alt="Download latest release" src="https://img.shields.io/badge/download-latest_release-222222?style=for-the-badge"></a>
+    <img alt="macOS 14+" src="https://img.shields.io/badge/macOS-14%2B-777777?style=for-the-badge">
+    <img alt="WidgetKit" src="https://img.shields.io/badge/WidgetKit-enabled-6f8f5f?style=for-the-badge">
+  </p>
+</div>
 
-## What It Shows
+Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset times, plan, and usage stats without keeping the Codex desktop app open. It runs quietly in the menu bar, refreshes in the background, and gives desktop widgets the latest cached snapshot.
 
-- 5-hour Codex limit remaining.
-- Weekly Codex limit remaining.
-- Exact reset time for the current 5-hour window.
-- Weekly progress meter.
-- Plan type, for example `PRO` or `PLUS`.
-- Account usage stats such as total tokens, peak day, last day, streak, and max turn.
-- Three additional editorial-style widgets with the same Codex limit data.
-- Optional menu bar status in either detailed or compact percent mode.
+## Highlights
+
+<table>
+  <tr>
+    <td width="33%">
+      <strong>Live Codex limits</strong><br>
+      Track 5-hour and weekly quota with exact reset times.
+    </td>
+    <td width="33%">
+      <strong>Desktop widgets</strong><br>
+      Small, medium, and large WidgetKit layouts in two visual styles.
+    </td>
+    <td width="33%">
+      <strong>Menu bar control</strong><br>
+      Detailed or compact percent modes with a quick popover.
+    </td>
+  </tr>
+  <tr>
+    <td width="33%">
+      <strong>Usage context</strong><br>
+      Plan, total tokens, peak day, last day, streak, and max turn.
+    </td>
+    <td width="33%">
+      <strong>Cached fallback</strong><br>
+      Widgets keep showing the last good snapshot if refresh fails.
+    </td>
+    <td width="33%">
+      <strong>Local first</strong><br>
+      Data is read from the local Codex CLI app-server.
+    </td>
+  </tr>
+</table>
+
+## Widgets
+
+### Editorial
+
+Warm, readable widgets for desktop glanceability.
+
+<table>
+  <tr>
+    <td width="40%" align="center">
+      <img src="assets/screenshots/readme/editorial-large.png" width="100%" alt="Large editorial widget"><br>
+      <sub>Large</sub>
+    </td>
+    <td width="38%" align="center">
+      <img src="assets/screenshots/readme/editorial-medium.png" width="100%" alt="Medium editorial widget"><br>
+      <sub>Medium</sub>
+    </td>
+    <td width="22%" align="center">
+      <img src="assets/screenshots/readme/editorial-small.png" width="100%" alt="Small editorial widget"><br>
+      <sub>Small</sub>
+    </td>
+  </tr>
+</table>
+
+### Terminal
+
+High-contrast terminal widgets for a dense developer setup.
+
+<table>
+  <tr>
+    <td width="40%" align="center">
+      <img src="assets/screenshots/readme/terminal-large.png" width="100%" alt="Large terminal widget"><br>
+      <sub>Large</sub>
+    </td>
+    <td width="38%" align="center">
+      <img src="assets/screenshots/readme/terminal-medium.png" width="100%" alt="Medium terminal widget"><br>
+      <sub>Medium</sub>
+    </td>
+    <td width="22%" align="center">
+      <img src="assets/screenshots/readme/terminal-small.png" width="100%" alt="Small terminal widget"><br>
+      <sub>Small</sub>
+    </td>
+  </tr>
+</table>
+
+## Menu Bar
+
+The menu bar app can show a detailed text status or a compact percent meter. Clicking it opens a popover with both limit windows, reset times, freshness, and quick access to settings.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/popover-beige.png" width="100%" alt="Beige menu bar popover"><br>
+      <sub>Beige popover</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/popover-dark.png" width="100%" alt="Dark menu bar popover"><br>
+      <sub>Dark popover</sub>
+    </td>
+  </tr>
+</table>
+
+## Settings
+
+Choose the window theme, menu bar mode, and percent source. Widgets keep refreshing while the app is running, even when the menu bar item is hidden.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/settings-beige.png" width="100%" alt="Beige settings window"><br>
+      <sub>Beige settings</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/settings-dark.png" width="100%" alt="Dark settings window"><br>
+      <sub>Dark settings</sub>
+    </td>
+  </tr>
+</table>
 
 ## Install
 
-Download `CodexLimitWidget-1.1.2-macOS.dmg` from the latest GitHub Release, open it, and drag `Codex Limit Widget.app` to `Applications`.
+Download the latest `.dmg` from [GitHub Releases](https://github.com/sergeylopukhov/codex-limit-widget/releases/latest), open it, and drag `Codex Limit Widget.app` to `Applications`.
 
-The release also includes a zip archive for manual installs.
-
-The app runs as a menu bar/background app and does not stay in the Dock.
-
-## Uninstall
-
-Quit Codex Limit Widget and delete the app from Applications:
-
-```text
-/Applications/Codex Limit Widget.app
-```
-
-Also eject the release DMG if it is still mounted.
-
-If the widget still appears in the widget gallery after deleting the app and restarting your Mac, another local copy of the app or widget extension is still registered. Search for and delete every remaining copy:
-
-```sh
-mdfind 'kMDItemFSName == "Codex Limit Widget.app" || kMDItemFSName == "CodexLimitWidgetExtension.appex"'
-```
-
-After removing the paths printed by that command, restart your Mac again. macOS can keep WidgetKit extensions in its local cache while any copy of the app or `.appex` still exists on disk.
+The release also includes a `.zip` archive for manual installs. The app runs as a menu bar/background app and does not stay in the Dock.
 
 ### Requirements
 
 - macOS 14 or newer.
+- Codex CLI installed and authenticated.
 - Xcode is only required if you build from source.
-- Codex CLI must be installed and authenticated.
 
-Codex Limit Widget reads data through:
+## How It Works
+
+Codex Limit Widget starts the local Codex app-server over stdio:
 
 ```sh
 codex app-server --stdio
 ```
 
-If the Codex CLI is missing or logged out, the widget can still show the last cached snapshot, but it cannot refresh live data.
-
-## Screenshots
-
-### Desktop Widgets
-
-Small, medium, and large widgets are designed for quick scanning on the desktop.
-
-![Desktop widgets, light style](assets/screenshots/desktop-light-showcase.png)
-
-![Desktop widgets, dark style](assets/screenshots/desktop-dark-showcase.png)
-
-![Small widget](assets/screenshots/widget-small.png)
-
-![Medium widget](assets/screenshots/widget-medium.png)
-
-![Large widget](assets/screenshots/widget-large.png)
-
-### Menu Bar
-
-Detailed mode shows both quota windows:
-
-![Menu bar detailed](assets/screenshots/menu-bar-detailed.png)
-
-Percent mode shows one selected source with a small live meter:
-
-![Menu bar percent](assets/screenshots/menu-bar-percent.png)
-
-Clicking the menu bar item opens the popover:
-
-![Menu popover](assets/screenshots/menu-popover.png)
-
-### Settings
-
-Settings let you hide the menu bar item, choose the menu bar mode, choose the percent source, and refresh manually.
-
-![Settings](assets/screenshots/settings.png)
-
-## How It Works
-
-Codex Limit Widget starts the local Codex app-server over stdio and sends JSON-RPC requests:
+It reads:
 
 ```json
 {"jsonrpc":"2.0","id":2,"method":"account/rateLimits/read","params":null}
 {"jsonrpc":"2.0","id":3,"method":"account/usage/read","params":null}
 ```
 
-The app uses the `codex` limit bucket:
+The app treats the `codex` limit bucket as follows:
 
-- `primary` is treated as the 5-hour window.
-- `secondary` is treated as the weekly window.
-- `planType` is shown as the current plan.
-- `resetsAt` is converted to local reset time.
+- `primary`: the 5-hour window.
+- `secondary`: the weekly window.
+- `planType`: the current plan.
+- `resetsAt`: local reset time.
 
-The menu bar app refreshes every minute and writes a cached snapshot into shared storage. The WidgetKit extension reads that cached snapshot and reloads its timeline.
-
-The Codex app-server connection is treated as unreliable I/O. Each JSON-RPC response wait has a bounded timeout, stdout is read asynchronously, and a stalled child process is terminated off the main app path so one bad refresh cannot permanently block later updates.
-
-This means:
-
-- The Codex desktop app does not need to be open.
-- The Codex CLI must remain installed and authenticated.
-- Widgets can keep showing the last good value if refresh fails.
+The menu bar app refreshes periodically and writes a cached snapshot into shared storage. WidgetKit reads that snapshot and reloads timelines from it. If Codex CLI is unavailable or logged out, widgets can keep showing the last successful snapshot, but live refresh will fail until Codex is available again.
 
 ## Build From Source
 
@@ -138,16 +182,32 @@ To create release files locally:
 The release files are written to:
 
 ```text
-release/CodexLimitWidget-1.1.2-macOS.dmg
-release/CodexLimitWidget-1.1.2-macOS.zip
+release/CodexLimitWidget-<version>-macOS.dmg
+release/CodexLimitWidget-<version>-macOS.zip
 ```
 
-## Signing Notice
+## Uninstall
 
-The included release workflow creates an ad-hoc signed app. For fully silent installation on every Mac, the release must be signed with an Apple Developer ID certificate and notarized by Apple.
+Quit Codex Limit Widget and delete the app from Applications:
 
-Without Developer ID notarization, macOS Gatekeeper may show a warning depending on how the archive was downloaded and opened. The install script removes quarantine from the installed app, but it cannot replace Apple notarization.
+```text
+/Applications/Codex Limit Widget.app
+```
+
+If the widget still appears in the widget gallery after deleting the app and restarting your Mac, another local copy of the app or widget extension is still registered. Search for remaining copies:
+
+```sh
+mdfind 'kMDItemFSName == "Codex Limit Widget.app" || kMDItemFSName == "CodexLimitWidgetExtension.appex"'
+```
+
+After removing the paths printed by that command, restart your Mac. macOS can keep WidgetKit extensions in its local cache while any copy of the app or `.appex` still exists on disk.
 
 ## Privacy
 
-Codex Limit Widget does not send data to its own server. It only talks to the local Codex CLI app-server and stores a small local JSON snapshot for the widget.
+Codex Limit Widget does not send data to its own server. It talks to the local Codex CLI app-server and stores a small local JSON snapshot for widgets.
+
+## Signing
+
+The included release workflow creates an ad-hoc signed app. For fully silent installation on every Mac, the release must be signed with an Apple Developer ID certificate and notarized by Apple.
+
+Without Developer ID notarization, macOS Gatekeeper may show a warning depending on how the archive was downloaded and opened.
