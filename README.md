@@ -24,6 +24,16 @@ The release also includes a zip archive for manual installs.
 
 The app runs as a menu bar/background app and does not stay in the Dock.
 
+## Uninstall
+
+Quit Codex Limit Widget, then delete:
+
+```text
+/Applications/Codex Limit Widget.app
+```
+
+If the widget still appears in the widget gallery after deleting the app, restart your Mac. macOS can keep WidgetKit extensions in its local cache after the app is removed.
+
 ### Requirements
 
 - macOS 14 or newer.
