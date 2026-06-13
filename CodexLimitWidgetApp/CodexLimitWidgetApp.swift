@@ -488,16 +488,6 @@ struct AppSettingsView: View {
 
                     SettingsRule(palette: palette)
 
-                    VStack(alignment: .leading, spacing: 12) {
-                        SettingsSectionTitle("Widget", palette: palette)
-
-                        SettingsRow("Show last updated time", palette: palette) {
-                            SettingsSwitch(isOn: binding(\.widgetShowsLastUpdated), palette: palette)
-                        }
-                    }
-
-                    SettingsRule(palette: palette)
-
                     HStack(alignment: .center, spacing: 18) {
                         VStack(alignment: .leading, spacing: 4) {
                             SettingsSectionTitle("Auto refresh", palette: palette)
