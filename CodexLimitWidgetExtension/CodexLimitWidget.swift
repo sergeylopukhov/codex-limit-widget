@@ -37,14 +37,27 @@ struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
 
+    @ViewBuilder
     var body: some View {
-        TerminalLimitWidgetView(
-            snapshot: entry.snapshot,
-            preferences: entry.preferences,
-            family: family
-        )
-        .containerBackground(for: .widget) {
-            TerminalWidgetBackground()
+        switch entry.preferences.menuWindowDesign {
+        case .terminal:
+            TerminalLimitWidgetView(
+                snapshot: entry.snapshot,
+                preferences: entry.preferences,
+                family: family
+            )
+            .containerBackground(for: .widget) {
+                TerminalWidgetBackground()
+            }
+        case .editorial:
+            EditorialLimitWidgetView(
+                snapshot: entry.snapshot,
+                preferences: entry.preferences,
+                variant: EditorialWidgetVariant(family: family)
+            )
+            .containerBackground(for: .widget) {
+                EditorialWidgetBackground()
+            }
         }
     }
 }
@@ -509,6 +522,17 @@ private enum EditorialWidgetVariant {
     case small
     case medium
     case large
+
+    init(family: WidgetFamily) {
+        switch family {
+        case .systemSmall:
+            self = .small
+        case .systemLarge:
+            self = .large
+        default:
+            self = .medium
+        }
+    }
 }
 
 private enum EditorialPalette {
@@ -519,22 +543,6 @@ private enum EditorialPalette {
     static let rule = Color(red: 0.74, green: 0.68, blue: 0.57)
     static let fill = Color(red: 0.54, green: 0.50, blue: 0.39)
     static let empty = Color(red: 0.90, green: 0.86, blue: 0.77)
-}
-
-private struct EditorialLimitWidgetEntryView: View {
-    var entry: CodexLimitProvider.Entry
-    let variant: EditorialWidgetVariant
-
-    var body: some View {
-        EditorialLimitWidgetView(
-            snapshot: entry.snapshot,
-            preferences: entry.preferences,
-            variant: variant
-        )
-        .containerBackground(for: .widget) {
-            EditorialWidgetBackground()
-        }
-    }
 }
 
 private struct EditorialLimitWidgetView: View {
@@ -983,50 +991,8 @@ struct CodexLimitWidget: Widget {
             CodexLimitWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Codex Limit Widget")
-        .description("Shows remaining 5-hour and weekly Codex limits.")
+        .description("Shows Codex limits using the Dark or Beige design selected in settings.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
-        .contentMarginsDisabled()
-    }
-}
-
-struct CodexLimitEditorialSmallWidget: Widget {
-    let kind = "Codex Limit Editorial Small"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
-            EditorialLimitWidgetEntryView(entry: entry, variant: .small)
-        }
-        .configurationDisplayName("Codex Limit Editorial Small")
-        .description("Shows Codex limits in a warm editorial style.")
-        .supportedFamilies([.systemSmall])
-        .contentMarginsDisabled()
-    }
-}
-
-struct CodexLimitEditorialMediumWidget: Widget {
-    let kind = "Codex Limit Editorial Medium"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
-            EditorialLimitWidgetEntryView(entry: entry, variant: .medium)
-        }
-        .configurationDisplayName("Codex Limit Editorial Medium")
-        .description("Shows Codex limits in a warm editorial style.")
-        .supportedFamilies([.systemMedium])
-        .contentMarginsDisabled()
-    }
-}
-
-struct CodexLimitEditorialLargeWidget: Widget {
-    let kind = "Codex Limit Editorial Large"
-
-    var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
-            EditorialLimitWidgetEntryView(entry: entry, variant: .large)
-        }
-        .configurationDisplayName("Codex Limit Editorial Large")
-        .description("Shows Codex limits in a warm editorial style.")
-        .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()
     }
 }
