@@ -1,10 +1,10 @@
 # Codex Limit Widget
 
 <div align="center">
-  <img src="assets/screenshots/readme/editorial-large.png" width="520" alt="Codex Limit Widget large editorial widget">
+  <img src="assets/screenshots/readme/beige-large.png" width="520" alt="Codex Limit Widget large widget in Beige window design">
 
   <p>
-    A macOS menu bar app and WidgetKit widget for keeping Codex quota visible at a glance.
+    A macOS menu bar app with one WidgetKit widget for keeping Codex quota visible at a glance.
   </p>
 
   <p>
@@ -14,7 +14,7 @@
   </p>
 </div>
 
-Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset times, plan, and usage stats without keeping the Codex desktop app open. It runs quietly in the menu bar, refreshes in the background, and gives desktop widgets the latest cached snapshot.
+Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset times, plan, and usage stats without keeping the Codex desktop app open. It runs quietly in the menu bar, refreshes in the background, and gives the WidgetKit widget the latest cached snapshot.
 
 ## Highlights
 
@@ -26,7 +26,7 @@ Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset ti
     </td>
     <td width="33%">
       <strong>Desktop widgets</strong><br>
-      Small, medium, and large WidgetKit layouts in two visual styles.
+      One WidgetKit widget named Codex Limit Widget with Small, Medium, and Large sizes.
     </td>
     <td width="33%">
       <strong>Menu bar control</strong><br>
@@ -39,8 +39,8 @@ Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset ti
       Plan, total tokens, peak day, last day, streak, and max turn.
     </td>
     <td width="33%">
-      <strong>Cached fallback</strong><br>
-      Widgets keep showing the last good snapshot if refresh fails.
+      <strong>Shared theme</strong><br>
+      Window design controls the app, popover, and already-added widgets.
     </td>
     <td width="33%">
       <strong>Local first</strong><br>
@@ -51,43 +51,45 @@ Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset ti
 
 ## Widgets
 
-### Editorial
+WidgetKit shows a single widget: `Codex Limit Widget`. Add it as Small, Medium, or Large from the macOS widget gallery. Themes are not separate gallery entries.
 
-Warm, readable widgets for desktop glanceability.
+The visual theme is not selected in WidgetKit. Every widget follows the app setting `Window design`: choose `Dark` or `Beige` in the settings window, and already-added widgets update through the shared app settings.
+
+### Beige Window Design
 
 <table>
   <tr>
     <td width="40%" align="center">
-      <img src="assets/screenshots/readme/editorial-large.png" width="100%" alt="Large editorial widget"><br>
+      <img src="assets/screenshots/readme/beige-large.png" width="100%" alt="Large Codex Limit Widget in Beige window design"><br>
       <sub>Large</sub>
     </td>
     <td width="38%" align="center">
-      <img src="assets/screenshots/readme/editorial-medium.png" width="100%" alt="Medium editorial widget"><br>
+      <img src="assets/screenshots/readme/beige-medium.png" width="100%" alt="Medium Codex Limit Widget in Beige window design"><br>
       <sub>Medium</sub>
     </td>
     <td width="22%" align="center">
-      <img src="assets/screenshots/readme/editorial-small.png" width="100%" alt="Small editorial widget"><br>
+      <img src="assets/screenshots/readme/beige-small.png" width="100%" alt="Small Codex Limit Widget in Beige window design"><br>
       <sub>Small</sub>
     </td>
   </tr>
 </table>
 
-### Terminal
+### Dark Window Design
 
-High-contrast terminal widgets for a dense developer setup.
+The same WidgetKit widget after switching `Window design` to `Dark`.
 
 <table>
   <tr>
     <td width="40%" align="center">
-      <img src="assets/screenshots/readme/terminal-large.png" width="100%" alt="Large terminal widget"><br>
+      <img src="assets/screenshots/readme/dark-large.png" width="100%" alt="Large Codex Limit Widget in Dark window design"><br>
       <sub>Large</sub>
     </td>
     <td width="38%" align="center">
-      <img src="assets/screenshots/readme/terminal-medium.png" width="100%" alt="Medium terminal widget"><br>
+      <img src="assets/screenshots/readme/dark-medium.png" width="100%" alt="Medium Codex Limit Widget in Dark window design"><br>
       <sub>Medium</sub>
     </td>
     <td width="22%" align="center">
-      <img src="assets/screenshots/readme/terminal-small.png" width="100%" alt="Small terminal widget"><br>
+      <img src="assets/screenshots/readme/dark-small.png" width="100%" alt="Small Codex Limit Widget in Dark window design"><br>
       <sub>Small</sub>
     </td>
   </tr>
@@ -100,29 +102,29 @@ The menu bar app can show a detailed text status or a compact percent meter. Cli
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-beige.png" width="100%" alt="Beige menu bar popover"><br>
-      <sub>Beige popover</sub>
+      <img src="assets/screenshots/readme/popover-window-beige.png" width="100%" alt="Menu bar popover in Beige window design"><br>
+      <sub>Window design: Beige</sub>
     </td>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-dark.png" width="100%" alt="Dark menu bar popover"><br>
-      <sub>Dark popover</sub>
+      <img src="assets/screenshots/readme/popover-window-dark.png" width="100%" alt="Menu bar popover in Dark window design"><br>
+      <sub>Window design: Dark</sub>
     </td>
   </tr>
 </table>
 
 ## Settings
 
-Choose the window theme, menu bar mode, and percent source. Widgets keep refreshing while the app is running, even when the menu bar item is hidden.
+Choose `Window design`, menu bar mode, and percent source. `Window design` applies to the app windows, menu bar popover, and all WidgetKit sizes. Widgets keep refreshing while the app is running, even when the menu bar item is hidden.
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-beige.png" width="100%" alt="Beige settings window"><br>
-      <sub>Beige settings</sub>
+      <img src="assets/screenshots/readme/settings-window-beige.png" width="100%" alt="Settings window with Beige window design selected"><br>
+      <sub>Window design: Beige</sub>
     </td>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-dark.png" width="100%" alt="Dark settings window"><br>
-      <sub>Dark settings</sub>
+      <img src="assets/screenshots/readme/settings-window-dark.png" width="100%" alt="Settings window with Dark window design selected"><br>
+      <sub>Window design: Dark</sub>
     </td>
   </tr>
 </table>
@@ -161,7 +163,7 @@ The app treats the `codex` limit bucket as follows:
 - `planType`: the current plan.
 - `resetsAt`: local reset time.
 
-The menu bar app refreshes periodically and writes a cached snapshot into shared storage. WidgetKit reads that snapshot and reloads timelines from it. If Codex CLI is unavailable or logged out, widgets can keep showing the last successful snapshot, but live refresh will fail until Codex is available again.
+The menu bar app refreshes periodically and writes a cached snapshot plus shared settings into app storage. WidgetKit reads that snapshot and the current `Window design` setting when it reloads timelines. If Codex CLI is unavailable or logged out, widgets can keep showing the last successful snapshot, but live refresh will fail until Codex is available again.
 
 ## Build From Source
 

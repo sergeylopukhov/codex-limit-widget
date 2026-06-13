@@ -1,15 +1,26 @@
 # Changelog
 
+## 1.1.3
+
+- Consolidated WidgetKit copy around one widget: `Codex Limit Widget`, available in Small, Medium, and Large sizes.
+- Clarified that `Window design` controls the visual theme for the app, popover, and already-added widgets.
+- Documented that switching between `Dark` and `Beige` updates widgets through shared app settings.
+
+## 1.1.2
+
+- Added shared app styling for the settings window and menu bar popover.
+- Prepared the app description and screenshots for the unified `Dark` and `Beige` window design model.
+
 ## 1.1.1
 
-- Tightened editorial widget layouts: smaller small-widget title, small-widget `PLAN` stat instead of repeated weekly stat, and higher large-widget percent block.
-- Removed the duplicate plan label from the large editorial message area and shortened the status message to avoid truncation.
+- Tightened the widget layouts for Beige window design: smaller small-widget title, small-widget `PLAN` stat instead of repeated weekly stat, and higher large-widget percent block.
+- Removed the duplicate plan label from the large-widget message area and shortened the status message to avoid truncation.
 
 ## 1.1.0
 
-- Added three new warm editorial widget variants using paper tones, serif typography, thin dividers, and muted progress bars.
-- Kept the widget data source unchanged: the new widgets read the same cached Codex limit snapshot as the existing widget.
-- Made the editorial progress bar explicitly show the weekly limit, removed request counts, and show the exact 5-hour reset time.
+- Added the Beige window design presentation using paper tones, serif typography, thin dividers, and muted progress bars.
+- Kept the widget data source unchanged: the widget reads the same cached Codex limit snapshot.
+- Made the Beige progress bar explicitly show the weekly limit, removed request counts, and show the exact 5-hour reset time.
 
 ## 1.0.9
 
