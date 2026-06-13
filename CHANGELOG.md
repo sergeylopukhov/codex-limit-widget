@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.10
+
+- Added three new warm editorial widget variants using paper tones, serif typography, thin dividers, and muted progress bars.
+- Kept the widget data source unchanged: the new widgets read the same cached Codex limit snapshot as the existing widget.
+
 ## 1.0.9
 
 - Simplified Widget settings to keep only the `Show last updated time` toggle.

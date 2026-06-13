@@ -14,11 +14,12 @@ It shows the remaining 5-hour and weekly Codex quota, reset time, plan, and acco
 - Weekly progress meter.
 - Plan type, for example `PRO` or `PLUS`.
 - Account usage stats such as total tokens, peak day, last day, streak, and max turn.
+- Three additional editorial-style widgets with the same Codex limit data.
 - Optional menu bar status in either detailed or compact percent mode.
 
 ## Install
 
-Download `CodexLimitWidget-1.0.9-macOS.dmg` from the latest GitHub Release, open it, and drag `Codex Limit Widget.app` to `Applications`.
+Download `CodexLimitWidget-1.0.10-macOS.dmg` from the latest GitHub Release, open it, and drag `Codex Limit Widget.app` to `Applications`.
 
 The release also includes a zip archive for manual installs.
 
@@ -137,8 +138,8 @@ To create release files locally:
 The release files are written to:
 
 ```text
-release/CodexLimitWidget-1.0.9-macOS.dmg
-release/CodexLimitWidget-1.0.9-macOS.zip
+release/CodexLimitWidget-1.0.10-macOS.dmg
+release/CodexLimitWidget-1.0.10-macOS.zip
 ```
 
 ## Signing Notice

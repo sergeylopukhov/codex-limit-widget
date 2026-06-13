@@ -505,6 +505,417 @@ private struct TerminalWidgetBackground: View {
     }
 }
 
+private enum EditorialWidgetVariant {
+    case small
+    case medium
+    case large
+}
+
+private enum EditorialPalette {
+    static let paper = Color(red: 0.93, green: 0.90, blue: 0.82)
+    static let paperLight = Color(red: 0.98, green: 0.96, blue: 0.90)
+    static let ink = Color(red: 0.14, green: 0.14, blue: 0.12)
+    static let mutedInk = Color(red: 0.43, green: 0.39, blue: 0.31)
+    static let rule = Color(red: 0.74, green: 0.68, blue: 0.57)
+    static let fill = Color(red: 0.54, green: 0.50, blue: 0.39)
+    static let empty = Color(red: 0.90, green: 0.86, blue: 0.77)
+}
+
+private struct EditorialLimitWidgetEntryView: View {
+    var entry: CodexLimitProvider.Entry
+    let variant: EditorialWidgetVariant
+
+    var body: some View {
+        EditorialLimitWidgetView(
+            snapshot: entry.snapshot,
+            preferences: entry.preferences,
+            variant: variant
+        )
+        .containerBackground(for: .widget) {
+            EditorialWidgetBackground()
+        }
+    }
+}
+
+private struct EditorialLimitWidgetView: View {
+    let snapshot: LimitSnapshot?
+    let preferences: LimitPreferences
+    let variant: EditorialWidgetVariant
+
+    var body: some View {
+        GeometryReader { proxy in
+            if let snapshot {
+                switch variant {
+                case .small:
+                    small(snapshot: snapshot, size: proxy.size)
+                case .medium:
+                    medium(snapshot: snapshot, size: proxy.size)
+                case .large:
+                    large(snapshot: snapshot, size: proxy.size)
+                }
+            } else {
+                emptyState(size: proxy.size)
+            }
+        }
+    }
+
+    private func small(snapshot: LimitSnapshot, size: CGSize) -> some View {
+        let padding: CGFloat = 16
+        let metric = snapshot.fiveHour
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Codex Limit")
+                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .foregroundStyle(EditorialPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Spacer(minLength: 8)
+
+                Text(metric.resetCountdownText)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            VStack(alignment: .leading, spacing: -2) {
+                Text("\(metric.leftPercent)%")
+                    .font(.system(size: 48, weight: .regular, design: .serif))
+                    .foregroundStyle(EditorialPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.58)
+
+                Text("Remaining")
+                    .font(.system(size: 20, weight: .regular, design: .serif))
+                    .foregroundStyle(EditorialPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            EditorialMeter(percent: metric.leftPercent, height: 10)
+
+            HStack(spacing: 10) {
+                editorialStat("USED", "\(metric.usedPercent)%")
+                EditorialVerticalRule()
+                editorialStat("WEEK", "\(snapshot.weekly.leftPercent)%")
+            }
+
+            if preferences.widgetShowsLastUpdated {
+                Text("Updated \(snapshot.updatedClockText)")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+        }
+        .padding(padding)
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
+        let padding = EdgeInsets(top: 17, leading: 20, bottom: 16, trailing: 20)
+        let metric = snapshot.fiveHour
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top) {
+                Text("Codex Limit")
+                    .font(.system(size: 25, weight: .regular, design: .serif))
+                    .foregroundStyle(EditorialPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Spacer(minLength: 12)
+
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Resets in")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(metric.resetCountdownText)
+                        .font(.system(size: 18, weight: .regular, design: .serif))
+                }
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+
+            HStack(alignment: .center, spacing: 18) {
+                VStack(alignment: .leading, spacing: -5) {
+                    Text("\(metric.leftPercent)%")
+                        .font(.system(size: 70, weight: .regular, design: .serif))
+                        .foregroundStyle(EditorialPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+
+                    Text("Remaining")
+                        .font(.system(size: 28, weight: .regular, design: .serif))
+                        .foregroundStyle(EditorialPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                }
+                .layoutPriority(2)
+
+                EditorialVerticalRule()
+                    .frame(height: 84)
+
+                Text(editorialMessage(for: metric.leftPercent))
+                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .italic()
+                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .layoutPriority(1)
+            }
+
+            EditorialMeter(percent: metric.leftPercent, height: 13)
+
+            HStack(spacing: 16) {
+                editorialStat("USED", "\(metric.usedPercent)%")
+                EditorialVerticalRule()
+                editorialStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
+                EditorialVerticalRule()
+                editorialStat("REQUESTS", requestCount(from: snapshot.usage))
+            }
+        }
+        .padding(padding)
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
+        let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
+        let metric = snapshot.fiveHour
+
+        return VStack(alignment: .leading, spacing: 15) {
+            HStack(alignment: .top) {
+                Text("Codex Limit")
+                    .font(.system(size: 31, weight: .regular, design: .serif))
+                    .foregroundStyle(EditorialPalette.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Spacer(minLength: 16)
+
+                VStack(alignment: .trailing, spacing: 3) {
+                    Text("Resets in")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(metric.resetCountdownText)
+                        .font(.system(size: 22, weight: .regular, design: .serif))
+                }
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            }
+
+            HStack(alignment: .center, spacing: 22) {
+                VStack(alignment: .leading, spacing: -8) {
+                    Text("\(metric.leftPercent)%")
+                        .font(.system(size: 104, weight: .regular, design: .serif))
+                        .foregroundStyle(EditorialPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+
+                    Text("Remaining")
+                        .font(.system(size: 38, weight: .regular, design: .serif))
+                        .foregroundStyle(EditorialPalette.ink)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                }
+                .layoutPriority(2)
+
+                EditorialVerticalRule()
+                    .frame(height: 112)
+
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(editorialMessage(for: metric.leftPercent))
+                        .font(.system(size: 21, weight: .regular, design: .serif))
+                        .italic()
+                        .lineLimit(4)
+
+                    Text((snapshot.planType ?? "plan unknown").capitalized)
+                        .font(.system(size: 14, weight: .semibold))
+                        .lineLimit(1)
+
+                    if preferences.widgetShowsLastUpdated {
+                        Text("Updated \(snapshot.updatedClockText)")
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                    }
+                }
+                .foregroundStyle(EditorialPalette.mutedInk)
+                .minimumScaleFactor(0.72)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            EditorialMeter(percent: metric.leftPercent, height: 15)
+
+            HStack(spacing: 18) {
+                editorialStat("USED", "\(metric.usedPercent)%")
+                EditorialVerticalRule()
+                editorialStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
+                EditorialVerticalRule()
+                editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens))
+                EditorialVerticalRule()
+                editorialStat("REQUESTS", requestCount(from: snapshot.usage))
+            }
+
+            HStack(spacing: 18) {
+                editorialStat("PEAK DAY", formatTokenCount(snapshot.usage?.peakDailyTokens))
+                EditorialVerticalRule()
+                editorialStat("LAST DAY", formatTokenCount(snapshot.usage?.lastDailyTokens))
+                EditorialVerticalRule()
+                editorialStat("STREAK", streakText(snapshot.usage))
+            }
+        }
+        .padding(padding)
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private func emptyState(size: CGSize) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Codex Limit")
+                .font(.system(size: variant == .large ? 31 : 25, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+
+            Rectangle()
+                .fill(EditorialPalette.rule.opacity(0.65))
+                .frame(height: 1)
+
+            Spacer(minLength: 8)
+
+            Text("No limit data")
+                .font(.system(size: variant == .small ? 24 : 32, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+
+            Text("Waiting for sync")
+                .font(.system(size: variant == .small ? 14 : 18, weight: .regular, design: .serif))
+                .italic()
+                .foregroundStyle(EditorialPalette.mutedInk)
+
+            Spacer(minLength: 8)
+        }
+        .padding(variant == .small ? 16 : 22)
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    private func editorialStat(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(label)
+                .font(.system(size: variant == .small ? 9 : 12, weight: .semibold))
+                .foregroundStyle(EditorialPalette.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(value)
+                .font(.system(size: variant == .small ? 15 : 20, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.62)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func editorialMessage(for percent: Int) -> String {
+        if percent >= 60 {
+            return "Stay in your flow. You're well within your limit."
+        }
+        if percent >= 30 {
+            return "Keep an eye on pace. You still have room to work."
+        }
+        return "Slow the pace. Your limit is getting close."
+    }
+
+    private func requestCount(from usage: AccountUsageSnapshot?) -> String {
+        if let totalThreads = usage?.totalThreads {
+            return formatPlainCount(totalThreads)
+        }
+        return formatPlainCount(usage?.totalSkillUses)
+    }
+
+    private func streakText(_ usage: AccountUsageSnapshot?) -> String {
+        guard let days = usage?.currentStreakDays else { return "--" }
+        return "\(days)d"
+    }
+
+    private func formatTokenCount(_ value: Int64?) -> String {
+        guard let value else { return "--" }
+
+        let number = Double(value)
+        if number >= 1_000_000_000 {
+            return String(format: "%.2fB", number / 1_000_000_000)
+        }
+        if number >= 1_000_000 {
+            return String(format: "%.1fM", number / 1_000_000)
+        }
+        if number >= 1_000 {
+            return String(format: "%.1fK", number / 1_000)
+        }
+        return "\(value)"
+    }
+
+    private func formatPlainCount(_ value: Int64?) -> String {
+        guard let value else { return "--" }
+        return value.formatted()
+    }
+}
+
+private struct EditorialMeter: View {
+    let percent: Int
+    let height: CGFloat
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(EditorialPalette.empty.opacity(0.75))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2, style: .continuous)
+                            .stroke(EditorialPalette.rule.opacity(0.75), lineWidth: 1)
+                    )
+
+                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                    .fill(EditorialPalette.fill)
+                    .frame(width: proxy.size.width * CGFloat(max(0, min(100, percent))) / 100)
+            }
+        }
+        .frame(height: height)
+        .clipped()
+    }
+}
+
+private struct EditorialVerticalRule: View {
+    var body: some View {
+        Rectangle()
+            .fill(EditorialPalette.rule.opacity(0.75))
+            .frame(width: 1)
+    }
+}
+
+private struct EditorialWidgetBackground: View {
+    var body: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .fill(EditorialPalette.paper)
+
+            LinearGradient(
+                colors: [
+                    EditorialPalette.paperLight.opacity(0.80),
+                    EditorialPalette.paper.opacity(0.35),
+                    EditorialPalette.fill.opacity(0.14)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
+
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(EditorialPalette.rule.opacity(0.52), lineWidth: 1)
+        }
+    }
+}
+
 private extension LimitWindowSnapshot {
     var resetClockText: String {
         guard let resetsAt else { return "--" }
@@ -512,6 +923,18 @@ private extension LimitWindowSnapshot {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: resetsAt)
+    }
+
+    var resetCountdownText: String {
+        guard let resetsAt else { return "--" }
+        let seconds = max(0, Int(resetsAt.timeIntervalSince(Date())))
+        let hours = seconds / 3_600
+        let minutes = (seconds % 3_600) / 60
+
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(minutes)m"
     }
 }
 
@@ -534,6 +957,48 @@ struct CodexLimitWidget: Widget {
         .configurationDisplayName("Codex Limit Widget")
         .description("Shows remaining 5-hour and weekly Codex limits.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
+        .contentMarginsDisabled()
+    }
+}
+
+struct CodexLimitEditorialSmallWidget: Widget {
+    let kind = "Codex Limit Editorial Small"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
+            EditorialLimitWidgetEntryView(entry: entry, variant: .small)
+        }
+        .configurationDisplayName("Codex Limit Editorial Small")
+        .description("Shows Codex limits in a warm editorial style.")
+        .supportedFamilies([.systemSmall])
+        .contentMarginsDisabled()
+    }
+}
+
+struct CodexLimitEditorialMediumWidget: Widget {
+    let kind = "Codex Limit Editorial Medium"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
+            EditorialLimitWidgetEntryView(entry: entry, variant: .medium)
+        }
+        .configurationDisplayName("Codex Limit Editorial Medium")
+        .description("Shows Codex limits in a warm editorial style.")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
+    }
+}
+
+struct CodexLimitEditorialLargeWidget: Widget {
+    let kind = "Codex Limit Editorial Large"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: CodexLimitProvider()) { entry in
+            EditorialLimitWidgetEntryView(entry: entry, variant: .large)
+        }
+        .configurationDisplayName("Codex Limit Editorial Large")
+        .description("Shows Codex limits in a warm editorial style.")
+        .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()
     }
 }

@@ -30,7 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.0.9" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.0.10" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release adds three new editorial-style widgets."
+              echo
+              echo "- Adds separate small, medium, and large warm paper widgets with serif typography."
+              echo "- Keeps the same Codex limit data source and refresh behavior as the existing widget."
+              echo "- Shows remaining 5-hour limit, weekly limit, reset countdown, and usage stats in the new style."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.0.10-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.0.9" ]; then
             {
               echo "## Release Notes"
               echo

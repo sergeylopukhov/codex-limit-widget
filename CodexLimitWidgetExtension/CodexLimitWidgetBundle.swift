@@ -5,5 +5,8 @@ import SwiftUI
 struct CodexLimitWidgetBundle: WidgetBundle {
     var body: some Widget {
         CodexLimitWidget()
+        CodexLimitEditorialSmallWidget()
+        CodexLimitEditorialMediumWidget()
+        CodexLimitEditorialLargeWidget()
     }
 }

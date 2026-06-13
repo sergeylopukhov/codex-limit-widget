@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="Release"
-VERSION="1.0.9"
+VERSION="1.0.10"
 APP_NAME="Codex Limit Widget.app"
 BUILT_APP="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/$APP_NAME"
 BUILT_APPEX="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/CodexLimitWidgetExtension.appex"
