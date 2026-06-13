@@ -145,6 +145,7 @@ enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
 
 enum LimitStore {
     static let filename = "codex-limit-snapshot.json"
+    private static let defaultsKey = "codex-limit-snapshot-data"
 
     static func read() -> LimitSnapshot? {
         for url in storageURLs(filename: filename) {
@@ -155,13 +156,15 @@ enum LimitStore {
                 continue
             }
         }
+        if let data = sharedDefaults()?.data(forKey: defaultsKey) {
+            return try? JSONDecoder.codexLimitDecoder.decode(LimitSnapshot.self, from: data)
+        }
         return nil
     }
 
     static func write(_ snapshot: LimitSnapshot) throws {
         let data = try JSONEncoder.codexLimitEncoder.encode(snapshot)
         let urls = storageURLs(filename: filename)
-        guard !urls.isEmpty else { throw LimitStoreError.unavailableContainer }
 
         var lastError: Error?
         var didWrite = false
@@ -175,8 +178,17 @@ enum LimitStore {
             }
         }
 
+        if let defaults = sharedDefaults() {
+            defaults.set(data, forKey: defaultsKey)
+            defaults.synchronize()
+            didWrite = true
+        }
+
         if !didWrite, let lastError {
             throw lastError
+        }
+        if !didWrite {
+            throw LimitStoreError.unavailableStorage
         }
     }
 
@@ -214,6 +226,7 @@ enum LimitStore {
 
 enum LimitPreferencesStore {
     static let filename = "codex-limit-settings.json"
+    private static let defaultsKey = "codex-limit-settings-data"
 
     static func read() -> LimitPreferences {
         for url in LimitStore.storageURLs(filename: filename) {
@@ -224,13 +237,16 @@ enum LimitPreferencesStore {
                 continue
             }
         }
+        if let data = sharedDefaults()?.data(forKey: defaultsKey),
+           let preferences = try? JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data) {
+            return preferences
+        }
         return .default
     }
 
     static func write(_ preferences: LimitPreferences) throws {
         let data = try JSONEncoder.codexLimitEncoder.encode(preferences)
         let urls = LimitStore.storageURLs(filename: filename)
-        guard !urls.isEmpty else { throw LimitStoreError.unavailableContainer }
 
         var lastError: Error?
         var didWrite = false
@@ -244,14 +260,27 @@ enum LimitPreferencesStore {
             }
         }
 
+        if let defaults = sharedDefaults() {
+            defaults.set(data, forKey: defaultsKey)
+            defaults.synchronize()
+            didWrite = true
+        }
+
         if !didWrite, let lastError {
             throw lastError
+        }
+        if !didWrite {
+            throw LimitStoreError.unavailableStorage
         }
     }
 }
 
 enum LimitStoreError: Error {
-    case unavailableContainer
+    case unavailableStorage
+}
+
+private func sharedDefaults() -> UserDefaults? {
+    UserDefaults(suiteName: appGroupIdentifier)
 }
 
 extension JSONDecoder {

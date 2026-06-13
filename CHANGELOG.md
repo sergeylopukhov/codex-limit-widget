@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- Added an App Group `UserDefaults` fallback for cached snapshots and widget settings so WidgetKit can still read data when file-based App Group reads return empty.
+
 ## 1.0.6
 
 - Fixed widget refresh visibility by showing the last successful snapshot update time directly on the widget.
