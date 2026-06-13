@@ -78,6 +78,7 @@ struct LimitPreferences: Codable, Equatable {
     var showsMenuBarItem = true
     var menuBarMode = MenuBarMode.detailed
     var compactMenuBarMetric = MenuBarCompactMetric.fiveHour
+    var menuWindowDesign = MenuWindowDesign.terminal
 
     static let `default` = LimitPreferences()
 
@@ -90,6 +91,7 @@ struct LimitPreferences: Codable, Equatable {
         case showsMenuBarItem
         case menuBarMode
         case compactMenuBarMetric
+        case menuWindowDesign
     }
 
     init() {}
@@ -113,6 +115,7 @@ struct LimitPreferences: Codable, Equatable {
         showsMenuBarItem = try container.decodeIfPresent(Bool.self, forKey: .showsMenuBarItem) ?? true
         menuBarMode = (try? container.decodeIfPresent(MenuBarMode.self, forKey: .menuBarMode)) ?? .detailed
         compactMenuBarMetric = try container.decodeIfPresent(MenuBarCompactMetric.self, forKey: .compactMenuBarMetric) ?? .fiveHour
+        menuWindowDesign = (try? container.decodeIfPresent(MenuWindowDesign.self, forKey: .menuWindowDesign)) ?? .terminal
     }
 }
 
@@ -148,6 +151,22 @@ enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
             return "5 hours"
         case .weekly:
             return "Weekly"
+        }
+    }
+}
+
+enum MenuWindowDesign: String, Codable, CaseIterable, Identifiable {
+    case terminal
+    case editorial
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .terminal:
+            return "Dark"
+        case .editorial:
+            return "Beige"
         }
     }
 }
