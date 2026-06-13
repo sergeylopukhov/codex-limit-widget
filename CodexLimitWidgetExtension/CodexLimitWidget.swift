@@ -689,9 +689,10 @@ private struct EditorialLimitWidgetView: View {
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
         let metric = snapshot.fiveHour
-        let leftWidth = min(290, max(250, size.width * 0.40))
+        let contentWidth = max(0, size.width - padding.leading - padding.trailing)
+        let leftWidth = min(176, max(146, contentWidth * 0.50))
 
-        return VStack(alignment: .leading, spacing: 15) {
+        return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top) {
                 Text("Codex Limit")
                     .font(.system(size: 31, weight: .regular, design: .serif))
@@ -712,7 +713,7 @@ private struct EditorialLimitWidgetView: View {
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .top, spacing: 22) {
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -8) {
                     Text("\(metric.leftPercent)%")
                         .font(.system(size: 104, weight: .regular, design: .serif))
@@ -727,31 +728,32 @@ private struct EditorialLimitWidgetView: View {
                         .minimumScaleFactor(0.65)
                 }
                 .frame(width: leftWidth, alignment: .leading)
-                .layoutPriority(2)
+                .layoutPriority(1)
 
                 EditorialVerticalRule()
-                    .frame(height: 112)
+                    .frame(height: 106)
 
-                VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 8) {
                     Text(editorialMessage(for: metric.leftPercent))
-                        .font(.system(size: 20, weight: .regular, design: .serif))
+                        .font(.system(size: 15, weight: .regular, design: .serif))
                         .italic()
-                        .lineLimit(3)
-                        .minimumScaleFactor(0.76)
+                        .lineLimit(4)
+                        .minimumScaleFactor(0.82)
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
 
                     if preferences.widgetShowsLastUpdated {
                         Text("Updated \(snapshot.updatedClockText)")
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.system(size: 11, weight: .medium))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                     }
                 }
                 .foregroundStyle(EditorialPalette.mutedInk)
-                .minimumScaleFactor(0.72)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .layoutPriority(1)
+                .layoutPriority(2)
             }
+            .frame(width: contentWidth, alignment: .leading)
 
             weeklyMeter(snapshot.weekly.leftPercent, height: 12, labelSize: 12)
 
