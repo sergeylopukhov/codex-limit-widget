@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8
+
+- Fixed empty widgets in ad-hoc builds by writing the cached snapshot and settings to the WidgetKit extension support container as a local fallback.
+
 ## 1.0.7
 
 - Added an App Group `UserDefaults` fallback for cached snapshots and widget settings so WidgetKit can still read data when file-based App Group reads return empty.

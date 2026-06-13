@@ -207,6 +207,12 @@ enum LimitStore {
             )
         }
 
+        urls.append(
+            FileManager.default.homeDirectoryForCurrentUser
+                .appendingPathComponent("Library/Containers/com.sergeylopukhov.CodexLimitWidget.WidgetExtension/Data/Library/Application Support/CodexLimitWidget", isDirectory: true)
+                .appendingPathComponent(filename)
+        )
+
         return uniqueURLs(urls)
     }
 
