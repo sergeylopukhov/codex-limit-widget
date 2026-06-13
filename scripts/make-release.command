@@ -6,6 +6,7 @@ CONFIGURATION="Release"
 VERSION="1.0.9"
 APP_NAME="Codex Limit Widget.app"
 BUILT_APP="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/$APP_NAME"
+BUILT_APPEX="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/CodexLimitWidgetExtension.appex"
 RELEASE_DIR="$PROJECT_DIR/release/CodexLimitWidget-$VERSION"
 ZIP_PATH="$PROJECT_DIR/release/CodexLimitWidget-$VERSION-macOS.zip"
 DMG_STAGING_DIR="$PROJECT_DIR/release/CodexLimitWidget-$VERSION-dmg"
@@ -159,7 +160,7 @@ COPYFILE_DISABLE=1 hdiutil convert "$DMG_TEMP_PATH" \
 
 COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent "$RELEASE_DIR" "$ZIP_PATH"
 codesign --verify --deep --strict --verbose=2 "$RELEASE_DIR/$APP_NAME"
-rm -rf "$DMG_STAGING_DIR" "$DMG_TEMP_PATH"
+rm -rf "$DMG_STAGING_DIR" "$DMG_TEMP_PATH" "$RELEASE_DIR" "$BUILT_APP" "$BUILT_APPEX"
 
 echo "$DMG_PATH"
 echo "$ZIP_PATH"
