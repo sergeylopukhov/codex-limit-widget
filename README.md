@@ -26,13 +26,21 @@ The app runs as a menu bar/background app and does not stay in the Dock.
 
 ## Uninstall
 
-Quit Codex Limit Widget, then delete:
+Quit Codex Limit Widget and delete the app from Applications:
 
 ```text
 /Applications/Codex Limit Widget.app
 ```
 
-If the widget still appears in the widget gallery after deleting the app, restart your Mac. macOS can keep WidgetKit extensions in its local cache after the app is removed.
+Also eject the release DMG if it is still mounted.
+
+If the widget still appears in the widget gallery after deleting the app and restarting your Mac, another local copy of the app or widget extension is still registered. Search for and delete every remaining copy:
+
+```sh
+mdfind 'kMDItemFSName == "Codex Limit Widget.app" || kMDItemFSName == "CodexLimitWidgetExtension.appex"'
+```
+
+After removing the paths printed by that command, restart your Mac again. macOS can keep WidgetKit extensions in its local cache while any copy of the app or `.appex` still exists on disk.
 
 ### Requirements
 
