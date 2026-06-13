@@ -101,6 +101,7 @@ struct LimitPreferences: Codable, Equatable {
         preferences.widgetShowsFiveHour = true
         preferences.widgetShowsWeekly = true
         preferences.widgetShowsResetTimes = true
+        preferences.widgetShowsLastUpdated = true
         preferences.widgetShowsStaleWarning = true
         return preferences
     }
