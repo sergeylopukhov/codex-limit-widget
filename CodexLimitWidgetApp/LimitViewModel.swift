@@ -38,7 +38,10 @@ final class LimitViewModel: ObservableObject {
         defer { isRefreshing = false }
 
         do {
-            let fresh = try await client.fetch()
+            var fresh = try await client.fetch()
+            if fresh.usage == nil {
+                fresh.usage = snapshot?.usage
+            }
             snapshot = fresh
             try? LimitStore.write(fresh)
             reloadWidgets()
