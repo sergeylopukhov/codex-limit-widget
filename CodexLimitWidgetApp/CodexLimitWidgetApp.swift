@@ -185,7 +185,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     private func showPopover() {
         guard let button = statusItem?.button else { return }
 
-        let size = NSSize(width: 286, height: 244)
+        let size = NSSize(width: 286, height: 272)
         let activePopover: NSPopover
 
         if let popover {

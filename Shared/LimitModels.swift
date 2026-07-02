@@ -54,6 +54,18 @@ struct LimitWindowSnapshot: Codable, Equatable {
         formatter.dateFormat = Calendar.current.isDateInToday(resetsAt) ? "HH:mm" : "MMM d, HH:mm"
         return formatter.string(from: resetsAt)
     }
+
+    var resetDateTimeText: String {
+        guard let resetsAt else { return "reset unknown" }
+
+        let calendar = Calendar.current
+        let currentYear = calendar.component(.year, from: Date())
+        let resetYear = calendar.component(.year, from: resetsAt)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = resetYear == currentYear ? "MMM d, HH:mm" : "MMM d, yyyy, HH:mm"
+        return formatter.string(from: resetsAt)
+    }
 }
 
 struct AccountUsageSnapshot: Codable, Equatable {

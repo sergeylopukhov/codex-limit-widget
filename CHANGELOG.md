@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.5
+
+- Added a dedicated weekly reset date and time line to the menu bar popover.
+- Increased the popover height so the weekly reset line stays visible above Settings.
+
+## 1.1.4
+
+- Preserved usage stats between refreshes when Codex rate-limit data updates but usage details are temporarily unavailable.
+
 ## 1.1.3
 
 - Consolidated WidgetKit copy around one widget: `Codex Limit Widget`, available in Small, Medium, and Large sizes.

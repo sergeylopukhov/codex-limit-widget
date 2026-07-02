@@ -89,6 +89,10 @@ private struct TerminalSnapshotDetailView: View {
             if let snapshot {
                 LimitGaugeView(window: snapshot.fiveHour, compact: true)
                 LimitGaugeView(window: snapshot.weekly, compact: true)
+                Text("Weekly reset: \(snapshot.weekly.resetDateTimeText)")
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(dimText)
+                    .lineLimit(1)
 
                 VStack(alignment: .leading, spacing: 3) {
                     if let planType = snapshot.planType {
@@ -194,6 +198,8 @@ private struct EditorialSnapshotDetailView: View {
                     editorialCompactStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
                 }
 
+                editorialWeeklyReset(snapshot.weekly.resetDateTimeText)
+
                 if snapshot.isStale {
                     Text("Data is older than 5 minutes")
                         .font(.system(size: 10, weight: .semibold))
@@ -238,6 +244,22 @@ private struct EditorialSnapshotDetailView: View {
                 .foregroundStyle(MenuWindowVisuals.editorialInk)
                 .lineLimit(1)
                 .minimumScaleFactor(0.68)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func editorialWeeklyReset(_ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("WEEKLY RESET")
+                .font(.system(size: 8.5, weight: .semibold))
+                .foregroundStyle(MenuWindowVisuals.editorialMutedInk)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: 13, weight: .regular, design: .serif))
+                .foregroundStyle(MenuWindowVisuals.editorialInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
