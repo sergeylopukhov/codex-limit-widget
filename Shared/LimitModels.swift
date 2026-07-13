@@ -4,8 +4,10 @@ let appGroupIdentifier = "group.com.sergeylopukhov.codexlimitwidget"
 let widgetKindIdentifier = "Codex Limit Widget"
 
 struct LimitSnapshot: Codable, Equatable {
-    var fiveHour: LimitWindowSnapshot
-    var weekly: LimitWindowSnapshot
+    // Some Codex plans no longer return a 5-hour window. Keep the window
+    // optional so the weekly limit can still be shown and refreshed.
+    var fiveHour: LimitWindowSnapshot?
+    var weekly: LimitWindowSnapshot?
     var planType: String?
     var usage: AccountUsageSnapshot?
     var updatedAt: Date
@@ -41,6 +43,13 @@ struct LimitWindowSnapshot: Codable, Equatable {
     var usedPercent: Int
     var windowDurationMins: Int?
     var resetsAt: Date?
+
+    static let unavailable = LimitWindowSnapshot(
+        label: "Limit",
+        usedPercent: 100,
+        windowDurationMins: nil,
+        resetsAt: nil
+    )
 
     var leftPercent: Int {
         max(0, min(100, 100 - usedPercent))

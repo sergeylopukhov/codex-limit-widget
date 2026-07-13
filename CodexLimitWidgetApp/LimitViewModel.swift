@@ -69,7 +69,14 @@ final class LimitViewModel: ObservableObject {
 
         switch preferences.menuBarMode {
         case .detailed:
-            return "5H \(snapshot.fiveHour.leftPercent)% 7D \(snapshot.weekly.leftPercent)%"
+            var parts: [String] = []
+            if let fiveHour = snapshot.fiveHour {
+                parts.append("5H \(fiveHour.leftPercent)%")
+            }
+            if let weekly = snapshot.weekly {
+                parts.append("7D \(weekly.leftPercent)%")
+            }
+            return parts.isEmpty ? "Codex --" : parts.joined(separator: " ")
         case .percentOnly:
             return "\(compactMenuBarPercent)%"
         }
@@ -80,9 +87,9 @@ final class LimitViewModel: ObservableObject {
 
         switch preferences.compactMenuBarMetric {
         case .fiveHour:
-            return snapshot.fiveHour.leftPercent
+            return (snapshot.fiveHour ?? snapshot.weekly)?.leftPercent ?? 0
         case .weekly:
-            return snapshot.weekly.leftPercent
+            return (snapshot.weekly ?? snapshot.fiveHour)?.leftPercent ?? 0
         }
     }
 

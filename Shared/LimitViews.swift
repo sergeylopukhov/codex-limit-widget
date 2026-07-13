@@ -87,12 +87,16 @@ private struct TerminalSnapshotDetailView: View {
             TerminalPopupDivider(color: mutedAccent)
 
             if let snapshot {
-                LimitGaugeView(window: snapshot.fiveHour, compact: true)
-                LimitGaugeView(window: snapshot.weekly, compact: true)
-                Text("Weekly reset: \(snapshot.weekly.resetDateTimeText)")
-                    .font(.system(size: 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(dimText)
-                    .lineLimit(1)
+                if let fiveHour = snapshot.fiveHour {
+                    LimitGaugeView(window: fiveHour, compact: true)
+                }
+                if let weekly = snapshot.weekly {
+                    LimitGaugeView(window: weekly, compact: true)
+                    Text("Weekly reset: \(weekly.resetDateTimeText)")
+                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                        .foregroundStyle(dimText)
+                        .lineLimit(1)
+                }
 
                 VStack(alignment: .leading, spacing: 3) {
                     if let planType = snapshot.planType {
@@ -163,10 +167,12 @@ private struct EditorialSnapshotDetailView: View {
 
             EditorialPopupDivider()
 
-            if let snapshot {
+            if let snapshot, let metric = snapshot.fiveHour ?? snapshot.weekly {
+                let metricLabel = snapshot.fiveHour == nil ? "WEEK" : "5 HOURS"
+                let metricResetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
                 HStack(alignment: .top, spacing: 12) {
                     VStack(alignment: .leading, spacing: -5) {
-                        Text("\(snapshot.fiveHour.leftPercent)%")
+                        Text("\(metric.leftPercent)%")
                             .font(.system(size: 50, weight: .regular, design: .serif))
                             .foregroundStyle(MenuWindowVisuals.editorialInk)
                             .lineLimit(1)
@@ -183,22 +189,28 @@ private struct EditorialSnapshotDetailView: View {
                     Spacer(minLength: 4)
 
                     VStack(alignment: .trailing, spacing: 4) {
-                        editorialCompactStat("5H RESET", snapshot.fiveHour.resetText)
+                        editorialCompactStat(metricResetLabel, metric.resetText)
                         editorialCompactStat("PLAN", (snapshot.planType ?? "--").uppercased())
                     }
                     .padding(.top, 5)
                 }
 
-                EditorialPopupMeter(title: "5 HOURS", percent: snapshot.fiveHour.leftPercent)
-                EditorialPopupMeter(title: "WEEK", percent: snapshot.weekly.leftPercent)
-
-                HStack(spacing: 10) {
-                    editorialCompactStat("USED", "\(snapshot.fiveHour.usedPercent)%")
-                    EditorialPopupVerticalRule()
-                    editorialCompactStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
+                EditorialPopupMeter(title: metricLabel, percent: metric.leftPercent)
+                if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
+                    EditorialPopupMeter(title: "WEEK", percent: weekly.leftPercent)
                 }
 
-                editorialWeeklyReset(snapshot.weekly.resetDateTimeText)
+                HStack(spacing: 10) {
+                    editorialCompactStat("USED", "\(metric.usedPercent)%")
+                    if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
+                        EditorialPopupVerticalRule()
+                        editorialCompactStat("WEEKLY", "\(weekly.leftPercent)%")
+                    }
+                }
+
+                if let weekly = snapshot.weekly {
+                    editorialWeeklyReset(weekly.resetDateTimeText)
+                }
 
                 if snapshot.isStale {
                     Text("Data is older than 5 minutes")

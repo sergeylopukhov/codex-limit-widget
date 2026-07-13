@@ -127,11 +127,11 @@ private struct TerminalLimitWidgetView: View {
 
     private var activeMetric: TerminalMetric? {
         guard let snapshot else { return nil }
-        if preferences.widgetShowsFiveHour {
-            return TerminalMetric(id: "5H", title: "5-hour quota", window: snapshot.fiveHour)
+        if preferences.widgetShowsFiveHour, let fiveHour = snapshot.fiveHour {
+            return TerminalMetric(id: "5H", title: "5-hour quota", window: fiveHour)
         }
-        if preferences.widgetShowsWeekly {
-            return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: snapshot.weekly)
+        if preferences.widgetShowsWeekly, let weekly = snapshot.weekly {
+            return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: weekly)
         }
         return nil
     }
@@ -167,7 +167,7 @@ private struct TerminalLimitWidgetView: View {
                         .minimumScaleFactor(0.6)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
-                    Text("5H REMAINING")
+                    Text(metric.remainingLabel)
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
@@ -194,16 +194,14 @@ private struct TerminalLimitWidgetView: View {
                 }
             }
 
-            HStack {
-                if preferences.widgetShowsWeekly {
+            if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
+                HStack {
                     terminalLine("WEEKLY LIMIT", color: dimText, size: 11)
                     Spacer()
-                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 11)
+                    terminalLine("\(weekly.leftPercent)%", color: accent, size: 11)
                 }
-            }
 
-            if preferences.widgetShowsWeekly {
-                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, height: 12)
+                TerminalMeter(percent: weekly.leftPercent, color: accent, height: 12)
             }
         }
     }
@@ -227,22 +225,22 @@ private struct TerminalLimitWidgetView: View {
                 .padding(.top, 8)
             }
 
-            Text("5H REMAINING")
+            Text(metric.remainingLabel)
                 .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
 
             Spacer(minLength: 4)
 
-            if preferences.widgetShowsWeekly {
+            if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
                 HStack {
                     terminalLine("WEEKLY LIMIT", color: dimText, size: 9.5)
                     Spacer(minLength: 6)
-                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 9.5)
+                    terminalLine("\(weekly.leftPercent)%", color: accent, size: 9.5)
                 }
 
                 Spacer(minLength: 3)
 
-                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 12, height: 10)
+                TerminalMeter(percent: weekly.leftPercent, color: accent, blockCount: 12, height: 10)
             }
 
             Spacer(minLength: 4)
@@ -274,7 +272,7 @@ private struct TerminalLimitWidgetView: View {
                         .frame(width: percentColumnWidth, alignment: .leading)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
-                    Text("5H REMAINING")
+                    Text(metric.remainingLabel)
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                         .lineLimit(1)
@@ -307,15 +305,15 @@ private struct TerminalLimitWidgetView: View {
             TerminalDivider(color: mutedAccent)
             fixedGap(8)
 
-            if preferences.widgetShowsWeekly {
+            if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
                 HStack {
                     terminalLine("WEEKLY LIMIT", color: dimText, size: 12)
                     Spacer(minLength: 8)
-                    terminalLine("\(snapshot.weekly.leftPercent)%", color: accent, size: 12)
+                    terminalLine("\(weekly.leftPercent)%", color: accent, size: 12)
                 }
                 .frame(width: contentWidth, alignment: .leading)
                 fixedGap(5)
-                TerminalMeter(percent: snapshot.weekly.leftPercent, color: accent, blockCount: 24)
+                TerminalMeter(percent: weekly.leftPercent, color: accent, blockCount: 24)
                     .frame(width: contentWidth)
             }
 
@@ -351,13 +349,13 @@ private struct TerminalLimitWidgetView: View {
         guard let snapshot else { return nil }
 
         if id != "5H" {
-            guard preferences.widgetShowsFiveHour else { return nil }
-            return TerminalMetric(id: "5H", title: "5-hour quota", window: snapshot.fiveHour)
+            guard preferences.widgetShowsFiveHour, let fiveHour = snapshot.fiveHour else { return nil }
+            return TerminalMetric(id: "5H", title: "5-hour quota", window: fiveHour)
         }
 
         if id != "WEEKLY" {
-            guard preferences.widgetShowsWeekly else { return nil }
-            return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: snapshot.weekly)
+            guard preferences.widgetShowsWeekly, let weekly = snapshot.weekly else { return nil }
+            return TerminalMetric(id: "WEEKLY", title: "weekly quota", window: weekly)
         }
 
         return nil
@@ -442,6 +440,10 @@ private struct TerminalMetric {
     let id: String
     let title: String
     let window: LimitWindowSnapshot
+
+    var remainingLabel: String {
+        id == "5H" ? "5H REMAINING" : "WEEKLY REMAINING"
+    }
 }
 
 private struct TerminalMeter: View {
@@ -564,7 +566,8 @@ private struct EditorialLimitWidgetView: View {
 
     private func small(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding: CGFloat = 16
-        let metric = snapshot.fiveHour
+        let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
+        let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
 
         return VStack(alignment: .leading, spacing: 7) {
             HStack(alignment: .firstTextBaseline) {
@@ -576,7 +579,7 @@ private struct EditorialLimitWidgetView: View {
 
                 Spacer(minLength: 8)
 
-                Text("5H \(metric.resetClockText)")
+                Text("\(metricPrefix) \(metric.resetClockText)")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -597,7 +600,9 @@ private struct EditorialLimitWidgetView: View {
                     .minimumScaleFactor(0.7)
             }
 
-            weeklyMeter(snapshot.weekly.leftPercent, height: 8, labelSize: 9)
+            if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                weeklyMeter(weekly.leftPercent, height: 8, labelSize: 9)
+            }
 
             HStack(spacing: 10) {
                 editorialStat("USED", "\(metric.usedPercent)%")
@@ -612,7 +617,8 @@ private struct EditorialLimitWidgetView: View {
 
     private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 8, leading: 20, bottom: 7, trailing: 20)
-        let metric = snapshot.fiveHour
+        let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
+        let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
         let leftWidth = min(118, max(104, size.width * 0.34))
 
         return VStack(alignment: .leading, spacing: 4) {
@@ -626,7 +632,7 @@ private struct EditorialLimitWidgetView: View {
                 Spacer(minLength: 12)
 
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text("5H RESET")
+                    Text("\(metricPrefix) RESET")
                         .font(.system(size: 9, weight: .semibold))
                     Text(metric.resetClockText)
                         .font(.system(size: 13, weight: .regular, design: .serif))
@@ -668,12 +674,16 @@ private struct EditorialLimitWidgetView: View {
             }
             .frame(height: 56)
 
-            weeklyMeter(snapshot.weekly.leftPercent, height: 7, labelSize: 7.8)
+            if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                weeklyMeter(weekly.leftPercent, height: 7, labelSize: 7.8)
+            }
 
             HStack(spacing: 16) {
                 editorialStat("USED", "\(metric.usedPercent)%")
-                EditorialVerticalRule()
-                editorialStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
+                if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                    EditorialVerticalRule()
+                    editorialStat("WEEKLY", "\(weekly.leftPercent)%")
+                }
                 EditorialVerticalRule()
                 editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
             }
@@ -684,7 +694,8 @@ private struct EditorialLimitWidgetView: View {
 
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
-        let metric = snapshot.fiveHour
+        let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
+        let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
         let contentWidth = max(0, size.width - padding.leading - padding.trailing)
         let leftWidth = min(176, max(146, contentWidth * 0.50))
 
@@ -699,7 +710,7 @@ private struct EditorialLimitWidgetView: View {
                 Spacer(minLength: 16)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("5H RESET")
+                    Text("\(metricPrefix) RESET")
                         .font(.system(size: 13, weight: .semibold))
                     Text(metric.resetClockText)
                         .font(.system(size: 22, weight: .regular, design: .serif))
@@ -745,12 +756,16 @@ private struct EditorialLimitWidgetView: View {
             }
             .frame(width: contentWidth, alignment: .leading)
 
-            weeklyMeter(snapshot.weekly.leftPercent, height: 12, labelSize: 12)
+            if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                weeklyMeter(weekly.leftPercent, height: 12, labelSize: 12)
+            }
 
             HStack(spacing: 18) {
                 editorialStat("USED", "\(metric.usedPercent)%")
-                EditorialVerticalRule()
-                editorialStat("WEEKLY", "\(snapshot.weekly.leftPercent)%")
+                if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                    EditorialVerticalRule()
+                    editorialStat("WEEKLY", "\(weekly.leftPercent)%")
+                }
                 EditorialVerticalRule()
                 editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens))
                 EditorialVerticalRule()

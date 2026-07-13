@@ -127,7 +127,7 @@ enum CodexRateLimitError: LocalizedError {
         case .missingCodexLimit:
             return "The response does not include the codex limit."
         case .invalidWindow:
-            return "The Codex response is missing the 5-hour or weekly window."
+            return "The Codex response does not include an available limit window."
         }
     }
 }
@@ -312,23 +312,27 @@ private struct RateLimitsResult: Decodable {
         guard codex.limitId == nil || codex.limitId == "codex" else {
             throw CodexRateLimitError.missingCodexLimit
         }
-        guard let primary = codex.primary, let secondary = codex.secondary else {
+        guard codex.primary != nil || codex.secondary != nil else {
             throw CodexRateLimitError.invalidWindow
         }
 
         return LimitSnapshot(
-            fiveHour: LimitWindowSnapshot(
-                label: "5 hours",
-                usedPercent: primary.usedPercent,
-                windowDurationMins: primary.windowDurationMins,
-                resetsAt: primary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-            ),
-            weekly: LimitWindowSnapshot(
-                label: "Week",
-                usedPercent: secondary.usedPercent,
-                windowDurationMins: secondary.windowDurationMins,
-                resetsAt: secondary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
-            ),
+            fiveHour: codex.primary.map { primary in
+                LimitWindowSnapshot(
+                    label: "5 hours",
+                    usedPercent: primary.usedPercent,
+                    windowDurationMins: primary.windowDurationMins,
+                    resetsAt: primary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                )
+            },
+            weekly: codex.secondary.map { secondary in
+                LimitWindowSnapshot(
+                    label: "Week",
+                    usedPercent: secondary.usedPercent,
+                    windowDurationMins: secondary.windowDurationMins,
+                    resetsAt: secondary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                )
+            },
             planType: codex.planType,
             usage: usage,
             updatedAt: Date(),

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.6
+
+- Fixed refreshes for accounts where Codex no longer returns a 5-hour limit window.
+- Kept the weekly limit visible in the app and widgets when the 5-hour window is unavailable.
+
 ## 1.1.5
 
 - Added a dedicated weekly reset date and time line to the menu bar popover.
