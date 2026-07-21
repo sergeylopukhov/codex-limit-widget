@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.7
+
+- Fixed weekly-only accounts where the 7-day window is returned as `primary` and was incorrectly labeled as a 5-hour limit.
+- Removed all 5-hour labels and choices from the runtime UI when the account has no 5-hour limit.
+- Filled the empty dark-widget area for weekly-only accounts with weekly usage, progress, and reset details.
+
 ## 1.1.6
 
 - Fixed refreshes for accounts where Codex no longer returns a 5-hour limit window.

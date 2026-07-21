@@ -312,25 +312,34 @@ private struct RateLimitsResult: Decodable {
         guard codex.limitId == nil || codex.limitId == "codex" else {
             throw CodexRateLimitError.missingCodexLimit
         }
-        guard codex.primary != nil || codex.secondary != nil else {
+
+        // A single weekly window can now be returned as `primary`. Classify
+        // windows by their duration instead of assuming primary always means 5h.
+        let windows = [codex.primary, codex.secondary].compactMap { $0 }
+        let fiveHourWindow = windows.first { $0.windowDurationMins == 5 * 60 }
+            ?? (codex.primary?.windowDurationMins == nil ? codex.primary : nil)
+        let weeklyWindow = windows.first { $0.windowDurationMins == 7 * 24 * 60 }
+            ?? (codex.secondary?.windowDurationMins == nil ? codex.secondary : nil)
+
+        guard fiveHourWindow != nil || weeklyWindow != nil else {
             throw CodexRateLimitError.invalidWindow
         }
 
         return LimitSnapshot(
-            fiveHour: codex.primary.map { primary in
+            fiveHour: fiveHourWindow.map { window in
                 LimitWindowSnapshot(
                     label: "5 hours",
-                    usedPercent: primary.usedPercent,
-                    windowDurationMins: primary.windowDurationMins,
-                    resetsAt: primary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                    usedPercent: window.usedPercent,
+                    windowDurationMins: window.windowDurationMins,
+                    resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
                 )
             },
-            weekly: codex.secondary.map { secondary in
+            weekly: weeklyWindow.map { window in
                 LimitWindowSnapshot(
                     label: "Week",
-                    usedPercent: secondary.usedPercent,
-                    windowDurationMins: secondary.windowDurationMins,
-                    resetsAt: secondary.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                    usedPercent: window.usedPercent,
+                    windowDurationMins: window.windowDurationMins,
+                    resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
                 )
             },
             planType: codex.planType,

@@ -179,7 +179,7 @@ private struct TerminalLimitWidgetView: View {
                     if let secondary = secondaryMetric(excluding: metric.id) {
                         statRow(secondary.id, "\(secondary.window.leftPercent)%", size: 12)
                     } else {
-                        statRow("RESET", metric.window.resetClockText, size: 12)
+                        statRow("USED", "\(metric.window.usedPercent)%", size: 12)
                     }
                 }
                 .padding(.top, 2)
@@ -187,7 +187,7 @@ private struct TerminalLimitWidgetView: View {
 
             TerminalDivider(color: mutedAccent)
 
-            if shouldShowStaleWarning(snapshot) {
+            if shouldShowStaleWarning(snapshot), secondaryMetric(excluding: metric.id) != nil {
                 HStack {
                     terminalLine("STALE DATA", color: dimText, size: 11)
                     Spacer()
@@ -201,7 +201,29 @@ private struct TerminalLimitWidgetView: View {
                     terminalLine("\(weekly.leftPercent)%", color: accent, size: 11)
                 }
 
-                TerminalMeter(percent: weekly.leftPercent, color: accent, height: 12)
+                TerminalMeter(percent: weekly.leftPercent, color: accent, blockCount: 24, height: 12)
+            } else {
+                HStack {
+                    terminalLine(metric.remainingLabel, color: dimText, size: 11)
+                    Spacer()
+                    terminalLine("\(metric.window.leftPercent)%", color: accent, size: 11)
+                }
+
+                TerminalMeter(percent: metric.window.leftPercent, color: accent, blockCount: 24, height: 12)
+
+                if shouldShowStaleWarning(snapshot) {
+                    HStack {
+                        terminalLine("STATUS", color: dimText, size: 11)
+                        Spacer()
+                        terminalLine("STALE DATA", color: accent, size: 11)
+                    }
+                } else if preferences.widgetShowsResetTimes {
+                    HStack {
+                        terminalLine("NEXT RESET", color: dimText, size: 11)
+                        Spacer()
+                        terminalLine(metric.window.resetDateTimeText.uppercased(), color: accent, size: 11)
+                    }
+                }
             }
         }
     }
@@ -241,6 +263,8 @@ private struct TerminalLimitWidgetView: View {
                 Spacer(minLength: 3)
 
                 TerminalMeter(percent: weekly.leftPercent, color: accent, blockCount: 12, height: 10)
+            } else {
+                TerminalMeter(percent: metric.window.leftPercent, color: accent, blockCount: 12, height: 10)
             }
 
             Spacer(minLength: 4)
@@ -314,6 +338,16 @@ private struct TerminalLimitWidgetView: View {
                 .frame(width: contentWidth, alignment: .leading)
                 fixedGap(5)
                 TerminalMeter(percent: weekly.leftPercent, color: accent, blockCount: 24)
+                    .frame(width: contentWidth)
+            } else {
+                HStack {
+                    terminalLine(metric.remainingLabel, color: dimText, size: 12)
+                    Spacer(minLength: 8)
+                    terminalLine("\(metric.window.leftPercent)%", color: accent, size: 12)
+                }
+                .frame(width: contentWidth, alignment: .leading)
+                fixedGap(5)
+                TerminalMeter(percent: metric.window.leftPercent, color: accent, blockCount: 24)
                     .frame(width: contentWidth)
             }
 
@@ -444,6 +478,7 @@ private struct TerminalMetric {
     var remainingLabel: String {
         id == "5H" ? "5H REMAINING" : "WEEKLY REMAINING"
     }
+
 }
 
 private struct TerminalMeter: View {

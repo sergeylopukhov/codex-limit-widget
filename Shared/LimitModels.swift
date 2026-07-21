@@ -4,8 +4,8 @@ let appGroupIdentifier = "group.com.sergeylopukhov.codexlimitwidget"
 let widgetKindIdentifier = "Codex Limit Widget"
 
 struct LimitSnapshot: Codable, Equatable {
-    // Some Codex plans no longer return a 5-hour window. Keep the window
-    // optional so the weekly limit can still be shown and refreshed.
+    // Some Codex plans return only a weekly window. Keep both windows optional
+    // so the UI renders only the limits that actually exist for the account.
     var fiveHour: LimitWindowSnapshot?
     var weekly: LimitWindowSnapshot?
     var planType: String?
@@ -18,7 +18,7 @@ struct LimitSnapshot: Codable, Equatable {
     }
 
     static let placeholder = LimitSnapshot(
-        fiveHour: LimitWindowSnapshot(label: "5 hours", usedPercent: 7, windowDurationMins: 300, resetsAt: Date().addingTimeInterval(3600 * 3)),
+        fiveHour: nil,
         weekly: LimitWindowSnapshot(label: "Week", usedPercent: 4, windowDurationMins: 10080, resetsAt: Date().addingTimeInterval(3600 * 24 * 6)),
         planType: "pro",
         usage: AccountUsageSnapshot(

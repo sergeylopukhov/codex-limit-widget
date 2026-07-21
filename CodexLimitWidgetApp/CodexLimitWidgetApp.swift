@@ -469,14 +469,16 @@ struct AppSettingsView: View {
                             .opacity(viewModel.preferences.showsMenuBarItem ? 1 : 0.45)
                         }
 
-                        SettingsRow("Percent source", palette: palette) {
-                            SettingsSegmentedControl(
-                                selection: binding(\.compactMenuBarMetric),
-                                items: MenuBarCompactMetric.allCases.map { SettingsSegmentedItem(value: $0, title: $0.title) },
-                                palette: palette
-                            )
-                            .disabled(!viewModel.preferences.showsMenuBarItem)
-                            .opacity(viewModel.preferences.showsMenuBarItem ? 1 : 0.45)
+                        if viewModel.availableCompactMenuBarMetrics.count > 1 {
+                            SettingsRow("Percent source", palette: palette) {
+                                SettingsSegmentedControl(
+                                    selection: binding(\.compactMenuBarMetric),
+                                    items: viewModel.availableCompactMenuBarMetrics.map { SettingsSegmentedItem(value: $0, title: $0.title) },
+                                    palette: palette
+                                )
+                                .disabled(!viewModel.preferences.showsMenuBarItem)
+                                .opacity(viewModel.preferences.showsMenuBarItem ? 1 : 0.45)
+                            }
                         }
 
                         Text("Widgets keep refreshing while the app is running, even when the menu bar item is hidden.")

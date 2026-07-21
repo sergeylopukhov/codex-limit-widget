@@ -42,6 +42,7 @@ final class LimitViewModel: ObservableObject {
             if fresh.usage == nil {
                 fresh.usage = snapshot?.usage
             }
+            normalizeCompactMenuBarMetric(for: fresh)
             snapshot = fresh
             try? LimitStore.write(fresh)
             reloadWidgets()
@@ -91,6 +92,32 @@ final class LimitViewModel: ObservableObject {
         case .weekly:
             return (snapshot.weekly ?? snapshot.fiveHour)?.leftPercent ?? 0
         }
+    }
+
+    var availableCompactMenuBarMetrics: [MenuBarCompactMetric] {
+        guard let snapshot else { return [] }
+        return availableCompactMenuBarMetrics(for: snapshot)
+    }
+
+    private func availableCompactMenuBarMetrics(for snapshot: LimitSnapshot) -> [MenuBarCompactMetric] {
+        var metrics: [MenuBarCompactMetric] = []
+        if snapshot.fiveHour != nil {
+            metrics.append(.fiveHour)
+        }
+        if snapshot.weekly != nil {
+            metrics.append(.weekly)
+        }
+        return metrics
+    }
+
+    private func normalizeCompactMenuBarMetric(for snapshot: LimitSnapshot) {
+        let availableMetrics = availableCompactMenuBarMetrics(for: snapshot)
+        guard !availableMetrics.contains(preferences.compactMenuBarMetric),
+              let fallbackMetric = availableMetrics.first
+        else { return }
+
+        preferences.compactMenuBarMetric = fallbackMetric
+        try? LimitPreferencesStore.write(preferences)
     }
 
     private func configureLoginItem() {
