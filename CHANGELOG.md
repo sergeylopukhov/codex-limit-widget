@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8
+
+- Added automatic checks for the latest GitHub release at launch and every four hours.
+- Added a visible update indicator in the menu bar, an update banner in the popover, and update status in Settings.
+- Added one-click download and installation with SHA-256, bundle identity, version, and code-signature verification.
+
 ## 1.1.7
 
 - Fixed weekly-only accounts where the 7-day window is returned as `primary` and was incorrectly labeled as a 5-hour limit.

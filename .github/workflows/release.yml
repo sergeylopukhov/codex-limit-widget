@@ -30,7 +30,21 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.1.1" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.1.8" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release makes application updates visible and installable inside Codex Limit Widget."
+              echo
+              echo "- Checks GitHub Releases automatically at launch and every four hours."
+              echo "- Shows an update indicator in the menu bar, a banner in the popover, and update status in Settings."
+              echo "- Downloads and installs updates with SHA-256, bundle identity, version, and code-signature verification."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.1.8-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Future versions can be installed from inside the app."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.1.1" ]; then
             {
               echo "## Release Notes"
               echo

@@ -7,26 +7,31 @@ import Carbon.HIToolbox
 struct CodexLimitWidgetApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var viewModel: LimitViewModel
+    @StateObject private var updateController: AppUpdateController
     @StateObject private var settingsWindowPresenter: SettingsWindowPresenter
     @StateObject private var statusItemController: StatusItemController
 
     @MainActor
     init() {
         let viewModel = LimitViewModel()
+        let updateController = AppUpdateController()
         let settingsWindowPresenter = SettingsWindowPresenter()
         let statusItemController = StatusItemController(
             viewModel: viewModel,
+            updateController: updateController,
             settingsWindowPresenter: settingsWindowPresenter
         )
         _viewModel = StateObject(wrappedValue: viewModel)
+        _updateController = StateObject(wrappedValue: updateController)
         _settingsWindowPresenter = StateObject(wrappedValue: settingsWindowPresenter)
         _statusItemController = StateObject(wrappedValue: statusItemController)
         appDelegate.showSettings = {
-            settingsWindowPresenter.show(viewModel: viewModel)
+            settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
         }
         Task { @MainActor in
+            updateController.start()
             try? await Task.sleep(nanoseconds: 1_000_000_000)
-            settingsWindowPresenter.show(viewModel: viewModel)
+            settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
         }
     }
 
@@ -39,6 +44,7 @@ struct CodexLimitWidgetApp: App {
 
 struct MenuBarContentView: View {
     @ObservedObject var viewModel: LimitViewModel
+    @ObservedObject var updateController: AppUpdateController
     @ObservedObject var settingsWindowPresenter: SettingsWindowPresenter
     var close: () -> Void = {}
 
@@ -57,10 +63,18 @@ struct MenuBarContentView: View {
                 .fill(MenuWindowVisuals.separator(for: design))
                 .frame(height: 1)
 
+            if updateController.isUpdateAvailable {
+                MenuBarUpdateBanner(updateController: updateController, design: design)
+
+                Rectangle()
+                    .fill(MenuWindowVisuals.separator(for: design))
+                    .frame(height: 1)
+            }
+
             Button {
                 close()
                 DispatchQueue.main.async {
-                    settingsWindowPresenter.show(viewModel: viewModel)
+                    settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
                 }
             } label: {
                 Label("Settings", systemImage: "gearshape")
@@ -85,9 +99,46 @@ struct MenuBarContentView: View {
     }
 }
 
+private struct MenuBarUpdateBanner: View {
+    @ObservedObject var updateController: AppUpdateController
+    let design: MenuWindowDesign
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "arrow.down.circle.fill")
+                .font(.system(size: 17, weight: .semibold))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(updateController.menuStatusText ?? "Update available")
+                    .font(MenuWindowVisuals.settingsFont(for: design))
+                    .lineLimit(1)
+                Text("Verified from GitHub Releases")
+                    .font(.system(size: 9, weight: .medium, design: design == .terminal ? .monospaced : .default))
+                    .opacity(0.72)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 4)
+
+            Button(updateController.isBusy ? "Wait" : "Update") {
+                Task { await updateController.installAvailableUpdate() }
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.small)
+            .tint(design == .terminal ? MenuWindowVisuals.terminalAccent : MenuWindowVisuals.editorialFill)
+            .disabled(updateController.isBusy)
+        }
+        .foregroundStyle(MenuWindowVisuals.settingsForeground(for: design))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .accessibilityElement(children: .combine)
+    }
+}
+
 @MainActor
 final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate {
     private let viewModel: LimitViewModel
+    private let updateController: AppUpdateController
     private let settingsWindowPresenter: SettingsWindowPresenter
     private var statusItem: NSStatusItem?
     private var popover: NSPopover?
@@ -95,8 +146,13 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     private var globalEventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
 
-    init(viewModel: LimitViewModel, settingsWindowPresenter: SettingsWindowPresenter) {
+    init(
+        viewModel: LimitViewModel,
+        updateController: AppUpdateController,
+        settingsWindowPresenter: SettingsWindowPresenter
+    ) {
         self.viewModel = viewModel
+        self.updateController = updateController
         self.settingsWindowPresenter = settingsWindowPresenter
         super.init()
 
@@ -117,6 +173,14 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
         viewModel.$isRefreshing
             .sink { [weak self] _ in
                 self?.syncStatusItem()
+            }
+            .store(in: &cancellables)
+
+        updateController.$phase
+            .combineLatest(updateController.$availableRelease)
+            .sink { [weak self] _, _ in
+                self?.updateButton()
+                self?.resizePopoverIfNeeded()
             }
             .store(in: &cancellables)
 
@@ -147,29 +211,48 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
         button.target = self
         button.action = #selector(togglePopover)
         button.sendAction(on: [.leftMouseUp, .rightMouseUp])
-        button.toolTip = "Codex Limit Widget"
+        button.toolTip = updateController.availableRelease.map {
+            "Codex Limit Widget — version \($0.version) available"
+        } ?? "Codex Limit Widget"
         button.setAccessibilityLabel("Codex Limit Widget")
-        button.setAccessibilityValue(viewModel.menuBarTitle)
+        button.setAccessibilityValue(
+            updateController.isUpdateAvailable
+                ? "\(viewModel.menuBarTitle), update available"
+                : viewModel.menuBarTitle
+        )
 
         switch viewModel.preferences.menuBarMode {
         case .percentOnly:
             button.title = ""
             button.attributedTitle = NSAttributedString(string: "")
-            button.image = MenuBarPercentImageRenderer.image(percent: viewModel.compactMenuBarPercent)
+            button.image = MenuBarPercentImageRenderer.image(
+                percent: viewModel.compactMenuBarPercent,
+                hasUpdate: updateController.isUpdateAvailable
+            )
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
-            statusItem?.length = MenuBarPercentImageRenderer.size.width
+            statusItem?.length = MenuBarPercentImageRenderer.size(hasUpdate: updateController.isUpdateAvailable).width
         case .detailed:
             button.image = nil
             button.imageScaling = .scaleProportionallyDown
             button.imagePosition = .noImage
-            button.attributedTitle = NSAttributedString(
+            let title = NSMutableAttributedString(
                 string: viewModel.menuBarTitle,
                 attributes: [
                     .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
                     .foregroundColor: NSColor.controlTextColor
                 ]
             )
+            if updateController.isUpdateAvailable {
+                title.append(NSAttributedString(
+                    string: "  ↑",
+                    attributes: [
+                        .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold),
+                        .foregroundColor: NSColor.systemGreen
+                    ]
+                ))
+            }
+            button.attributedTitle = title
             statusItem?.length = NSStatusItem.variableLength
         }
     }
@@ -185,7 +268,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     private func showPopover() {
         guard let button = statusItem?.button else { return }
 
-        let size = NSSize(width: 286, height: 272)
+        let size = preferredPopoverSize
         let activePopover: NSPopover
 
         if let popover {
@@ -199,6 +282,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
             createdPopover.contentViewController = NSHostingController(
                 rootView: MenuBarContentView(
                     viewModel: viewModel,
+                    updateController: updateController,
                     settingsWindowPresenter: settingsWindowPresenter,
                     close: { [weak self] in self?.closePopover() }
                 )
@@ -213,6 +297,14 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
             preferredEdge: .minY
         )
         installEventMonitors()
+    }
+
+    private var preferredPopoverSize: NSSize {
+        NSSize(width: 286, height: updateController.isUpdateAvailable ? 334 : 272)
+    }
+
+    private func resizePopoverIfNeeded() {
+        popover?.contentSize = preferredPopoverSize
     }
 
     private func closePopover() {
@@ -319,22 +411,25 @@ struct MenuBarPercentMeter: View {
     let percent: Int
 
     var body: some View {
-        Image(nsImage: MenuBarPercentImageRenderer.image(percent: percent))
+        Image(nsImage: MenuBarPercentImageRenderer.image(percent: percent, hasUpdate: false))
             .renderingMode(.original)
             .resizable()
             .frame(
-                width: MenuBarPercentImageRenderer.size.width,
-                height: MenuBarPercentImageRenderer.size.height
+                width: MenuBarPercentImageRenderer.size(hasUpdate: false).width,
+                height: MenuBarPercentImageRenderer.size(hasUpdate: false).height
             )
             .id(percent)
     }
 }
 
 private enum MenuBarPercentImageRenderer {
-    static let size = NSSize(width: 30, height: 18)
+    static func size(hasUpdate: Bool) -> NSSize {
+        NSSize(width: hasUpdate ? 40 : 30, height: 18)
+    }
 
-    static func image(percent: Int) -> NSImage {
+    static func image(percent: Int, hasUpdate: Bool) -> NSImage {
         let clampedPercent = max(0, min(100, percent))
+        let size = size(hasUpdate: hasUpdate)
         let image = NSImage(size: size)
 
         image.lockFocus()
@@ -346,9 +441,10 @@ private enum MenuBarPercentImageRenderer {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
+        let meterWidth: CGFloat = 30
         let text = "\(clampedPercent)%" as NSString
         text.draw(
-            in: NSRect(x: 0, y: 6, width: size.width, height: 10),
+            in: NSRect(x: 0, y: 6, width: meterWidth, height: 10),
             withAttributes: [
                 .font: NSFont.monospacedDigitSystemFont(ofSize: 9.5, weight: .semibold),
                 .foregroundColor: NSColor.white,
@@ -356,7 +452,7 @@ private enum MenuBarPercentImageRenderer {
             ]
         )
 
-        let trackRect = NSRect(x: 1, y: 2.5, width: size.width - 2, height: 2)
+        let trackRect = NSRect(x: 1, y: 2.5, width: meterWidth - 2, height: 2)
         let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.25, yRadius: 1.25)
         NSColor.white.withAlphaComponent(0.28).setFill()
         track.fill()
@@ -370,6 +466,19 @@ private enum MenuBarPercentImageRenderer {
             )
             NSColor.white.setFill()
             fill.fill()
+        }
+
+        if hasUpdate {
+            let updateParagraph = NSMutableParagraphStyle()
+            updateParagraph.alignment = .center
+            ("↑" as NSString).draw(
+                in: NSRect(x: 30, y: 3.5, width: 10, height: 14),
+                withAttributes: [
+                    .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold),
+                    .foregroundColor: NSColor.white,
+                    .paragraphStyle: updateParagraph
+                ]
+            )
         }
 
         image.isTemplate = true
@@ -387,8 +496,8 @@ private final class CustomSettingsWindow: NSWindow {
 final class SettingsWindowPresenter: ObservableObject {
     private var windowController: NSWindowController?
 
-    func show(viewModel: LimitViewModel) {
-        let contentView = AppSettingsView(viewModel: viewModel)
+    func show(viewModel: LimitViewModel, updateController: AppUpdateController) {
+        let contentView = AppSettingsView(viewModel: viewModel, updateController: updateController)
 
         if let window = windowController?.window {
             window.contentViewController = NSHostingController(rootView: contentView)
@@ -398,14 +507,14 @@ final class SettingsWindowPresenter: ObservableObject {
         }
 
         let window = CustomSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 560, height: 440),
+            contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
             styleMask: [.borderless, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Codex Limit Widget Settings"
         window.contentViewController = NSHostingController(rootView: contentView)
-        window.minSize = NSSize(width: 520, height: 410)
+        window.minSize = NSSize(width: 540, height: 460)
         window.backgroundColor = .clear
         window.isOpaque = false
         window.hasShadow = true
@@ -430,6 +539,7 @@ final class SettingsWindowPresenter: ObservableObject {
 
 struct AppSettingsView: View {
     @ObservedObject var viewModel: LimitViewModel
+    @ObservedObject var updateController: AppUpdateController
 
     var body: some View {
         let design = viewModel.preferences.menuWindowDesign
@@ -491,6 +601,56 @@ struct AppSettingsView: View {
                     SettingsRule(palette: palette)
 
                     HStack(alignment: .center, spacing: 18) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            SettingsSectionTitle("Updates", palette: palette)
+                            Text(updateController.settingsStatusText)
+                                .font(palette.noteFont)
+                                .foregroundStyle(updateController.isUpdateAvailable ? palette.accent : palette.mutedText)
+                                .fixedSize(horizontal: false, vertical: true)
+
+                            Text("Installed: v\(updateController.currentVersion)")
+                                .font(palette.noteFont)
+                                .foregroundStyle(palette.mutedText)
+
+                            if let errorMessage = updateController.errorMessage {
+                                Text(errorMessage)
+                                    .font(palette.noteFont)
+                                    .foregroundStyle(Color(red: 0.92, green: 0.33, blue: 0.28))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+
+                            if updateController.isUpdateAvailable {
+                                Button("Open release page") {
+                                    updateController.openReleasePage()
+                                }
+                                .buttonStyle(.plain)
+                                .font(palette.noteFont)
+                                .foregroundStyle(palette.accent)
+                                .underline()
+                            }
+                        }
+
+                        Spacer(minLength: 16)
+
+                        SettingsActionButton(
+                            title: updateActionTitle,
+                            systemImage: updateActionIcon,
+                            isDisabled: updateController.isBusy,
+                            palette: palette
+                        ) {
+                            Task {
+                                if updateController.isUpdateAvailable {
+                                    await updateController.installAvailableUpdate()
+                                } else {
+                                    await updateController.checkForUpdates()
+                                }
+                            }
+                        }
+                    }
+
+                    SettingsRule(palette: palette)
+
+                    HStack(alignment: .center, spacing: 18) {
                         VStack(alignment: .leading, spacing: 4) {
                             SettingsSectionTitle("Auto refresh", palette: palette)
                             Text("Runs every minute while the app is open.")
@@ -516,7 +676,7 @@ struct AppSettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .topLeading)
             }
         }
-        .frame(minWidth: 520, minHeight: 410, alignment: .topLeading)
+        .frame(minWidth: 540, minHeight: 460, alignment: .topLeading)
         .background(SettingsWindowBackground(palette: palette))
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .overlay(
@@ -534,6 +694,23 @@ struct AppSettingsView: View {
                 }
             }
         )
+    }
+
+    private var updateActionTitle: String {
+        switch updateController.phase {
+        case .checking:
+            return "Checking"
+        case .downloading:
+            return "Downloading"
+        case .installing:
+            return "Installing"
+        default:
+            return updateController.isUpdateAvailable ? "Update now" : "Check now"
+        }
+    }
+
+    private var updateActionIcon: String {
+        updateController.isUpdateAvailable ? "arrow.down.circle" : "arrow.clockwise"
     }
 }
 
