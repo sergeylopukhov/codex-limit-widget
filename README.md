@@ -18,23 +18,28 @@
   </p>
 </div>
 
-Codex Limit Widget shows your remaining 5-hour and weekly Codex limits, reset times, plan, and usage stats without keeping the Codex desktop app open. It runs in the menu bar, refreshes in the background, and keeps the macOS widget updated.
+Codex Limit Widget keeps the limit windows returned for your account visible in the macOS menu bar and on the desktop. Weekly-only accounts see weekly data without a stray 5-hour label or empty 5-hour space. Accounts that still have the 5-hour window see both limits. Reset times, plan details, and usage history remain available without keeping Codex Desktop open.
+
+While the app is running, it refreshes the local data once per minute and passes the latest snapshot to WidgetKit.
 
 ## What It Shows
 
-- Remaining 5-hour and weekly limits.
-- Reset time for each limit.
+- Every limit window available to the account: weekly, plus 5-hour when Codex provides it.
+- Reset date and time for each available limit.
 - Current Codex plan.
 - Usage stats: total tokens, peak day, last day, streak, and max turn.
 - Compact or detailed menu bar status.
 - One macOS widget in Small, Medium, and Large sizes.
 - Two designs: Dark and Beige.
+- A visible notice and an `Update now` button when a newer release is available.
 
 ## Install
 
 1. Download the latest `.dmg` from [GitHub Releases](https://github.com/sergeylopukhov/codex-limit-widget/releases/latest).
 2. Open it and drag `Codex Limit Widget.app` to `Applications`.
 3. Launch the app.
+
+Starting with version 1.1.8, later releases can be installed from inside the app.
 
 Requirements:
 
@@ -49,7 +54,7 @@ The widget design is controlled in the app settings. Choose `Dark` or `Beige`; a
 
 ## Menu Bar
 
-The menu bar item can show detailed limits or a compact percent indicator. Click it to open a popover with both limit windows, reset times, freshness, and settings.
+The menu bar item can show detailed limits or a compact percent indicator. Click it to open a popover with the available limit windows, reset times, data freshness, and settings. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
 
 <table>
   <tr>
@@ -102,7 +107,7 @@ The menu bar item can show detailed limits or a compact percent indicator. Click
 
 ## Settings
 
-Use settings to choose the window design, menu bar mode, and percent source.
+Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. The Updates section shows the installed version, the latest check result, and the update action.
 
 <table>
   <tr>
@@ -117,9 +122,17 @@ Use settings to choose the window design, menu bar mode, and percent source.
   </tr>
 </table>
 
+## Updates
+
+A check against the latest public GitHub Release runs at startup and every four hours after that. You can also run a check from Settings at any time.
+
+If a newer version is available, the menu bar, popover, and Settings all show it. Press `Update now` to download the official macOS ZIP. Before installation, verification covers the SHA-256 digest published by GitHub, bundle identifier, version, and code signature. After verification, the copy in `Applications` is replaced and the new version opens.
+
+If the `Applications` folder cannot be changed, use `Open release page` and install the DMG manually.
+
 ## Privacy
 
-Codex Limit Widget reads data from the local Codex CLI session and stores a small local snapshot for widgets. It does not send data to its own server.
+Codex usage and limit data stay on your Mac. The app reads the local Codex CLI session and stores a small snapshot for widgets. Update checks include the installed version number in the request to the public GitHub Releases API; they do not include Codex usage data. The project has no server of its own.
 
 ## Uninstall
 
