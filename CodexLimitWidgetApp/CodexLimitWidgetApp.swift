@@ -9,6 +9,7 @@ struct CodexLimitWidgetApp: App {
     @StateObject private var viewModel: LimitViewModel
     @StateObject private var updateController: AppUpdateController
     @StateObject private var settingsWindowPresenter: SettingsWindowPresenter
+    @StateObject private var releaseNotesWindowPresenter: ReleaseNotesWindowPresenter
     @StateObject private var statusItemController: StatusItemController
 
     @MainActor
@@ -16,6 +17,7 @@ struct CodexLimitWidgetApp: App {
         let viewModel = LimitViewModel()
         let updateController = AppUpdateController()
         let settingsWindowPresenter = SettingsWindowPresenter()
+        let releaseNotesWindowPresenter = ReleaseNotesWindowPresenter()
         let statusItemController = StatusItemController(
             viewModel: viewModel,
             updateController: updateController,
@@ -24,9 +26,13 @@ struct CodexLimitWidgetApp: App {
         _viewModel = StateObject(wrappedValue: viewModel)
         _updateController = StateObject(wrappedValue: updateController)
         _settingsWindowPresenter = StateObject(wrappedValue: settingsWindowPresenter)
+        _releaseNotesWindowPresenter = StateObject(wrappedValue: releaseNotesWindowPresenter)
         _statusItemController = StateObject(wrappedValue: statusItemController)
         appDelegate.showSettings = {
             settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
+        }
+        appDelegate.showInitialWindow = {
+            releaseNotesWindowPresenter.showIfNeeded(viewModel: viewModel, onDismiss: {})
         }
         updateController.start()
     }
@@ -42,10 +48,11 @@ struct MenuBarContentView: View {
     @ObservedObject var viewModel: LimitViewModel
     @ObservedObject var updateController: AppUpdateController
     @ObservedObject var settingsWindowPresenter: SettingsWindowPresenter
+    @Environment(\.colorScheme) private var colorScheme
     var close: () -> Void = {}
 
     var body: some View {
-        let design = viewModel.preferences.menuWindowDesign
+        let design = viewModel.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark)
 
         VStack(spacing: 0) {
             SnapshotDetailView(
@@ -277,6 +284,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
                     settingsWindowPresenter: settingsWindowPresenter,
                     close: { [weak self] in self?.closePopover() }
                 )
+                .environment(\.locale, viewModel.preferences.appLanguage.locale)
             )
             popover = createdPopover
             activePopover = createdPopover
@@ -353,12 +361,15 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var showSettings: (() -> Void)?
+    var showInitialWindow: (() -> Void)?
     private var isSettingsPresentationPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         installAppleEventHandlers()
-        requestSettingsPresentation()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            self?.showInitialWindow?()
+        }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -370,6 +381,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             requestSettingsPresentation()
         }
         return true
+    }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        requestSettingsPresentation()
     }
 
     private func installAppleEventHandlers() {
@@ -386,9 +401,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             forEventClass: AEEventClass(kCoreEventClass),
             andEventID: AEEventID(kAEReopenApplication)
         )
+        eventManager.setEventHandler(
+            self,
+            andSelector: #selector(handleOpenURL(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
     }
 
     @objc private func handleOpenApplicationEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
+        DispatchQueue.main.async { [weak self] in
+            self?.requestSettingsPresentation()
+        }
+    }
+
+    @objc private func handleOpenURL(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         DispatchQueue.main.async { [weak self] in
             self?.requestSettingsPresentation()
         }
@@ -401,8 +428,239 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             guard let self else { return }
             self.isSettingsPresentationPending = false
-            guard !NSApp.windows.contains(where: { $0.isVisible }) else { return }
             self.showSettings?()
+        }
+    }
+}
+
+@MainActor
+final class ReleaseNotesWindowPresenter: ObservableObject {
+    private let lastShownVersionKey = "lastReleaseNotesVersion"
+    private var windowController: NSWindowController?
+
+    @discardableResult
+    func showIfNeeded(viewModel: LimitViewModel, onDismiss: @escaping () -> Void) -> Bool {
+        let version = currentVersionIdentifier
+        let defaults = UserDefaults.standard
+        defer { defaults.set(version, forKey: lastShownVersionKey) }
+
+        guard let lastShownVersion = defaults.string(forKey: lastShownVersionKey),
+              lastShownVersion != version
+        else { return false }
+
+        show(viewModel: viewModel, onDismiss: onDismiss)
+        return true
+    }
+
+    private func show(viewModel: LimitViewModel, onDismiss: @escaping () -> Void) {
+        let window = CustomSettingsWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 560, height: 620),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "What's New"
+        window.contentViewController = NSHostingController(
+            rootView: ReleaseNotesView(
+                viewModel: viewModel,
+                dismiss: { [weak self] in
+                    self?.windowController?.close()
+                    DispatchQueue.main.async(execute: onDismiss)
+                }
+            )
+            .environment(\.locale, viewModel.preferences.appLanguage.locale)
+        )
+        window.minSize = NSSize(width: 560, height: 620)
+        window.maxSize = window.minSize
+        window.backgroundColor = .clear
+        window.isOpaque = false
+        window.hasShadow = true
+        window.isMovableByWindowBackground = true
+        window.level = .floating
+        // The window is positioned on the following AppKit cycle, when the
+        // actual target screen is known. Keep it hidden meanwhile so it never
+        // visibly jumps from AppKit's default position.
+        window.alphaValue = 0
+
+        let controller = NSWindowController(window: window)
+        windowController = controller
+        controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        DispatchQueue.main.async { [weak window] in
+            guard let window else { return }
+            window.contentView?.layoutSubtreeIfNeeded()
+            centerReleaseNotesWindow(window)
+            window.alphaValue = 1
+            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        }
+    }
+
+    private var currentVersionIdentifier: String {
+        let bundle = Bundle.main
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "0"
+        return "\(version) (\(build))"
+    }
+}
+
+@MainActor
+private func centerReleaseNotesWindow(_ window: NSWindow) {
+    guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+        window.center()
+        return
+    }
+
+    let frame = screen.visibleFrame
+    window.setFrameOrigin(
+        NSPoint(
+            x: frame.midX - window.frame.width / 2,
+            y: frame.midY - window.frame.height / 2
+        )
+    )
+}
+
+@MainActor
+private func centerWindowOnMainScreen(_ window: NSWindow) {
+    guard let screen = NSScreen.main ?? NSScreen.screens.first else {
+        window.center()
+        return
+    }
+
+    let frame = screen.visibleFrame
+    window.setFrameOrigin(
+        NSPoint(
+            x: frame.midX - window.frame.width / 2,
+            y: frame.midY - window.frame.height / 2
+        )
+    )
+}
+
+private struct ReleaseNotesView: View {
+    @ObservedObject var viewModel: LimitViewModel
+    let dismiss: () -> Void
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        let design = viewModel.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark)
+        let palette = SettingsWindowPalette(design: design)
+
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(palette.accent)
+                    .frame(width: 44, height: 44)
+                    .background(Circle().fill(palette.backgroundHighlight))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("What's new")
+                        .font(palette.titleFont)
+                        .foregroundStyle(palette.titleText)
+                    Text("Codex Limit Widget v\(currentVersion)")
+                        .font(palette.noteFont)
+                        .foregroundStyle(palette.mutedText)
+                }
+                Spacer()
+            }
+
+            Text("Since v1.1.1")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(palette.mutedText)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Capsule().fill(palette.backgroundHighlight))
+                .padding(.top, 14)
+
+            SettingsRule(palette: palette)
+                .padding(.vertical, 18)
+
+            VStack(alignment: .leading, spacing: 12) {
+                ReleaseNoteRow(
+                    icon: "rectangle.3.group",
+                    title: "Refined widget and app design",
+                    detail: "Dark and Beige widgets, the popover, and Settings now use clearer, denser layouts."
+                )
+                ReleaseNoteRow(
+                    icon: "checkmark.shield",
+                    title: "Reliable limit data",
+                    detail: "Weekly-only accounts work without 5-hour placeholders, and widgets keep the latest successful data."
+                )
+                ReleaseNoteRow(
+                    icon: "calendar.badge.clock",
+                    title: "Usage and reset details",
+                    detail: "Weekly reset times and usage details stay visible across refreshes."
+                )
+                ReleaseNoteRow(
+                    icon: "arrow.down.app",
+                    title: "Built-in updates",
+                    detail: "The app checks GitHub Releases and installs verified updates in one click."
+                )
+                ReleaseNoteRow(
+                    icon: "bell.badge",
+                    title: "Low limit alerts",
+                    detail: "Choose up to five thresholds for the 5-hour and weekly limits."
+                )
+                ReleaseNoteRow(
+                    icon: "cursorarrow.click",
+                    title: "Widget opens the app",
+                    detail: "Click a widget to open Codex Limit Widget settings."
+                )
+                ReleaseNoteRow(
+                    icon: "circle.lefthalf.filled",
+                    title: "System language and appearance",
+                    detail: "Choose Russian or English, or follow macOS. The window and widget follow system appearance."
+                )
+            }
+            .foregroundStyle(palette.primaryText)
+
+            Spacer(minLength: 18)
+
+            HStack {
+                Spacer()
+                SettingsActionButton(
+                    title: "Got it",
+                    systemImage: "checkmark",
+                    isDisabled: false,
+                    palette: palette,
+                    action: dismiss
+                )
+            }
+        }
+        .padding(30)
+        .frame(width: 560, height: 620, alignment: .topLeading)
+        .background(SettingsWindowBackground(palette: palette))
+        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 30, style: .continuous)
+                .stroke(palette.border, lineWidth: 1)
+        )
+    }
+
+    private var currentVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+    }
+}
+
+private struct ReleaseNoteRow: View {
+    let icon: String
+    let title: String
+    let detail: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 15, weight: .semibold))
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(LocalizedStringKey(title))
+                    .font(.system(size: 14, weight: .semibold))
+                Text(LocalizedStringKey(detail))
+                    .font(.system(size: 12))
+                    .opacity(0.72)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 }
@@ -493,26 +751,30 @@ private final class CustomSettingsWindow: NSWindow {
 }
 
 @MainActor
-final class SettingsWindowPresenter: ObservableObject {
+final class SettingsWindowPresenter: NSObject, ObservableObject, NSWindowDelegate {
+    private let initialContentSize = NSSize(width: 580, height: 520)
     private var windowController: NSWindowController?
+    private weak var viewModel: LimitViewModel?
 
     func show(viewModel: LimitViewModel, updateController: AppUpdateController) {
-        let contentView = AppSettingsView(viewModel: viewModel, updateController: updateController)
+        self.viewModel = viewModel
+        let contentView = LocalizedSettingsRoot(viewModel: viewModel, updateController: updateController)
 
         if let window = windowController?.window {
             window.contentViewController = NSHostingController(rootView: contentView)
-            centerOnCurrentScreen(window)
+            centerOnMainScreen(window)
             bringToFront(window)
             return
         }
 
         let window = CustomSettingsWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 580, height: 520),
+            contentRect: NSRect(origin: .zero, size: initialContentSize),
             styleMask: [.borderless, .resizable],
             backing: .buffered,
             defer: false
         )
         window.title = "Codex Limit Widget Settings"
+        window.delegate = self
         window.contentViewController = NSHostingController(rootView: contentView)
         window.minSize = NSSize(width: 540, height: 460)
         window.backgroundColor = .clear
@@ -527,12 +789,19 @@ final class SettingsWindowPresenter: ObservableObject {
         let controller = NSWindowController(window: window)
         windowController = controller
         controller.showWindow(nil)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
         DispatchQueue.main.async { [weak self, weak window] in
             guard let self, let window else { return }
             window.contentView?.layoutSubtreeIfNeeded()
-            self.centerOnCurrentScreen(window)
-            window.alphaValue = 1
-            self.bringToFront(window)
+            window.setContentSize(self.initialContentSize)
+            self.centerOnMainScreen(window)
+            DispatchQueue.main.async { [weak self, weak window] in
+                guard let self, let window else { return }
+                self.centerOnMainScreen(window)
+                window.alphaValue = 1
+                self.bringToFront(window)
+            }
         }
     }
 
@@ -542,28 +811,32 @@ final class SettingsWindowPresenter: ObservableObject {
         window.orderFrontRegardless()
     }
 
-    private func centerOnCurrentScreen(_ window: NSWindow) {
-        let mouseLocation = NSEvent.mouseLocation
-        guard let screen = NSScreen.screens.first(where: { $0.visibleFrame.contains(mouseLocation) }) ?? NSScreen.main else {
-            window.center()
-            return
-        }
+    private func centerOnMainScreen(_ window: NSWindow) {
+        centerWindowOnMainScreen(window)
+    }
 
-        let visibleFrame = screen.visibleFrame
-        let origin = NSPoint(
-            x: visibleFrame.midX - window.frame.width / 2,
-            y: visibleFrame.midY - window.frame.height / 2
-        )
-        window.setFrameOrigin(origin)
+    func windowWillClose(_ notification: Notification) {
+        viewModel?.removeEmptyNotificationThresholds()
+    }
+}
+
+private struct LocalizedSettingsRoot: View {
+    @ObservedObject var viewModel: LimitViewModel
+    @ObservedObject var updateController: AppUpdateController
+
+    var body: some View {
+        AppSettingsView(viewModel: viewModel, updateController: updateController)
+            .environment(\.locale, viewModel.preferences.appLanguage.locale)
     }
 }
 
 struct AppSettingsView: View {
     @ObservedObject var viewModel: LimitViewModel
     @ObservedObject var updateController: AppUpdateController
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let design = viewModel.preferences.menuWindowDesign
+        let design = viewModel.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark)
         let palette = SettingsWindowPalette(design: design)
 
         VStack(spacing: 0) {
@@ -586,6 +859,14 @@ struct AppSettingsView: View {
                             SettingsSegmentedControl(
                                 selection: binding(\.menuWindowDesign),
                                 items: MenuWindowDesign.allCases.map { SettingsSegmentedItem(value: $0, title: $0.title) },
+                                palette: palette
+                            )
+                        }
+
+                        SettingsRow("Language", palette: palette) {
+                            SettingsSegmentedControl(
+                                selection: binding(\.appLanguage),
+                                items: AppLanguage.allCases.map { SettingsSegmentedItem(value: $0, title: $0.title) },
                                 palette: palette
                             )
                         }
@@ -617,6 +898,29 @@ struct AppSettingsView: View {
                             .foregroundStyle(palette.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.top, 2)
+                    }
+
+                    SettingsRule(palette: palette)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        SettingsSectionTitle("Low limit alerts", palette: palette)
+
+                        SettingsRow("System notifications", palette: palette) {
+                            SettingsSwitch(
+                                isOn: Binding(
+                                    get: { viewModel.preferences.lowLimitNotificationsEnabled },
+                                    set: { viewModel.setLowLimitNotificationsEnabled($0) }
+                                ),
+                                palette: palette
+                            )
+                        }
+
+                        NotificationThresholdEditor(viewModel: viewModel, palette: palette)
+
+                        Text("Alerts are sent once for the nearest reached threshold in each available limit window; lower thresholds alert later if the limit continues to fall.")
+                            .font(palette.noteFont)
+                            .foregroundStyle(palette.mutedText)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     SettingsRule(palette: palette)
@@ -735,12 +1039,130 @@ struct AppSettingsView: View {
     }
 }
 
+private struct NotificationThresholdEditor: View {
+    @ObservedObject var viewModel: LimitViewModel
+    let palette: SettingsWindowPalette
+
+    var body: some View {
+        SettingsRow("Alert thresholds", palette: palette) {
+            HStack(spacing: 6) {
+                if canRemoveThreshold {
+                    Button {
+                        viewModel.removeLastNotificationThreshold()
+                    } label: {
+                        Image(systemName: "minus")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(palette.accent)
+                            .frame(width: 30, height: 30)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(palette.backgroundHighlight)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(palette.rule, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Remove last alert threshold")
+                }
+
+                ForEach(Array(viewModel.preferences.lowLimitNotificationThresholds.indices), id: \.self) { index in
+                    SettingsThresholdField(
+                        text: thresholdBinding(at: index),
+                        palette: palette
+                    )
+                }
+
+                if canAddThreshold {
+                    Button {
+                        viewModel.addNotificationThreshold()
+                    } label: {
+                        Image(systemName: "plus")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(palette.accent)
+                            .frame(width: 30, height: 30)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .fill(palette.backgroundHighlight)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .stroke(palette.rule, lineWidth: 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Add alert threshold")
+                }
+            }
+        }
+    }
+
+    private var canAddThreshold: Bool {
+        viewModel.preferences.lowLimitNotificationThresholds.count < 5
+    }
+
+    private var canRemoveThreshold: Bool {
+        !viewModel.preferences.lowLimitNotificationThresholds.isEmpty
+    }
+
+    private func thresholdBinding(at index: Int) -> Binding<String> {
+        Binding(
+            get: {
+                let thresholds = viewModel.preferences.lowLimitNotificationThresholds
+                return index < thresholds.count ? thresholds[index].map(String.init) ?? "" : ""
+            },
+            set: { value in
+                var thresholds = viewModel.preferences.lowLimitNotificationThresholds.map { $0.map(String.init) ?? "" }
+                while thresholds.count <= index { thresholds.append("") }
+                thresholds[index] = value
+                let values = thresholds.map { text in
+                    text.isEmpty ? nil : Int(text)
+                }
+                viewModel.updatePreferences {
+                    $0.lowLimitNotificationThresholds = LimitPreferences.normalizedNotificationThresholds(values)
+                }
+            }
+        )
+    }
+}
+
+private struct SettingsThresholdField: View {
+    @Binding var text: String
+    let palette: SettingsWindowPalette
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        TextField(
+            "",
+            text: $text,
+            prompt: Text("%").foregroundStyle(palette.mutedText)
+        )
+        .textFieldStyle(.plain)
+        .font(palette.controlFont)
+        .foregroundStyle(palette.primaryText)
+        .multilineTextAlignment(.center)
+        .focused($isFocused)
+        .padding(.horizontal, 6)
+        .frame(width: 42, height: 30)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(palette.backgroundHighlight)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(isFocused ? palette.accent : palette.rule, lineWidth: isFocused ? 1.5 : 1)
+        )
+        .accessibilityLabel("Alert threshold")
+    }
+}
+
 private struct SettingsWindowPalette {
     let design: MenuWindowDesign
 
     var background: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.02, green: 0.026, blue: 0.022)
         case .editorial:
             return MenuWindowVisuals.editorialPaper
@@ -749,7 +1171,7 @@ private struct SettingsWindowPalette {
 
     var backgroundHighlight: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.11, green: 0.14, blue: 0.10)
         case .editorial:
             return MenuWindowVisuals.editorialPaperLight
@@ -758,7 +1180,7 @@ private struct SettingsWindowPalette {
 
     var titleText: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return MenuWindowVisuals.terminalAccent
         case .editorial:
             return MenuWindowVisuals.editorialInk
@@ -767,7 +1189,7 @@ private struct SettingsWindowPalette {
 
     var primaryText: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.69, green: 0.91, blue: 0.64)
         case .editorial:
             return MenuWindowVisuals.editorialInk
@@ -776,7 +1198,7 @@ private struct SettingsWindowPalette {
 
     var mutedText: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.44, green: 0.62, blue: 0.40)
         case .editorial:
             return MenuWindowVisuals.editorialMutedInk
@@ -785,7 +1207,7 @@ private struct SettingsWindowPalette {
 
     var accent: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return MenuWindowVisuals.terminalAccent
         case .editorial:
             return MenuWindowVisuals.editorialFill
@@ -794,7 +1216,7 @@ private struct SettingsWindowPalette {
 
     var accentText: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.025, green: 0.035, blue: 0.025)
         case .editorial:
             return MenuWindowVisuals.editorialPaperLight
@@ -803,7 +1225,7 @@ private struct SettingsWindowPalette {
 
     var controlTrack: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.09, green: 0.12, blue: 0.085)
         case .editorial:
             return MenuWindowVisuals.editorialEmpty
@@ -812,7 +1234,7 @@ private struct SettingsWindowPalette {
 
     var controlSelected: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return MenuWindowVisuals.terminalAccent
         case .editorial:
             return MenuWindowVisuals.editorialFill
@@ -821,7 +1243,7 @@ private struct SettingsWindowPalette {
 
     var rule: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.29, green: 0.48, blue: 0.25).opacity(0.58)
         case .editorial:
             return MenuWindowVisuals.editorialRule.opacity(0.72)
@@ -830,7 +1252,7 @@ private struct SettingsWindowPalette {
 
     var border: Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return MenuWindowVisuals.terminalBorder
         case .editorial:
             return MenuWindowVisuals.editorialRule.opacity(0.54)
@@ -839,7 +1261,7 @@ private struct SettingsWindowPalette {
 
     var titleFont: Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 21, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 24, weight: .regular, design: .serif)
@@ -848,7 +1270,7 @@ private struct SettingsWindowPalette {
 
     var sectionFont: Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 16, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 19, weight: .semibold)
@@ -857,7 +1279,7 @@ private struct SettingsWindowPalette {
 
     var labelFont: Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 13, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 16, weight: .medium)
@@ -866,7 +1288,7 @@ private struct SettingsWindowPalette {
 
     var controlFont: Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 12, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 15, weight: .medium)
@@ -875,7 +1297,7 @@ private struct SettingsWindowPalette {
 
     var noteFont: Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 11, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 13, weight: .regular)
@@ -1033,7 +1455,7 @@ private struct SettingsSectionTitle: View {
     }
 
     var body: some View {
-        Text(title)
+        Text(LocalizedStringKey(title))
             .font(palette.sectionFont)
             .foregroundStyle(palette.primaryText)
             .lineLimit(1)
@@ -1053,7 +1475,7 @@ private struct SettingsRow<Control: View>: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 18) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(palette.labelFont)
                 .foregroundStyle(palette.primaryText)
                 .lineLimit(1)
@@ -1157,7 +1579,7 @@ private struct SettingsSegmentedOption: View {
         let background = isSelected ? palette.controlSelected : Color.clear
 
         Button(action: action) {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(palette.controlFont)
                 .foregroundStyle(foreground)
                 .lineLimit(1)
@@ -1186,7 +1608,7 @@ private struct SettingsActionButton: View {
             HStack(spacing: 8) {
                 Image(systemName: systemImage)
                     .font(.system(size: 12, weight: .bold))
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(palette.controlFont)
             }
             .foregroundStyle(palette.accentText)

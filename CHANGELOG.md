@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.2.0
+
+- Refined the Dark and Beige widgets, menu bar popover, and Settings into clearer, denser layouts.
+- Made limit data more reliable: weekly-only accounts no longer show 5-hour placeholders, widgets keep the latest successful payload, and usage values survive incomplete refreshes.
+- Kept weekly reset times and usage details visible across refreshes.
+- Added automatic GitHub Release checks, visible update status, and verified one-click updates.
+- Added optional macOS notifications for low limits, with up to five thresholds evaluated separately for every available limit window; only the nearest reached threshold is sent first, and reset detection tolerates timestamp drift.
+- Made widgets open Settings when clicked.
+- Added Russian and English application/widget localization with a system-language option, plus a system appearance mode for the window and widgets.
+- Added a localized "What's new" window shown once after an update, summarizing changes since version 1.1.1.
+
 ## 1.1.11
 
 - Prevented duplicate Settings presentations when launch and reopen events overlap.

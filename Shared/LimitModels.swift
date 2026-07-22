@@ -69,14 +69,23 @@ struct LimitWindowSnapshot: Codable, Equatable {
     }
 
     var resetDateTimeText: String {
+        resetDateTimeText(locale: Locale(identifier: "en_US_POSIX"))
+    }
+
+    func resetDateTimeText(locale: Locale) -> String {
         guard let resetsAt else { return "reset unknown" }
 
         let calendar = Calendar.current
         let currentYear = calendar.component(.year, from: Date())
         let resetYear = calendar.component(.year, from: resetsAt)
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = resetYear == currentYear ? "MMM d, HH:mm" : "MMM d, yyyy, HH:mm"
+        formatter.locale = locale
+        let isRussian = locale.identifier.lowercased().hasPrefix("ru")
+        if isRussian {
+            formatter.dateFormat = resetYear == currentYear ? "d MMM, HH:mm" : "d MMM yyyy, HH:mm"
+        } else {
+            formatter.dateFormat = resetYear == currentYear ? "MMM d, HH:mm" : "MMM d, yyyy, HH:mm"
+        }
         return formatter.string(from: resetsAt)
     }
 }
@@ -104,6 +113,9 @@ struct LimitPreferences: Codable, Equatable {
     var menuBarMode = MenuBarMode.detailed
     var compactMenuBarMetric = MenuBarCompactMetric.fiveHour
     var menuWindowDesign = MenuWindowDesign.terminal
+    var appLanguage = AppLanguage.system
+    var lowLimitNotificationsEnabled = false
+    var lowLimitNotificationThresholds: [Int?] = [10, 15]
 
     static let `default` = LimitPreferences()
 
@@ -117,6 +129,9 @@ struct LimitPreferences: Codable, Equatable {
         case menuBarMode
         case compactMenuBarMetric
         case menuWindowDesign
+        case appLanguage
+        case lowLimitNotificationsEnabled
+        case lowLimitNotificationThresholds
     }
 
     init() {}
@@ -142,6 +157,47 @@ struct LimitPreferences: Codable, Equatable {
         menuBarMode = (try? container.decodeIfPresent(MenuBarMode.self, forKey: .menuBarMode)) ?? .detailed
         compactMenuBarMetric = try container.decodeIfPresent(MenuBarCompactMetric.self, forKey: .compactMenuBarMetric) ?? .fiveHour
         menuWindowDesign = (try? container.decodeIfPresent(MenuWindowDesign.self, forKey: .menuWindowDesign)) ?? .terminal
+        appLanguage = (try? container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage)) ?? .system
+        lowLimitNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowLimitNotificationsEnabled) ?? false
+        lowLimitNotificationThresholds = Self.normalizedNotificationThresholds(
+            try container.decodeIfPresent([Int?].self, forKey: .lowLimitNotificationThresholds) ?? [10, 15]
+        )
+    }
+
+    static func normalizedNotificationThresholds(_ thresholds: [Int?]) -> [Int?] {
+        Array(thresholds.prefix(5)).map { threshold in
+            threshold.map { min(100, max(1, $0)) }
+        }
+    }
+}
+
+enum AppLanguage: String, Codable, CaseIterable, Identifiable {
+    case system
+    case english
+    case russian
+
+    var id: String { rawValue }
+
+    var locale: Locale {
+        switch self {
+        case .system:
+            .autoupdatingCurrent
+        case .english:
+            Locale(identifier: "en")
+        case .russian:
+            Locale(identifier: "ru")
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .system:
+            "System"
+        case .english:
+            "English"
+        case .russian:
+            "Russian"
+        }
     }
 }
 
@@ -184,6 +240,7 @@ enum MenuBarCompactMetric: String, Codable, CaseIterable, Identifiable {
 enum MenuWindowDesign: String, Codable, CaseIterable, Identifiable {
     case terminal
     case editorial
+    case system
 
     var id: String { rawValue }
 
@@ -193,7 +250,14 @@ enum MenuWindowDesign: String, Codable, CaseIterable, Identifiable {
             return "Dark"
         case .editorial:
             return "Beige"
+        case .system:
+            return "System"
         }
+    }
+
+    func resolved(isDark: Bool) -> MenuWindowDesign {
+        guard self == .system else { return self }
+        return isDark ? .terminal : .editorial
     }
 }
 

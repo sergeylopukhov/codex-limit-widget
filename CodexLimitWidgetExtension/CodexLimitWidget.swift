@@ -33,7 +33,10 @@ struct CodexLimitProvider: TimelineProvider {
         Task {
             let payload = await loadPayload() ?? WidgetPayloadStore.read()
             let entry = CodexLimitEntry(date: Date(), snapshot: payload?.snapshot, preferences: payload?.preferences ?? .default)
-            let next = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
+            // The menu bar is refreshed every minute. Keep the widget timeline on
+            // the same cadence so it does not knowingly display a 15-minute-old
+            // limit when WidgetKit has not yet processed an explicit reload.
+            let next = Calendar.current.date(byAdding: .minute, value: 1, to: Date()) ?? Date().addingTimeInterval(60)
             completionBox.completion(Timeline(entries: [entry], policy: .after(next)))
         }
     }
@@ -50,29 +53,36 @@ struct CodexLimitProvider: TimelineProvider {
 struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
+    @Environment(\.colorScheme) private var colorScheme
 
     @ViewBuilder
     var body: some View {
-        switch entry.preferences.menuWindowDesign {
-        case .terminal:
-            TerminalLimitWidgetView(
-                snapshot: entry.snapshot,
-                preferences: entry.preferences,
-                family: family
-            )
-            .containerBackground(for: .widget) {
-                TerminalWidgetBackground()
-            }
-        case .editorial:
-            EditorialLimitWidgetView(
-                snapshot: entry.snapshot,
-                preferences: entry.preferences,
-                variant: EditorialWidgetVariant(family: family)
-            )
-            .containerBackground(for: .widget) {
-                EditorialWidgetBackground()
+        Group {
+            switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
+            case .terminal:
+                TerminalLimitWidgetView(
+                    snapshot: entry.snapshot,
+                    preferences: entry.preferences,
+                    family: family
+                )
+                .containerBackground(for: .widget) {
+                    TerminalWidgetBackground()
+                }
+            case .editorial:
+                EditorialLimitWidgetView(
+                    snapshot: entry.snapshot,
+                    preferences: entry.preferences,
+                    variant: EditorialWidgetVariant(family: family)
+                )
+                .containerBackground(for: .widget) {
+                    EditorialWidgetBackground()
+                }
+            case .system:
+                EmptyView()
             }
         }
+        .environment(\.locale, entry.preferences.appLanguage.locale)
+        .widgetURL(URL(string: "codexlimitwidget://open"))
     }
 }
 
@@ -80,6 +90,7 @@ private struct TerminalLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let family: WidgetFamily
+    @Environment(\.locale) private var locale
 
     private var accent: Color { Color(red: 0.52, green: 0.95, blue: 0.43) }
     private var mutedAccent: Color { Color(red: 0.32, green: 0.56, blue: 0.28) }
@@ -161,7 +172,13 @@ private struct TerminalLimitWidgetView: View {
             Spacer(minLength: 8)
 
             if let metric, preferences.widgetShowsResetTimes {
-                Text(compact ? metric.window.resetClockText : "resets at \(metric.window.resetClockText)")
+                Group {
+                    if compact {
+                        Text(metric.window.resetClockText)
+                    } else {
+                        Text("resets at") + Text(verbatim: " \(metric.window.resetClockText)")
+                    }
+                }
                     .font(.system(size: compact ? 9 : (family == .systemMedium ? 12 : 13), weight: .semibold, design: .monospaced))
                     .foregroundStyle(dimText)
                     .lineLimit(1)
@@ -181,7 +198,7 @@ private struct TerminalLimitWidgetView: View {
                         .minimumScaleFactor(0.6)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
-                    Text(metric.remainingLabel)
+                    Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                 }
@@ -235,7 +252,11 @@ private struct TerminalLimitWidgetView: View {
                     HStack {
                         terminalLine("NEXT RESET", color: dimText, size: 11)
                         Spacer()
-                        terminalLine(metric.window.resetDateTimeText.uppercased(), color: accent, size: 11)
+                        terminalLine(
+                            metric.window.resetDateTimeText(locale: locale).uppercased(with: locale),
+                            color: accent,
+                            size: 11
+                        )
                     }
                 }
             }
@@ -261,7 +282,7 @@ private struct TerminalLimitWidgetView: View {
                 .padding(.top, 8)
             }
 
-            Text(metric.remainingLabel)
+            Text(LocalizedStringKey(metric.remainingLabel))
                 .font(.system(size: 9.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
 
@@ -310,7 +331,7 @@ private struct TerminalLimitWidgetView: View {
                         .frame(width: percentColumnWidth, alignment: .leading)
                         .shadow(color: accent.opacity(0.24), radius: 5)
 
-                    Text(metric.remainingLabel)
+                    Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 16, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                         .lineLimit(1)
@@ -415,7 +436,7 @@ private struct TerminalLimitWidgetView: View {
 
     private func statRow(_ label: String, _ value: String, size: CGFloat = 13) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: size, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
                 .lineLimit(1)
@@ -434,7 +455,7 @@ private struct TerminalLimitWidgetView: View {
 
     private func compactStat(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
             Text(value)
@@ -446,7 +467,7 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func terminalLine(_ text: String, color: Color, size: CGFloat) -> Text {
-        Text(text)
+        Text(LocalizedStringKey(text))
             .font(.system(size: size, weight: .bold, design: .monospaced))
             .foregroundStyle(color)
     }
@@ -595,6 +616,7 @@ private struct EditorialLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let variant: EditorialWidgetVariant
+    @Environment(\.locale) private var locale
 
     var body: some View {
         GeometryReader { proxy in
@@ -628,7 +650,7 @@ private struct EditorialLimitWidgetView: View {
 
                 Spacer(minLength: 8)
 
-                Text("\(metricPrefix) \(metric.resetClockText)")
+                (Text(LocalizedStringKey(metricPrefix)) + Text(verbatim: " \(metric.resetClockText)"))
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -665,70 +687,95 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
-        let padding = EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
+        let horizontalPadding: CGFloat = 12
+        let topPadding: CGFloat = 8
+        let bottomPadding: CGFloat = 5
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
-        let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
-        let meterTitle = snapshot.fiveHour == nil ? "WEEKLY LIMIT" : "5-HOUR LIMIT"
-        let leftWidth = min(138, max(118, size.width * 0.40))
+        let resetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
+        let metricID = snapshot.fiveHour == nil ? "WEEKLY" : "5H"
+        let secondaryMetric = snapshot.fiveHour == nil ? nil : snapshot.weekly
+        let remainingLabel = snapshot.fiveHour == nil ? "WEEKLY REMAINING" : "5H REMAINING"
+        let contentWidth = max(0, size.width - horizontalPadding * 2)
+        let leftWidth = max(116, contentWidth * 0.42)
 
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 2) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Codex Limit")
-                    .font(.system(size: 17, weight: .regular, design: .serif))
+                    .font(.system(size: 14, weight: .regular, design: .serif))
                     .foregroundStyle(EditorialPalette.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Spacer(minLength: 12)
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("\(metricPrefix) RESET")
-                        .font(.system(size: 8, weight: .semibold))
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Text(LocalizedStringKey(resetLabel))
+                        .font(.system(size: 7.5, weight: .semibold))
                     Text(metric.resetClockText)
-                        .font(.system(size: 14, weight: .regular, design: .serif))
+                        .font(.system(size: 13, weight: .regular, design: .serif))
                 }
                 .foregroundStyle(EditorialPalette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .top, spacing: 14) {
+            EditorialHorizontalRule()
+
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -5) {
                     Text("\(metric.leftPercent)%")
-                        .font(.system(size: 52, weight: .regular, design: .serif))
+                        .font(.system(size: 50, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
                     Text("Remaining")
-                        .font(.system(size: 17, weight: .regular, design: .serif))
+                        .font(.system(size: 15, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
                 .frame(width: leftWidth, alignment: .leading)
-                .layoutPriority(2)
 
-                EditorialVerticalRule()
-                    .frame(height: 62)
-
-                VStack(alignment: .leading, spacing: 7) {
-                    mediumStat("PLAN", (snapshot.planType ?? "--").uppercased())
-                    mediumStat("USED", "\(metric.usedPercent)%")
+                VStack(alignment: .leading, spacing: 4) {
+                    editorialMediumStatRow("PLAN", (snapshot.planType ?? "--").uppercased())
+                    editorialMediumStatRow("LIMIT", metricID)
+                    if let secondaryMetric {
+                        editorialMediumStatRow("WEEKLY", "\(secondaryMetric.leftPercent)%")
+                    } else {
+                        editorialMediumStatRow("USED", "\(metric.usedPercent)%")
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.top, 1)
             }
 
-            limitMeter(title: meterTitle, percent: metric.leftPercent, height: 7, labelSize: 8)
+            EditorialHorizontalRule()
+
+            if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metricID != "WEEKLY" {
+                editorialMeterHeader("WEEKLY LIMIT", "\(weekly.leftPercent)%")
+                EditorialMeter(percent: weekly.leftPercent, height: 10)
+            } else {
+                editorialMeterHeader(remainingLabel, "\(metric.leftPercent)%")
+                EditorialMeter(percent: metric.leftPercent, height: 10)
+
+                if preferences.widgetShowsResetTimes {
+                    editorialMeterHeader(
+                        "NEXT RESET",
+                        metric.resetDateTimeText(locale: locale).uppercased(with: locale)
+                    )
+                }
+            }
         }
-        .padding(padding)
-        .frame(width: size.width, height: size.height, alignment: .topLeading)
+        .frame(width: contentWidth, height: max(0, size.height - topPadding - bottomPadding), alignment: .topLeading)
+        .padding(.horizontal, horizontalPadding)
+        .padding(.top, topPadding)
+        .padding(.bottom, bottomPadding)
     }
 
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
-        let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
+        let resetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
         let contentWidth = max(0, size.width - padding.leading - padding.trailing)
         let leftWidth = min(176, max(146, contentWidth * 0.50))
 
@@ -743,7 +790,7 @@ private struct EditorialLimitWidgetView: View {
                 Spacer(minLength: 16)
 
                 VStack(alignment: .trailing, spacing: 3) {
-                    Text("\(metricPrefix) RESET")
+                    Text(LocalizedStringKey(resetLabel))
                         .font(.system(size: 13, weight: .semibold))
                     Text(metric.resetClockText)
                         .font(.system(size: 22, weight: .regular, design: .serif))
@@ -864,7 +911,7 @@ private struct EditorialLimitWidgetView: View {
         let spacing: CGFloat = variant == .medium ? 1 : 5
 
         return VStack(alignment: .leading, spacing: spacing) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: labelSize, weight: .semibold))
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .lineLimit(1)
@@ -886,7 +933,7 @@ private struct EditorialLimitWidgetView: View {
     private func limitMeter(title: String, percent: Int, height: CGFloat, labelSize: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(.system(size: labelSize, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -894,7 +941,7 @@ private struct EditorialLimitWidgetView: View {
 
                 Spacer(minLength: 8)
 
-                Text("\(percent)% REMAINING")
+                (Text(verbatim: "\(percent)% ") + Text("REMAINING"))
                     .font(.system(size: labelSize, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -907,13 +954,43 @@ private struct EditorialLimitWidgetView: View {
 
     private func mediumStat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 8, weight: .semibold))
                 .foregroundStyle(EditorialPalette.mutedInk)
                 .lineLimit(1)
 
             Text(value)
                 .font(.system(size: 15, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+    }
+
+    private func editorialMediumStatRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(LocalizedStringKey(label))
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(EditorialPalette.mutedInk)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.system(size: 12, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+    }
+
+    private func editorialMeterHeader(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(LocalizedStringKey(label))
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundStyle(EditorialPalette.mutedInk)
+                .lineLimit(1)
+            Spacer(minLength: 8)
+            Text(value)
+                .font(.system(size: 11, weight: .regular, design: .serif))
                 .foregroundStyle(EditorialPalette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
@@ -989,6 +1066,14 @@ private struct EditorialVerticalRule: View {
     }
 }
 
+private struct EditorialHorizontalRule: View {
+    var body: some View {
+        Rectangle()
+            .fill(EditorialPalette.rule.opacity(0.78))
+            .frame(height: 1)
+    }
+}
+
 private struct EditorialWidgetBackground: View {
     var body: some View {
         ZStack {
@@ -1031,7 +1116,7 @@ struct CodexLimitWidget: Widget {
             CodexLimitWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Codex Limit Widget")
-        .description("Shows Codex limits using the Dark or Beige design selected in settings.")
+        .description("Shows Codex limits using the selected design, including automatic system appearance.")
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }

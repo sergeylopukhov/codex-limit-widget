@@ -22,6 +22,8 @@
 		A10100000000000000000015 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000017 /* AppIcon.icns */; };
 		A10100000000000000000016 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000018 /* AppIcon.icns */; };
 		A10100000000000000000017 /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000019 /* AppUpdateController.swift */; };
+		A10100000000000000000018 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000020 /* Localizable.strings */; };
+		A10100000000000000000019 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000020 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -67,6 +69,8 @@
 		A10200000000000000000017 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		A10200000000000000000018 /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 		A10200000000000000000019 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
+		A10200000000000000000021 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A10200000000000000000022 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -130,6 +134,7 @@
 			children = (
 				A10200000000000000000004 /* LimitModels.swift */,
 				A10200000000000000000005 /* LimitViews.swift */,
+				A10200000000000000000020 /* Localizable.strings */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -206,6 +211,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ru,
 				Base,
 			);
 			mainGroup = A10600000000000000000001;
@@ -226,6 +232,7 @@
 			files = (
 				A10100000000000000000013 /* Assets.xcassets in Resources */,
 				A10100000000000000000015 /* AppIcon.icns in Resources */,
+				A10100000000000000000018 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -235,10 +242,23 @@
 			files = (
 				A10100000000000000000014 /* Assets.xcassets in Resources */,
 				A10100000000000000000016 /* AppIcon.icns in Resources */,
+				A10100000000000000000019 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		A10200000000000000000020 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A10200000000000000000021 /* en */,
+				A10200000000000000000022 /* ru */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A10A00000000000000000001 /* Sources */ = {
@@ -399,7 +419,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 142;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -408,7 +428,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.11;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
 				PRODUCT_NAME = "Codex Limit Widget";
 				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
@@ -425,7 +445,7 @@
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 142;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
@@ -433,7 +453,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.11;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
 				PRODUCT_NAME = "Codex Limit Widget";
 				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
@@ -449,7 +469,7 @@
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 142;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -457,7 +477,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.11;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
 				PRODUCT_NAME = CodexLimitWidgetExtension;
 				SKIP_INSTALL = YES;
@@ -473,7 +493,7 @@
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 141;
+				CURRENT_PROJECT_VERSION = 142;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -481,7 +501,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.11;
+				MARKETING_VERSION = 1.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
 				PRODUCT_NAME = CodexLimitWidgetExtension;
 				SKIP_INSTALL = YES;

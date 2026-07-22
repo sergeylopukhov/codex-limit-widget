@@ -42,7 +42,7 @@ struct SnapshotDetailView: View {
     @ViewBuilder
     var body: some View {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             TerminalSnapshotDetailView(
                 snapshot: snapshot,
                 isRefreshing: isRefreshing,
@@ -409,7 +409,7 @@ enum MenuWindowVisuals {
 
     static func popoverBackground(for design: MenuWindowDesign) -> Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return terminalBackground
         case .editorial:
             return editorialPaper
@@ -418,7 +418,7 @@ enum MenuWindowVisuals {
 
     static func popoverBorder(for design: MenuWindowDesign) -> Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return terminalBorder
         case .editorial:
             return editorialRule.opacity(0.52)
@@ -427,7 +427,7 @@ enum MenuWindowVisuals {
 
     static func settingsForeground(for design: MenuWindowDesign) -> Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return terminalAccent
         case .editorial:
             return editorialInk
@@ -436,7 +436,7 @@ enum MenuWindowVisuals {
 
     static func separator(for design: MenuWindowDesign) -> Color {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return Color(red: 0.09, green: 0.10, blue: 0.09)
         case .editorial:
             return editorialRule.opacity(0.7)
@@ -445,7 +445,7 @@ enum MenuWindowVisuals {
 
     static func settingsFont(for design: MenuWindowDesign) -> Font {
         switch design {
-        case .terminal:
+        case .terminal, .system:
             return .system(size: 13, weight: .bold, design: .monospaced)
         case .editorial:
             return .system(size: 15, weight: .regular, design: .serif)

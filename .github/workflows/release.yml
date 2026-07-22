@@ -30,7 +30,23 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.0" ]; then
+            {
+              echo "## What’s New Since 1.1.1"
+              echo
+              echo "- Refined the Dark and Beige widgets, menu bar popover, and Settings into clearer, denser layouts."
+              echo "- Improved reliability for weekly-only limits and widget data: no 5-hour placeholders, preserved usage values, and the latest successful payload stays visible."
+              echo "- Added weekly reset details and built-in, verified one-click updates from GitHub Releases."
+              echo "- Added optional low-limit alerts with up to five thresholds, evaluated separately for each available limit window. Alerts now send the nearest reached threshold first and reliably reset with the limit window."
+              echo "- Click a widget to open Settings."
+              echo "- Added Russian and English localization, a system-language option, and a system appearance mode for the app and widgets."
+              echo "- Added a localized What’s New window that appears once after an update."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.0-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
             {
               echo "## Release Notes"
               echo

@@ -1,6 +1,7 @@
 import Foundation
 import Network
 import ServiceManagement
+@preconcurrency import UserNotifications
 import WidgetKit
 
 @MainActor
@@ -11,6 +12,7 @@ final class LimitViewModel: ObservableObject {
 
     private let client = CodexRateLimitClient()
     private let widgetBridge = LoopbackWidgetBridge()
+    private let lowLimitNotificationManager = LowLimitNotificationManager()
     private var timer: Timer?
     private var started = false
 
@@ -50,6 +52,7 @@ final class LimitViewModel: ObservableObject {
             snapshot = fresh
             try? LimitStore.write(fresh)
             reloadWidgets()
+            await lowLimitNotificationManager.deliverIfNeeded(for: fresh, preferences: preferences)
         } catch {
             let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
             if var current = snapshot {
@@ -67,6 +70,46 @@ final class LimitViewModel: ObservableObject {
         preferences = next
         try? LimitPreferencesStore.write(next)
         reloadWidgets()
+    }
+
+    func setLowLimitNotificationsEnabled(_ isEnabled: Bool) {
+        guard isEnabled else {
+            updatePreferences { $0.lowLimitNotificationsEnabled = false }
+            return
+        }
+
+        Task { [weak self] in
+            guard let self else { return }
+            guard await lowLimitNotificationManager.requestAuthorization() else { return }
+            updatePreferences { $0.lowLimitNotificationsEnabled = true }
+            if let snapshot {
+                await lowLimitNotificationManager.deliverIfNeeded(for: snapshot, preferences: preferences)
+            }
+        }
+    }
+
+    func addNotificationThreshold() {
+        updatePreferences { preferences in
+            guard preferences.lowLimitNotificationThresholds.count < 5 else { return }
+            let last = preferences.lowLimitNotificationThresholds.reversed().compactMap { $0 }.first ?? 5
+            preferences.lowLimitNotificationThresholds.append(min(100, last + 5))
+            preferences.lowLimitNotificationThresholds = LimitPreferences.normalizedNotificationThresholds(
+                preferences.lowLimitNotificationThresholds
+            )
+        }
+    }
+
+    func removeLastNotificationThreshold() {
+        updatePreferences { preferences in
+            guard !preferences.lowLimitNotificationThresholds.isEmpty else { return }
+            preferences.lowLimitNotificationThresholds.removeLast()
+        }
+    }
+
+    func removeEmptyNotificationThresholds() {
+        let compacted = preferences.lowLimitNotificationThresholds.compactMap { $0 }
+        guard compacted.count != preferences.lowLimitNotificationThresholds.count else { return }
+        updatePreferences { $0.lowLimitNotificationThresholds = compacted }
     }
 
     var menuBarTitle: String {
@@ -133,7 +176,161 @@ final class LimitViewModel: ObservableObject {
     private func reloadWidgets() {
         widgetBridge.publish(WidgetPayload(snapshot: snapshot, preferences: preferences))
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
-        WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+private actor LowLimitNotificationManager {
+    private enum LimitWindowKind: String, Codable {
+        case fiveHour
+        case weekly
+    }
+
+    private struct LimitWindowCycle: Codable, Equatable {
+        let kind: LimitWindowKind
+        let resetAtQuarterHour: Int64
+    }
+
+    private struct NotificationDelivery: Codable {
+        let cycle: LimitWindowCycle
+        let threshold: Int
+        let deliveredAt: Date
+    }
+
+    private struct DeliveryLedger: Codable {
+        var deliveries: [NotificationDelivery] = []
+        // Keep the old string keys while users upgrade from 1.2.0. They stop
+        // the same alert from being sent twice during the current reset cycle.
+        var legacyDeliveryKeys: Set<String> = []
+
+        private enum CodingKeys: String, CodingKey {
+            case deliveries
+            case deliveredKeys
+        }
+
+        init() {}
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            deliveries = try container.decodeIfPresent([NotificationDelivery].self, forKey: .deliveries) ?? []
+            legacyDeliveryKeys = try container.decodeIfPresent(Set<String>.self, forKey: .deliveredKeys) ?? []
+        }
+
+        func contains(_ cycle: LimitWindowCycle, threshold: Int, legacyKey: String?) -> Bool {
+            deliveries.contains { $0.cycle == cycle && $0.threshold == threshold }
+                || legacyKey.map { legacyDeliveryKeys.contains($0) } == true
+        }
+
+        mutating func record(_ cycle: LimitWindowCycle, threshold: Int, deliveredAt: Date) {
+            deliveries.append(NotificationDelivery(cycle: cycle, threshold: threshold, deliveredAt: deliveredAt))
+        }
+
+        mutating func removeExpiredEntries(now: Date) {
+            // A weekly cycle can remain active for seven days. Retain completed
+            // cycles for 30 days so partial API responses cannot erase history.
+            let cutoff = Int64(now.addingTimeInterval(-30 * 24 * 60 * 60).timeIntervalSince1970 / 900)
+            deliveries.removeAll { $0.cycle.resetAtQuarterHour < cutoff }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(deliveries, forKey: .deliveries)
+            try container.encode(legacyDeliveryKeys, forKey: .deliveredKeys)
+        }
+    }
+
+    private let center = UNUserNotificationCenter.current()
+
+    func requestAuthorization() async -> Bool {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional:
+            return true
+        case .notDetermined:
+            return (try? await center.requestAuthorization(options: [.alert, .sound])) == true
+        default:
+            return false
+        }
+    }
+
+    func deliverIfNeeded(for snapshot: LimitSnapshot, preferences: LimitPreferences) async {
+        guard preferences.lowLimitNotificationsEnabled,
+              await requestAuthorization()
+        else { return }
+
+        var ledger = readLedger()
+        ledger.removeExpiredEntries(now: Date())
+        let windows: [(LimitWindowKind, LimitWindowSnapshot)] = [
+            snapshot.fiveHour.map { (.fiveHour, $0) },
+            snapshot.weekly.map { (.weekly, $0) }
+        ].compactMap { $0 }
+
+        for (kind, window) in windows {
+            guard let cycle = cycle(for: window, kind: kind) else { continue }
+            // Several thresholds can match if the app first sees an already-low
+            // value. Alert only for the nearest one; lower thresholds can still
+            // alert later as the remaining percentage continues to fall.
+            guard let threshold = preferences.lowLimitNotificationThresholds
+                .compactMap({ $0 })
+                .filter({ window.leftPercent <= $0 })
+                .min()
+            else { continue }
+
+            let legacyKey = legacyDeliveryKey(for: window, threshold: threshold)
+            guard !ledger.contains(cycle, threshold: threshold, legacyKey: legacyKey) else { continue }
+
+            let content = UNMutableNotificationContent()
+            content.title = "Codex limit is running low"
+            content.body = "\(window.label): \(window.leftPercent)% remaining (alert threshold \(threshold)%)."
+            content.sound = .default
+            let request = UNNotificationRequest(
+                identifier: "codex-limit.\(kind.rawValue).\(cycle.resetAtQuarterHour).\(threshold)",
+                content: content,
+                trigger: nil
+            )
+
+            do {
+                try await center.add(request)
+                ledger.record(cycle, threshold: threshold, deliveredAt: Date())
+            } catch {
+                continue
+            }
+        }
+        writeLedger(ledger)
+    }
+
+    private func cycle(for window: LimitWindowSnapshot, kind: LimitWindowKind) -> LimitWindowCycle? {
+        guard let resetsAt = window.resetsAt else { return nil }
+        // The API can shift a reset timestamp by seconds between refreshes.
+        // Rounding to 15-minute buckets keeps one real reset cycle stable.
+        let resetAtQuarterHour = Int64((resetsAt.timeIntervalSince1970 / 900).rounded())
+        return LimitWindowCycle(kind: kind, resetAtQuarterHour: resetAtQuarterHour)
+    }
+
+    private func legacyDeliveryKey(for window: LimitWindowSnapshot, threshold: Int) -> String? {
+        guard let resetsAt = window.resetsAt else { return nil }
+        let resetHour = Int(resetsAt.timeIntervalSince1970 / 3_600)
+        return "\(window.windowDurationMins ?? 0)-\(resetHour)|\(threshold)"
+    }
+
+    private func readLedger() -> DeliveryLedger {
+        guard let data = try? Data(contentsOf: ledgerURL()),
+              let ledger = try? JSONDecoder.codexLimitDecoder.decode(DeliveryLedger.self, from: data)
+        else { return DeliveryLedger() }
+        return ledger
+    }
+
+    private func writeLedger(_ ledger: DeliveryLedger) {
+        guard let data = try? JSONEncoder.codexLimitEncoder.encode(ledger) else { return }
+        let url = ledgerURL()
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    private func ledgerURL() -> URL {
+        (FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory)
+            .appendingPathComponent("CodexLimitWidget", isDirectory: true)
+            .appendingPathComponent("low-limit-notification-ledger.json")
     }
 }
 
