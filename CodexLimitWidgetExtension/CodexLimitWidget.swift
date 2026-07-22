@@ -1,6 +1,14 @@
 import WidgetKit
 import SwiftUI
 
+private final class TimelineCompletionBox<Value>: @unchecked Sendable {
+    let completion: (Value) -> Void
+
+    init(_ completion: @escaping (Value) -> Void) {
+        self.completion = completion
+    }
+}
+
 struct CodexLimitEntry: TimelineEntry {
     let date: Date
     let snapshot: LimitSnapshot?
@@ -13,23 +21,29 @@ struct CodexLimitProvider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (CodexLimitEntry) -> Void) {
-        completion(
-            CodexLimitEntry(
-                date: Date(),
-                snapshot: LimitStore.read() ?? .placeholder,
-                preferences: LimitPreferencesStore.read()
-            )
-        )
+        let completionBox = TimelineCompletionBox(completion)
+        Task {
+            let payload = await loadPayload() ?? WidgetPayload(snapshot: .placeholder, preferences: .default)
+            completionBox.completion(CodexLimitEntry(date: Date(), snapshot: payload.snapshot, preferences: payload.preferences))
+        }
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<CodexLimitEntry>) -> Void) {
-        let entry = CodexLimitEntry(
-            date: Date(),
-            snapshot: LimitStore.read(),
-            preferences: LimitPreferencesStore.read()
-        )
-        let next = Calendar.current.date(byAdding: .minute, value: 1, to: Date()) ?? Date().addingTimeInterval(60)
-        completion(Timeline(entries: [entry], policy: .after(next)))
+        let completionBox = TimelineCompletionBox(completion)
+        Task {
+            let payload = await loadPayload() ?? WidgetPayloadStore.read()
+            let entry = CodexLimitEntry(date: Date(), snapshot: payload?.snapshot, preferences: payload?.preferences ?? .default)
+            let next = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
+            completionBox.completion(Timeline(entries: [entry], policy: .after(next)))
+        }
+    }
+
+    private func loadPayload() async -> WidgetPayload? {
+        if let payload = await WidgetBridgeClient.fetch() {
+            WidgetPayloadStore.write(payload)
+            return payload
+        }
+        return nil
     }
 }
 
@@ -651,15 +665,16 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
-        let padding = EdgeInsets(top: 8, leading: 20, bottom: 7, trailing: 20)
+        let padding = EdgeInsets(top: 14, leading: 16, bottom: 14, trailing: 16)
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
         let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
-        let leftWidth = min(118, max(104, size.width * 0.34))
+        let meterTitle = snapshot.fiveHour == nil ? "WEEKLY LIMIT" : "5-HOUR LIMIT"
+        let leftWidth = min(138, max(118, size.width * 0.40))
 
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .top) {
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
                 Text("Codex Limit")
-                    .font(.system(size: 20, weight: .regular, design: .serif))
+                    .font(.system(size: 17, weight: .regular, design: .serif))
                     .foregroundStyle(EditorialPalette.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
@@ -668,25 +683,25 @@ private struct EditorialLimitWidgetView: View {
 
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(metricPrefix) RESET")
-                        .font(.system(size: 9, weight: .semibold))
+                        .font(.system(size: 8, weight: .semibold))
                     Text(metric.resetClockText)
-                        .font(.system(size: 13, weight: .regular, design: .serif))
+                        .font(.system(size: 14, weight: .regular, design: .serif))
                 }
                 .foregroundStyle(EditorialPalette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .center, spacing: 12) {
-                VStack(alignment: .leading, spacing: -6) {
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: -5) {
                     Text("\(metric.leftPercent)%")
-                        .font(.system(size: 48, weight: .regular, design: .serif))
+                        .font(.system(size: 52, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
                     Text("Remaining")
-                        .font(.system(size: 20, weight: .regular, design: .serif))
+                        .font(.system(size: 17, weight: .regular, design: .serif))
                         .foregroundStyle(EditorialPalette.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -695,33 +710,16 @@ private struct EditorialLimitWidgetView: View {
                 .layoutPriority(2)
 
                 EditorialVerticalRule()
-                    .frame(height: 56)
+                    .frame(height: 62)
 
-                Text(editorialMessage(for: metric.leftPercent))
-                    .font(.system(size: 13, weight: .regular, design: .serif))
-                    .italic()
-                    .foregroundStyle(EditorialPalette.mutedInk)
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.7)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .layoutPriority(3)
-            }
-            .frame(height: 56)
-
-            if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
-                weeklyMeter(weekly.leftPercent, height: 7, labelSize: 7.8)
-            }
-
-            HStack(spacing: 16) {
-                editorialStat("USED", "\(metric.usedPercent)%")
-                if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
-                    EditorialVerticalRule()
-                    editorialStat("WEEKLY", "\(weekly.leftPercent)%")
+                VStack(alignment: .leading, spacing: 7) {
+                    mediumStat("PLAN", (snapshot.planType ?? "--").uppercased())
+                    mediumStat("USED", "\(metric.usedPercent)%")
                 }
-                EditorialVerticalRule()
-                editorialStat("PLAN", (snapshot.planType ?? "--").uppercased())
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            limitMeter(title: meterTitle, percent: metric.leftPercent, height: 7, labelSize: 8)
         }
         .padding(padding)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
@@ -882,9 +880,13 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func weeklyMeter(_ percent: Int, height: CGFloat, labelSize: CGFloat) -> some View {
+        limitMeter(title: "WEEKLY LIMIT", percent: percent, height: height, labelSize: labelSize)
+    }
+
+    private func limitMeter(title: String, percent: Int, height: CGFloat, labelSize: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
-                Text("WEEKLY LIMIT")
+                Text(title)
                     .font(.system(size: labelSize, weight: .semibold))
                     .foregroundStyle(EditorialPalette.mutedInk)
                     .lineLimit(1)
@@ -900,6 +902,21 @@ private struct EditorialLimitWidgetView: View {
             }
 
             EditorialMeter(percent: percent, height: height)
+        }
+    }
+
+    private func mediumStat(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(label)
+                .font(.system(size: 8, weight: .semibold))
+                .foregroundStyle(EditorialPalette.mutedInk)
+                .lineLimit(1)
+
+            Text(value)
+                .font(.system(size: 15, weight: .regular, design: .serif))
+                .foregroundStyle(EditorialPalette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
         }
     }
 

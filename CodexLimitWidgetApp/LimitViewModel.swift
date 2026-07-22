@@ -1,4 +1,5 @@
 import Foundation
+import Network
 import ServiceManagement
 import WidgetKit
 
@@ -9,6 +10,7 @@ final class LimitViewModel: ObservableObject {
     @Published private(set) var preferences: LimitPreferences
 
     private let client = CodexRateLimitClient()
+    private let widgetBridge = LoopbackWidgetBridge()
     private var timer: Timer?
     private var started = false
 
@@ -23,6 +25,8 @@ final class LimitViewModel: ObservableObject {
     func start() {
         guard !started else { return }
         started = true
+        widgetBridge.start()
+        widgetBridge.publish(WidgetPayload(snapshot: snapshot, preferences: preferences))
         configureLoginItem()
         Task { await refresh() }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
@@ -127,7 +131,55 @@ final class LimitViewModel: ObservableObject {
     }
 
     private func reloadWidgets() {
+        widgetBridge.publish(WidgetPayload(snapshot: snapshot, preferences: preferences))
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
         WidgetCenter.shared.reloadAllTimelines()
+    }
+}
+
+private final class LoopbackWidgetBridge: @unchecked Sendable {
+    private let queue = DispatchQueue(label: "com.sergeylopukhov.codexlimitwidget.loopback")
+    private var listener: NWListener?
+    private var responseData = Data()
+
+    func start() {
+        guard listener == nil else { return }
+
+        do {
+            let parameters = NWParameters.tcp
+            parameters.requiredLocalEndpoint = .hostPort(host: "127.0.0.1", port: 38347)
+            let listener = try NWListener(using: parameters)
+            listener.newConnectionHandler = { [weak self] connection in
+                self?.serve(connection)
+            }
+            listener.start(queue: queue)
+            self.listener = listener
+        } catch {
+            listener = nil
+        }
+    }
+
+    func publish(_ payload: WidgetPayload) {
+        let data = (try? JSONEncoder.codexLimitEncoder.encode(payload)) ?? Data()
+        queue.sync { responseData = data }
+    }
+
+    private func serve(_ connection: NWConnection) {
+        connection.start(queue: queue)
+        connection.receive(minimumIncompleteLength: 1, maximumLength: 4_096) { [weak self] data, _, _, _ in
+            guard let self else {
+                connection.cancel()
+                return
+            }
+
+            let request = String(data: data ?? Data(), encoding: .utf8) ?? ""
+            let isPayloadRequest = request.hasPrefix("GET /v1/widget-payload ")
+            let body = isPayloadRequest ? self.responseData : Data()
+            let status = isPayloadRequest ? "200 OK" : "404 Not Found"
+            let headers = "HTTP/1.1 \(status)\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\nConnection: close\r\n\r\n"
+            connection.send(content: Data(headers.utf8) + body, completion: .contentProcessed { _ in
+                connection.cancel()
+            })
+        }
     }
 }

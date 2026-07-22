@@ -28,11 +28,7 @@ struct CodexLimitWidgetApp: App {
         appDelegate.showSettings = {
             settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
         }
-        Task { @MainActor in
-            updateController.start()
-            try? await Task.sleep(nanoseconds: 1_000_000_000)
-            settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
-        }
+        updateController.start()
     }
 
     var body: some Scene {
@@ -496,7 +492,7 @@ final class SettingsWindowPresenter: ObservableObject {
 
         if let window = windowController?.window {
             window.contentViewController = NSHostingController(rootView: contentView)
-            window.center()
+            centerOnCurrentScreen(window)
             bringToFront(window)
             return
         }
@@ -517,18 +513,39 @@ final class SettingsWindowPresenter: ObservableObject {
         window.isReleasedWhenClosed = false
         window.level = .floating
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        window.center()
+        window.alphaValue = 0
 
         let controller = NSWindowController(window: window)
         windowController = controller
         controller.showWindow(nil)
-        bringToFront(window)
+        DispatchQueue.main.async { [weak self, weak window] in
+            guard let self, let window else { return }
+            window.contentView?.layoutSubtreeIfNeeded()
+            self.centerOnCurrentScreen(window)
+            window.alphaValue = 1
+            self.bringToFront(window)
+        }
     }
 
     private func bringToFront(_ window: NSWindow) {
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         window.orderFrontRegardless()
+    }
+
+    private func centerOnCurrentScreen(_ window: NSWindow) {
+        let mouseLocation = NSEvent.mouseLocation
+        guard let screen = NSScreen.screens.first(where: { $0.visibleFrame.contains(mouseLocation) }) ?? NSScreen.main else {
+            window.center()
+            return
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let origin = NSPoint(
+            x: visibleFrame.midX - window.frame.width / 2,
+            y: visibleFrame.midY - window.frame.height / 2
+        )
+        window.setFrameOrigin(origin)
     }
 }
 

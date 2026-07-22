@@ -1,7 +1,11 @@
 import Foundation
 
-let appGroupIdentifier = "group.com.sergeylopukhov.codexlimitwidget"
 let widgetKindIdentifier = "Codex Limit Widget"
+
+struct WidgetPayload: Codable, Equatable {
+    var snapshot: LimitSnapshot?
+    var preferences: LimitPreferences
+}
 
 struct LimitSnapshot: Codable, Equatable {
     // Some Codex plans return only a weekly window. Keep both windows optional
@@ -195,7 +199,6 @@ enum MenuWindowDesign: String, Codable, CaseIterable, Identifiable {
 
 enum LimitStore {
     static let filename = "codex-limit-snapshot.json"
-    private static let defaultsKey = "codex-limit-snapshot-data"
 
     static func read() -> LimitSnapshot? {
         for url in storageURLs(filename: filename) {
@@ -205,9 +208,6 @@ enum LimitStore {
             } catch {
                 continue
             }
-        }
-        if let data = sharedDefaults()?.data(forKey: defaultsKey) {
-            return try? JSONDecoder.codexLimitDecoder.decode(LimitSnapshot.self, from: data)
         }
         return nil
     }
@@ -228,12 +228,6 @@ enum LimitStore {
             }
         }
 
-        if let defaults = sharedDefaults() {
-            defaults.set(data, forKey: defaultsKey)
-            defaults.synchronize()
-            didWrite = true
-        }
-
         if !didWrite, let lastError {
             throw lastError
         }
@@ -243,46 +237,19 @@ enum LimitStore {
     }
 
     static func storageURLs(filename: String) -> [URL] {
-        var urls: [URL] = []
-
-        if let groupURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            urls.append(groupURL.appendingPathComponent(filename))
-        }
-
         if let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first {
-            urls.append(
+            return [
                 support
                     .appendingPathComponent("CodexLimitWidget", isDirectory: true)
                     .appendingPathComponent(filename)
-            )
+            ]
         }
-
-        urls.append(
-            FileManager.default.homeDirectoryForCurrentUser
-                .appendingPathComponent("Library/Containers/com.sergeylopukhov.CodexLimitWidget.WidgetExtension/Data/Library/Application Support/CodexLimitWidget", isDirectory: true)
-                .appendingPathComponent(filename)
-        )
-
-        return uniqueURLs(urls)
-    }
-
-    private static func uniqueURLs(_ urls: [URL]) -> [URL] {
-        var seen = Set<String>()
-        var result: [URL] = []
-
-        for url in urls {
-            let path = url.standardizedFileURL.path
-            guard seen.insert(path).inserted else { continue }
-            result.append(url)
-        }
-
-        return result
+        return []
     }
 }
 
 enum LimitPreferencesStore {
     static let filename = "codex-limit-settings.json"
-    private static let defaultsKey = "codex-limit-settings-data"
 
     static func read() -> LimitPreferences {
         for url in LimitStore.storageURLs(filename: filename) {
@@ -292,10 +259,6 @@ enum LimitPreferencesStore {
             } catch {
                 continue
             }
-        }
-        if let data = sharedDefaults()?.data(forKey: defaultsKey),
-           let preferences = try? JSONDecoder.codexLimitDecoder.decode(LimitPreferences.self, from: data) {
-            return preferences.normalizedForCurrentUI
         }
         return .default
     }
@@ -316,12 +279,6 @@ enum LimitPreferencesStore {
             }
         }
 
-        if let defaults = sharedDefaults() {
-            defaults.set(data, forKey: defaultsKey)
-            defaults.synchronize()
-            didWrite = true
-        }
-
         if !didWrite, let lastError {
             throw lastError
         }
@@ -335,8 +292,46 @@ enum LimitStoreError: Error {
     case unavailableStorage
 }
 
-private func sharedDefaults() -> UserDefaults? {
-    UserDefaults(suiteName: appGroupIdentifier)
+enum WidgetPayloadStore {
+    private static let filename = "widget-payload.json"
+
+    static func read() -> WidgetPayload? {
+        guard let data = try? Data(contentsOf: storageURL()) else { return nil }
+        return try? JSONDecoder.codexLimitDecoder.decode(WidgetPayload.self, from: data)
+    }
+
+    static func write(_ payload: WidgetPayload) {
+        guard let data = try? JSONEncoder.codexLimitEncoder.encode(payload) else { return }
+        let url = storageURL()
+        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? data.write(to: url, options: [.atomic])
+    }
+
+    private static func storageURL() -> URL {
+        let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+            ?? FileManager.default.temporaryDirectory
+        return support
+            .appendingPathComponent("CodexLimitWidget", isDirectory: true)
+            .appendingPathComponent(filename)
+    }
+}
+
+enum WidgetBridgeClient {
+    static let url = URL(string: "http://127.0.0.1:38347/v1/widget-payload")!
+
+    static func fetch() async -> WidgetPayload? {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 1.5
+        request.cachePolicy = .reloadIgnoringLocalCacheData
+
+        guard let (data, response) = try? await URLSession.shared.data(for: request),
+              (response as? HTTPURLResponse)?.statusCode == 200,
+              let payload = try? JSONDecoder.codexLimitDecoder.decode(WidgetPayload.self, from: data)
+        else {
+            return nil
+        }
+        return payload
+    }
 }
 
 extension JSONDecoder {
