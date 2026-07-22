@@ -30,7 +30,19 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
 
-          if [ "$GITHUB_REF_NAME" = "v1.1.8" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
+            {
+              echo "## Release Notes"
+              echo
+              echo "This release fixes light corner artifacts around the menu bar popover."
+              echo
+              echo "- Uses the native macOS popover shape, so the pointer and rounded edges render as one surface."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.1.9-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.1.8" ]; then
             {
               echo "## Release Notes"
               echo

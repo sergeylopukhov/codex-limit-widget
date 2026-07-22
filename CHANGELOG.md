@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.9
+
+- Fixed light corner artifacts in the menu bar popover by letting macOS draw its native popover shape.
+
 ## 1.1.8
 
 - Added automatic checks for the latest GitHub release at launch and every four hours.

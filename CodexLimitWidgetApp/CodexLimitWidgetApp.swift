@@ -91,11 +91,6 @@ struct MenuBarContentView: View {
         }
         .frame(width: 286, alignment: .top)
         .background(MenuWindowVisuals.popoverBackground(for: design))
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .stroke(MenuWindowVisuals.popoverBorder(for: design), lineWidth: 1)
-        )
     }
 }
 
