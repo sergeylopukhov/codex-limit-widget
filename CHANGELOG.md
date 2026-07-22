@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.10 Beta 3
+
+- Stopped opening Settings automatically at launch.
+- Center Settings on the screen containing the pointer.
+
 ## 1.1.10 Beta 2
 
 - Corrected the bundled app and extension version metadata to `1.1.10` (build `140`).
