@@ -207,6 +207,7 @@ jobs:
           name: ${{ env.RELEASE_NAME }}
           body_path: release-description.md
           overwrite_files: true
+          prerelease: ${{ contains(github.ref_name, '-beta.') }}
           files: |
             release/CodexLimitWidget-*-macOS.dmg
             release/CodexLimitWidget-*-macOS.zip

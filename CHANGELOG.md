@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.10 Beta 1
+
+- Added the first beta release channel. Beta releases do not appear as updates for stable installations.
+- Made WidgetKit load its data through the app bridge and retain the latest successful payload as fallback.
+- Tightened the Beige medium widget: compact metric grid, no status paragraph, and one active-limit progress bar.
+
 ## 1.1.9
 
 - Fixed light corner artifacts in the menu bar popover by letting macOS draw its native popover shape.
