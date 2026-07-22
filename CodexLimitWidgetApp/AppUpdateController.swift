@@ -31,6 +31,7 @@ final class AppUpdateController: ObservableObject {
     private let releasesURL = URL(string: "https://api.github.com/repos/sergeylopukhov/codex-limit-widget/releases/latest")!
     private var timer: Timer?
     private var started = false
+    private var activeCheckID: UUID?
 
     var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "--"
@@ -97,11 +98,26 @@ final class AppUpdateController: ObservableObject {
     func checkForUpdates() async {
         guard phase != .downloading, phase != .installing else { return }
 
+        let checkID = UUID()
+        activeCheckID = checkID
         phase = .checking
         errorMessage = nil
 
+        let timeoutTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 20_000_000_000)
+            guard !Task.isCancelled, let self, self.activeCheckID == checkID else { return }
+
+            self.activeCheckID = nil
+            self.phase = self.availableRelease == nil ? .failed : .available
+            self.errorMessage = "Update check timed out. Please try again."
+        }
+        defer { timeoutTask.cancel() }
+
         do {
             let release = try await fetchLatestRelease()
+            guard activeCheckID == checkID else { return }
+
+            activeCheckID = nil
             lastCheckedAt = Date()
 
             if Self.isVersion(release.version, newerThan: currentVersion) {
@@ -112,6 +128,9 @@ final class AppUpdateController: ObservableObject {
                 phase = .upToDate
             }
         } catch {
+            guard activeCheckID == checkID else { return }
+
+            activeCheckID = nil
             phase = .failed
             errorMessage = Self.message(for: error)
         }

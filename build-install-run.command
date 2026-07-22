@@ -70,14 +70,6 @@ fi
 rm -rf "$BUILD_PRODUCTS_DIR"
 pluginkit -a "$EXTENSION_APP" 2>/dev/null || true
 touch "$TARGET_APP" "$EXTENSION_APP" 2>/dev/null || true
-rm -rf "$HOME/Library/Caches/com.apple.chrono/widget-relevance-cache" 2>/dev/null || true
-/usr/bin/qlmanage -r cache >/dev/null 2>&1 || true
-killall iconservicesagent 2>/dev/null || true
-killall IconServicesAgent 2>/dev/null || true
-killall chronod 2>/dev/null || true
-killall NotificationCenter 2>/dev/null || true
-killall WidgetKitExtension 2>/dev/null || true
-killall Dock 2>/dev/null || true
 open "$TARGET_APP"
 
 osascript -e 'display notification "Built, installed, and launched" with title "Codex Limit Widget"'

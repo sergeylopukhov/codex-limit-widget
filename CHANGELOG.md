@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.11
+
+- Prevented duplicate Settings presentations when launch and reopen events overlap.
+- Stopped local install scripts from restarting macOS interface and WidgetKit processes.
+- Added a 20-second timeout to update checks so the update action cannot remain blocked indefinitely.
+
 ## 1.1.10
 
 - Made WidgetKit load data through the app bridge and retain the latest successful payload as fallback.

@@ -111,7 +111,7 @@ private struct MenuBarUpdateBanner: View {
 
             Spacer(minLength: 4)
 
-            Button(updateController.isBusy ? "Wait" : "Update") {
+            Button(updateController.phase == .checking ? "Checking" : "Update") {
                 Task { await updateController.installAvailableUpdate() }
             }
             .buttonStyle(.borderedProminent)
@@ -353,11 +353,12 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var showSettings: (() -> Void)?
+    private var isSettingsPresentationPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         installAppleEventHandlers()
-        showSettingsSoon()
+        requestSettingsPresentation()
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -365,7 +366,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
-        showSettingsSoon()
+        if !flag {
+            requestSettingsPresentation()
+        }
         return true
     }
 
@@ -387,13 +390,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleOpenApplicationEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         DispatchQueue.main.async { [weak self] in
-            self?.showSettingsSoon()
+            self?.requestSettingsPresentation()
         }
     }
 
-    private func showSettingsSoon() {
+    private func requestSettingsPresentation() {
+        guard !isSettingsPresentationPending else { return }
+        isSettingsPresentationPending = true
+
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
-            self?.showSettings?()
+            guard let self else { return }
+            self.isSettingsPresentationPending = false
+            guard !NSApp.windows.contains(where: { $0.isVisible }) else { return }
+            self.showSettings?()
         }
     }
 }
