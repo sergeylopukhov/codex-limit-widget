@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.10 Beta 2
+
+- Corrected the bundled app and extension version metadata to `1.1.10` (build `140`).
+
 ## 1.1.10 Beta 1
 
 - Added the first beta release channel. Beta releases do not appear as updates for stable installations.
