@@ -22,8 +22,11 @@ outputs/
 work/
 
 # Local agent documentation
+AGENTS.md
+BACKLOG.md
+RELEASE_WORKFLOW.md
+docs/
 ARCHITECTURE.md
-CHANGELOG.md
 DEVELOPMENT.md
 
 # SwiftPM / tooling
