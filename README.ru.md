@@ -5,8 +5,6 @@
 </p>
 
 <div align="center">
-  <img src="assets/screenshots/readme/beige-large.png" width="520" alt="Большой виджет Codex Limit Widget в бежевом оформлении">
-
   <p>
     Приложение для строки меню macOS и виджет рабочего стола, чтобы видеть лимиты Codex.
   </p>
@@ -58,71 +56,13 @@ Codex Desktop с встроенным Codex не заменяет Codex CLI д
 
 Индикатор в строке меню показывает подробные лимиты или компактный процент. Нажмите на него, чтобы открыть окно с доступными лимитами, временем сброса, свежестью данных и настройками. Когда выходит новая версия, рядом со значением появляется стрелка, а во всплывающем окне — карточка обновления.
 
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-window-beige.png" width="100%" alt="Окно строки меню в бежевом оформлении"><br>
-      <sub>Beige</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-window-dark.png" width="100%" alt="Окно строки меню в тёмном оформлении"><br>
-      <sub>Dark</sub>
-    </td>
-  </tr>
-</table>
-
 ## Виджеты
 
-<table>
-  <tr>
-    <td width="40%" align="center">
-      <img src="assets/screenshots/readme/beige-large.png" width="100%" alt="Большой виджет Codex Limit Widget в бежевом оформлении"><br>
-      <sub>Large</sub>
-    </td>
-    <td width="38%" align="center">
-      <img src="assets/screenshots/readme/beige-medium.png" width="100%" alt="Средний виджет Codex Limit Widget в бежевом оформлении"><br>
-      <sub>Medium</sub>
-    </td>
-    <td width="22%" align="center">
-      <img src="assets/screenshots/readme/beige-small.png" width="100%" alt="Маленький виджет Codex Limit Widget в бежевом оформлении"><br>
-      <sub>Small</sub>
-    </td>
-  </tr>
-</table>
-
-<table>
-  <tr>
-    <td width="40%" align="center">
-      <img src="assets/screenshots/readme/dark-large.png" width="100%" alt="Большой виджет Codex Limit Widget в тёмном оформлении"><br>
-      <sub>Large</sub>
-    </td>
-    <td width="38%" align="center">
-      <img src="assets/screenshots/readme/dark-medium.png" width="100%" alt="Средний виджет Codex Limit Widget в тёмном оформлении"><br>
-      <sub>Medium</sub>
-    </td>
-    <td width="22%" align="center">
-      <img src="assets/screenshots/readme/dark-small.png" width="100%" alt="Маленький виджет Codex Limit Widget в тёмном оформлении"><br>
-      <sub>Small</sub>
-    </td>
-  </tr>
-</table>
+Виджет доступен в размерах Small, Medium и Large, с тёмным и бежевым оформлением.
 
 ## Настройки
 
 В настройках выбираются оформление окна и режим строки меню. Если доступны оба лимита, здесь же выбирается источник процента для компактного индикатора. В разделе `Updates` указаны установленная версия, результат последней проверки и действие для обновления.
-
-<table>
-  <tr>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-window-beige.png" width="100%" alt="Окно настроек с выбранным бежевым оформлением"><br>
-      <sub>Beige</sub>
-    </td>
-    <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-window-dark.png" width="100%" alt="Окно настроек с выбранным тёмным оформлением"><br>
-      <sub>Dark</sub>
-    </td>
-  </tr>
-</table>
 
 ## Обновления
 

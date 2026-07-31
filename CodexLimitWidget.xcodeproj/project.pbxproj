@@ -24,8 +24,6 @@
 		A10100000000000000000017 /* AppUpdateController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000019 /* AppUpdateController.swift */; };
 		A10100000000000000000018 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000020 /* Localizable.strings */; };
 		A10100000000000000000019 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000020 /* Localizable.strings */; };
-		A10100000000000000000020 /* CodexCLIIntegrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000023 /* CodexCLIIntegrationTests.swift */; };
-		A10100000000000000000021 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A10200000000000000000025 /* XCTest.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -35,13 +33,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = A10800000000000000000002;
 			remoteInfo = CodexLimitWidgetExtension;
-		};
-		A10300000000000000000002 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A10900000000000000000001 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A10800000000000000000001;
-			remoteInfo = CodexLimitWidget;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -80,9 +71,6 @@
 		A10200000000000000000019 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
 		A10200000000000000000021 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A10200000000000000000022 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
-		A10200000000000000000023 /* CodexCLIIntegrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CodexCLIIntegrationTests.swift; sourceTree = "<group>"; };
-		A10200000000000000000024 /* CodexLimitWidgetTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CodexLimitWidgetTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		A10200000000000000000025 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -100,14 +88,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A10500000000000000000003 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A10100000000000000000021 /* XCTest.framework in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -117,7 +97,6 @@
 				A10600000000000000000002 /* CodexLimitWidgetApp */,
 				A10600000000000000000003 /* CodexLimitWidgetExtension */,
 				A10600000000000000000004 /* Shared */,
-				A10600000000000000000006 /* CodexLimitWidgetTests */,
 				A10600000000000000000005 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -169,14 +148,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		A10600000000000000000006 /* CodexLimitWidgetTests */ = {
-			isa = PBXGroup;
-			children = (
-				A10200000000000000000023 /* CodexCLIIntegrationTests.swift */,
-			);
-			path = CodexLimitWidgetTests;
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -216,24 +187,6 @@
 			productReference = A10200000000000000000009 /* CodexLimitWidgetExtension.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		A10800000000000000000003 /* CodexLimitWidgetTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = A10C00000000000000000004 /* Build configuration list for PBXNativeTarget "CodexLimitWidgetTests" */;
-			buildPhases = (
-				A10A00000000000000000003 /* Sources */,
-				A10500000000000000000003 /* Frameworks */,
-				A10E00000000000000000003 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				A10B00000000000000000002 /* PBXTargetDependency */,
-			);
-			name = CodexLimitWidgetTests;
-			productName = CodexLimitWidgetTests;
-			productReference = A10200000000000000000024 /* CodexLimitWidgetTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -249,10 +202,6 @@
 					};
 					A10800000000000000000002 = {
 						CreatedOnToolsVersion = 16.0;
-					};
-					A10800000000000000000003 = {
-						CreatedOnToolsVersion = 16.0;
-						TestTargetID = A10800000000000000000001;
 					};
 				};
 			};
@@ -272,7 +221,6 @@
 			targets = (
 				A10800000000000000000001 /* CodexLimitWidget */,
 				A10800000000000000000002 /* CodexLimitWidgetExtension */,
-				A10800000000000000000003 /* CodexLimitWidgetTests */,
 			);
 		};
 /* End PBXProject section */
@@ -295,13 +243,6 @@
 				A10100000000000000000014 /* Assets.xcassets in Resources */,
 				A10100000000000000000016 /* AppIcon.icns in Resources */,
 				A10100000000000000000019 /* Localizable.strings in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A10E00000000000000000003 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -344,14 +285,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		A10A00000000000000000003 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				A10100000000000000000020 /* CodexCLIIntegrationTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -359,11 +292,6 @@
 			isa = PBXTargetDependency;
 			target = A10800000000000000000002 /* CodexLimitWidgetExtension */;
 			targetProxy = A10300000000000000000001 /* PBXContainerItemProxy */;
-		};
-		A10B00000000000000000002 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A10800000000000000000001 /* CodexLimitWidget */;
-			targetProxy = A10300000000000000000002 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -582,34 +510,6 @@
 			};
 			name = Release;
 		};
-		A10D00000000000000000007 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidgetTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Limit Widget.app/Contents/MacOS/Codex Limit Widget";
-			};
-			name = Debug;
-		};
-		A10D00000000000000000008 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				CODE_SIGN_STYLE = Automatic;
-				GENERATE_INFOPLIST_FILE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidgetTests;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SWIFT_VERSION = 6.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Codex Limit Widget.app/Contents/MacOS/Codex Limit Widget";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -636,15 +536,6 @@
 			buildConfigurations = (
 				A10D00000000000000000001 /* Debug */,
 				A10D00000000000000000002 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		A10C00000000000000000004 /* Build configuration list for PBXNativeTarget "CodexLimitWidgetTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				A10D00000000000000000007 /* Debug */,
-				A10D00000000000000000008 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -21,6 +21,13 @@ release/
 outputs/
 work/
 
+# Non-source project files
+.github/
+assets/
+scripts/
+build-install-run.command
+CodexLimitWidgetTests/
+
 # Local agent documentation
 AGENTS.md
 BACKLOG.md
