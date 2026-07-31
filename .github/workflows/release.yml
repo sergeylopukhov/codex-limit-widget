@@ -90,8 +90,11 @@ jobs:
               echo
               echo "- Shows the remaining balance as \`250T\` or \`∞T\` when the selected Codex limit is exhausted."
               echo "- Uses the full menu-bar height for the compact credit value and removes the unused percentage-meter space."
+              echo "- Keeps detailed mode on the same compact credit value without \`5H\` or \`7D\` labels and shows up to four fractional digits."
               echo "- Preserves the existing percentage display when credit data is unavailable."
+              echo "- Makes long What's New notes scrollable while keeping the Got it button pinned in the bottom-right corner."
               echo "- Shows version-aware What's New notes: updates from 1.2.251 show only this release, while older upgrades include the intermediate release notes."
+              echo "- Republished the same user-facing version as internal build 148."
               echo
               echo "## Installation"
               echo
