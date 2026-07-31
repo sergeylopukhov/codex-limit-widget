@@ -774,8 +774,8 @@ private struct ReleaseNotesView: View {
                 id: "four-decimal-credit-balance",
                 introducedIn: "1.2.302",
                 icon: "textformat.123",
-                title: "Four-decimal credit balance",
-                detail: "Compact credit balances retain four fractional digits, including values such as 200.9500T."
+                title: "Mode-specific credit precision",
+                detail: "Percent mode shows two fractional digits, such as 200.95T. Detailed mode keeps four, such as 200.9500T."
             ),
             ReleaseNoteItem(
                 id: "reliable-update-checks",

@@ -322,7 +322,7 @@ final class LimitViewModel: ObservableObject {
 
     private var detailedMenuBarCreditValue: String? {
         guard let snapshot,
-              let creditsText = snapshot.credits?.displayText,
+              let creditsText = snapshot.credits?.displayText(maxFractionDigits: 4),
               (snapshot.fiveHour?.usedPercent ?? 0) >= 100 ||
               (snapshot.weekly?.usedPercent ?? 0) >= 100
         else {
@@ -333,7 +333,8 @@ final class LimitViewModel: ObservableObject {
     }
 
     private func menuBarValue(for window: LimitWindowSnapshot) -> String {
-        if window.usedPercent >= 100, let creditsText = snapshot?.credits?.displayText {
+        if window.usedPercent >= 100,
+           let creditsText = snapshot?.credits?.displayText(maxFractionDigits: 2) {
             return creditsText
         }
 

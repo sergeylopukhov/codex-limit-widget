@@ -4,7 +4,7 @@
 
 - Registers the app as a macOS Login Item only once on a clean installation; updates and restarts never register it again.
 - Restores the system glass appearance for desktop widgets when macOS dims them behind another window, while keeping the selected full-color design in the foreground.
-- Keeps four fractional digits in compact credit balances, including values such as `200.9500T`.
+- Shows two fractional digits in Percent mode, such as `200.95T`, and four in Detailed mode, such as `200.9500T`.
 - Bumped the internal build to 150.
 
 ## 1.2.301 - 2026-07-31

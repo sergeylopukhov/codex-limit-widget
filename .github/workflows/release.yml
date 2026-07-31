@@ -90,7 +90,7 @@ jobs:
               echo
               echo "- Registers the app as a Login Item only once during a clean installation; updates and restarts never register it again."
               echo "- Restores the system glass appearance when macOS dims a desktop widget behind another window, while preserving the selected full-color design in the foreground."
-              echo "- Keeps four fractional digits in compact credit balances, including values such as \`200.9500T\`."
+              echo "- Shows two fractional digits in Percent mode, such as \`200.95T\`, and four in Detailed mode, such as \`200.9500T\`."
               echo
               echo "## Installation"
               echo

@@ -60,19 +60,23 @@ struct CreditsSnapshot: Codable, Equatable {
     var balance: String?
 
     var displayText: String? {
+        displayText(maxFractionDigits: 4)
+    }
+
+    func displayText(maxFractionDigits: Int) -> String? {
         guard hasCredits else { return nil }
         if unlimited {
             return "∞T"
         }
 
-        guard let balance = formattedBalance else {
+        guard let balance = formattedBalance(maxFractionDigits: maxFractionDigits) else {
             return nil
         }
 
         return "\(balance)T"
     }
 
-    private var formattedBalance: String? {
+    private func formattedBalance(maxFractionDigits: Int) -> String? {
         guard let balance else { return nil }
         let trimmed = balance.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -93,8 +97,13 @@ struct CreditsSnapshot: Codable, Equatable {
             return String(integerPart)
         }
 
-        let displayedFraction = String(fractionalPart.prefix(4))
-            .padding(toLength: 4, withPad: "0", startingAt: 0)
+        let fractionDigits = max(0, min(maxFractionDigits, 4))
+        guard fractionDigits > 0 else {
+            return String(integerPart)
+        }
+
+        let displayedFraction = String(fractionalPart.prefix(fractionDigits))
+            .padding(toLength: fractionDigits, withPad: "0", startingAt: 0)
         return "\(integerPart).\(displayedFraction)"
     }
 }
