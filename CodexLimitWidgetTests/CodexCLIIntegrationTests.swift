@@ -83,7 +83,7 @@ final class CodexCLIIntegrationTests: XCTestCase {
     func testReleaseNotesShowWhenNoPreviousVersionWasRecorded() {
         XCTAssertTrue(
             ReleaseNotesPresentationPolicy.shouldShow(
-                currentVersionIdentifier: "1.2.251 (146)",
+                currentVersionIdentifier: "1.2.253 (147)",
                 lastShownVersionIdentifier: nil
             )
         )
@@ -92,20 +92,20 @@ final class CodexCLIIntegrationTests: XCTestCase {
     func testReleaseNotesShowAfterOlderBuildAndSkipSameBuild() {
         XCTAssertTrue(
             ReleaseNotesPresentationPolicy.shouldShow(
-                currentVersionIdentifier: "1.2.251 (146)",
-                lastShownVersionIdentifier: "1.2.25 (144)"
+                currentVersionIdentifier: "1.2.253 (147)",
+                lastShownVersionIdentifier: "1.2.251 (146)"
             )
         )
         XCTAssertTrue(
             ReleaseNotesPresentationPolicy.shouldShow(
-                currentVersionIdentifier: "1.2.251 (146)",
+                currentVersionIdentifier: "1.2.253 (147)",
                 lastShownVersionIdentifier: "1.2.251 (145)"
             )
         )
         XCTAssertFalse(
             ReleaseNotesPresentationPolicy.shouldShow(
-                currentVersionIdentifier: "1.2.251 (146)",
-                lastShownVersionIdentifier: "1.2.251 (146)"
+                currentVersionIdentifier: "1.2.253 (147)",
+                lastShownVersionIdentifier: "1.2.253 (147)"
             )
         )
     }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.253 - 2026-07-31
+
+- Shows the remaining Codex credit balance in the menu bar as `250T` or `∞T` when the selected limit is exhausted.
+- Makes the compact credit value larger and vertically centered across the menu-bar height, without reserving space for the percentage meter.
+- Keeps the percentage display unchanged when credit data is unavailable.
+- Expands the localized “What’s New” window with version-aware notes: users upgrading from 1.2.251 see only these changes, while users coming from older versions see the intermediate changes as well.
+
 ## 1.2.251 - 2026-07-31 (Bugfix)
 
 - Fixed duplicate macOS login items: only the canonical release app in `/Applications/Codex Limit Widget.app` with the correct Bundle ID can register at login.

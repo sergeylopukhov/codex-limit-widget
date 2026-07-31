@@ -18,6 +18,13 @@
 "What's new" = "What's new";
 "What's new in v%@" = "What's new in v%@";
 "Bug fix" = "Bug fix";
+"Improvements" = "Improvements";
+"Credit balance in the menu bar" = "Credit balance in the menu bar";
+"When a Codex limit is exhausted, the menu bar shows the remaining balance as 250T or ∞T." = "When a Codex limit is exhausted, the menu bar shows the remaining balance as 250T or ∞T.";
+"Readable compact balance" = "Readable compact balance";
+"Credit values use the full menu-bar height and no longer leave space for the percentage meter." = "Credit values use the full menu-bar height and no longer leave space for the percentage meter.";
+"Version-aware update notes" = "Version-aware update notes";
+"Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes." = "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes.";
 "One login item" = "One login item";
 "Only the installed release app can register at login; Debug and temporary copies stay out." = "Only the installed release app can register at login; Debug and temporary copies stay out.";
 "Reliable update notes" = "Reliable update notes";

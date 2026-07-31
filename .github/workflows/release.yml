@@ -82,6 +82,21 @@ jobs:
               echo
               echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
             } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.253" ]; then
+            {
+              echo "## What's New Since 1.2.251"
+              echo
+              echo "Codex Limit Widget 1.2.253 makes the credit balance clear and readable in the menu bar."
+              echo
+              echo "- Shows the remaining balance as \`250T\` or \`∞T\` when the selected Codex limit is exhausted."
+              echo "- Uses the full menu-bar height for the compact credit value and removes the unused percentage-meter space."
+              echo "- Preserves the existing percentage display when credit data is unavailable."
+              echo "- Shows version-aware What's New notes: updates from 1.2.251 show only this release, while older upgrades include the intermediate release notes."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.253-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
+            } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.2.251" ]; then
             {
               echo "## What's New"

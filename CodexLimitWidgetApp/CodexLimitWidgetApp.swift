@@ -659,7 +659,7 @@ private struct ReleaseNotesView: View {
                     .padding(.vertical, 5)
                     .background(Capsule().fill(palette.backgroundHighlight))
 
-                Text("Bug fix")
+                Text("Improvements")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(palette.mutedText)
                     .padding(.horizontal, 10)
@@ -671,11 +671,14 @@ private struct ReleaseNotesView: View {
             SettingsRule(palette: palette)
                 .padding(.vertical, 18)
 
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(visibleReleaseNotes) { note in
-                    ReleaseNoteRow(icon: note.icon, title: note.title, detail: note.detail)
+            ScrollView(.vertical) {
+                VStack(alignment: .leading, spacing: 12) {
+                    ForEach(visibleReleaseNotes) { note in
+                        ReleaseNoteRow(icon: note.icon, title: note.title, detail: note.detail)
+                    }
                 }
             }
+            .frame(maxHeight: 390)
             .foregroundStyle(palette.primaryText)
 
             Spacer(minLength: 18)
@@ -723,6 +726,27 @@ private struct ReleaseNotesView: View {
 
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
+            ReleaseNoteItem(
+                id: "credit-balance",
+                introducedIn: "1.2.253",
+                icon: "creditcard",
+                title: "Credit balance in the menu bar",
+                detail: "When a Codex limit is exhausted, the menu bar shows the remaining balance as 250T or ∞T."
+            ),
+            ReleaseNoteItem(
+                id: "credit-readable",
+                introducedIn: "1.2.253",
+                icon: "textformat.size",
+                title: "Readable compact balance",
+                detail: "Credit values use the full menu-bar height and no longer leave space for the percentage meter."
+            ),
+            ReleaseNoteItem(
+                id: "version-aware-notes",
+                introducedIn: "1.2.253",
+                icon: "clock.arrow.circlepath",
+                title: "Version-aware update notes",
+                detail: "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes."
+            ),
             ReleaseNoteItem(
                 id: "login-item",
                 introducedIn: "1.2.251",
@@ -859,10 +883,16 @@ private enum MenuBarPercentImageRenderer {
         paragraph.alignment = .center
 
         let text = value as NSString
+        let textRect = isPercent
+            ? NSRect(x: 0, y: 6, width: meterWidth, height: 10)
+            : NSRect(x: 0, y: 1, width: meterWidth, height: 16)
         text.draw(
-            in: NSRect(x: 0, y: 6, width: meterWidth, height: 10),
+            in: textRect,
             withAttributes: [
-                .font: NSFont.monospacedDigitSystemFont(ofSize: 9.5, weight: .semibold),
+                .font: NSFont.monospacedDigitSystemFont(
+                    ofSize: isPercent ? 9.5 : 13,
+                    weight: .semibold
+                ),
                 .foregroundColor: NSColor.white,
                 .paragraphStyle: paragraph
             ]

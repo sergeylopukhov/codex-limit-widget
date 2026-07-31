@@ -62,14 +62,14 @@ struct CreditsSnapshot: Codable, Equatable {
     var displayText: String? {
         guard hasCredits else { return nil }
         if unlimited {
-            return "∞ cr"
+            return "∞T"
         }
 
         guard let balance, !balance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return nil
         }
 
-        return "\(balance) cr"
+        return "\(balance)T"
     }
 }
 

@@ -62,6 +62,13 @@
 "What's new" = "Что нового";
 "What's new in v%@" = "Что нового в v%@";
 "Bug fix" = "Багфикс";
+"Improvements" = "Улучшения";
+"Credit balance in the menu bar" = "Баланс кредитов в строке меню";
+"When a Codex limit is exhausted, the menu bar shows the remaining balance as 250T or ∞T." = "Когда лимит Codex исчерпан, в строке меню показывается остаток кредитов: 250T или ∞T.";
+"Readable compact balance" = "Читаемый компактный баланс";
+"Credit values use the full menu-bar height and no longer leave space for the percentage meter." = "Значение кредитов использует всю высоту строки меню и больше не оставляет место под процентный индикатор.";
+"Version-aware update notes" = "Заметки с учётом версии";
+"Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes." = "При обновлении с 1.2.251 показываются только последние изменения, а при переходе со старых версий — заметки промежуточных релизов.";
 "One login item" = "Один объект входа";
 "Only the installed release app can register at login; Debug and temporary copies stay out." = "При входе регистрируется только установленный релиз; Debug- и временные копии не добавляются.";
 "Reliable update notes" = "Надёжное окно изменений";
