@@ -37,6 +37,7 @@ final class LimitViewModel: ObservableObject {
     private let client = CodexRateLimitClient()
     private let widgetBridge = LoopbackWidgetBridge()
     private let lowLimitNotificationManager = LowLimitNotificationManager()
+    private let notificationSetupKey = "systemNotificationsConfigured"
     private var timer: Timer?
     private var started = false
 
@@ -54,6 +55,7 @@ final class LimitViewModel: ObservableObject {
         widgetBridge.start()
         widgetBridge.publish(WidgetPayload(snapshot: snapshot, preferences: preferences))
         configureLoginItem()
+        configureSystemNotificationsIfNeeded()
         Task { await refresh() }
         timer = Timer.scheduledTimer(withTimeInterval: 60, repeats: true) { [weak self] _ in
             Task { @MainActor in
@@ -415,6 +417,19 @@ final class LimitViewModel: ObservableObject {
             let service = SMAppService.mainApp
             guard service.status == .notRegistered else { return }
             try? service.register()
+        }
+    }
+
+    private func configureSystemNotificationsIfNeeded() {
+        guard !UserDefaults.standard.bool(forKey: notificationSetupKey) else { return }
+
+        Task { [weak self] in
+            guard let self else { return }
+            let isAuthorized = await lowLimitNotificationManager.requestAuthorization()
+            updatePreferences { preferences in
+                preferences.lowLimitNotificationsEnabled = isAuthorized
+            }
+            UserDefaults.standard.set(true, forKey: notificationSetupKey)
         }
     }
 

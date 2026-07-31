@@ -82,6 +82,27 @@ jobs:
               echo
               echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
             } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.301" ]; then
+            {
+              echo "## What's New Since 1.2.253"
+              echo
+              echo "Codex Limit Widget 1.2.301 makes update discovery and installation reliable and keeps the menu bar credit value readable."
+              echo
+              echo "- Bounds update checks so they cannot remain on \`Checking\` forever."
+              echo "- Fixes the Update button in Settings and the menu-bar popover."
+              echo "- Retries a ZIP download with a fresh URL when a CDN cache returns an older asset, preventing false SHA-256 failures."
+              echo "- Sends a notification when a new version appears; clicking it opens Settings at Updates."
+              echo "- Requests notification permission on first launch and enables system alerts when allowed."
+              echo "- Keeps the update arrow green in both percent and detailed menu-bar modes."
+              echo "- Keeps the full compact credit value, including the \`T\` suffix and values such as \`200.95T\`."
+              echo "- Explains that Auto refresh updates limit percentages, credits, token data, and related values."
+              echo "- Closes Settings before opening the release page."
+              echo "- Shows version-aware What's New notes, including intermediate changes for older upgrades."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.301-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
+            } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.2.253" ]; then
             {
               echo "## What's New Since 1.2.251"

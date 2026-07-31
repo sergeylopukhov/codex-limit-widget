@@ -2,6 +2,7 @@ import SwiftUI
 import AppKit
 import Combine
 import Carbon.HIToolbox
+import UserNotifications
 
 @main
 struct CodexLimitWidgetApp: App {
@@ -28,8 +29,8 @@ struct CodexLimitWidgetApp: App {
         _settingsWindowPresenter = StateObject(wrappedValue: settingsWindowPresenter)
         _releaseNotesWindowPresenter = StateObject(wrappedValue: releaseNotesWindowPresenter)
         _statusItemController = StateObject(wrappedValue: statusItemController)
-        appDelegate.showSettings = {
-            settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController)
+        appDelegate.showSettings = { focus in
+            settingsWindowPresenter.show(viewModel: viewModel, updateController: updateController, focus: focus)
         }
         appDelegate.showInitialWindow = {
             releaseNotesWindowPresenter.showIfNeeded(viewModel: viewModel, onDismiss: {})
@@ -145,7 +146,7 @@ private struct MenuBarUpdateBanner: View {
 
             Spacer(minLength: 4)
 
-            Button(updateController.phase == .checking ? "Checking" : "Update") {
+            Button(updateController.menuActionTitle) {
                 Task { await updateController.installAvailableUpdate() }
             }
             .buttonStyle(.borderedProminent)
@@ -399,14 +400,20 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     }
 }
 
+enum SettingsFocus: Hashable {
+    case general
+    case updates
+}
+
 @MainActor
-final class AppDelegate: NSObject, NSApplicationDelegate {
-    var showSettings: (() -> Void)?
+final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    var showSettings: ((SettingsFocus) -> Void)?
     var showInitialWindow: (() -> Void)?
     private var isSettingsPresentationPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        UNUserNotificationCenter.current().delegate = self
         installAppleEventHandlers()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             self?.showInitialWindow?()
@@ -419,13 +426,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if !flag {
-            requestSettingsPresentation()
+            requestSettingsPresentation(focus: .general)
         }
         return true
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {
-        requestSettingsPresentation()
+        requestSettingsPresentation(focus: .general)
     }
 
     private func installAppleEventHandlers() {
@@ -452,25 +459,47 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func handleOpenApplicationEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         DispatchQueue.main.async { [weak self] in
-            self?.requestSettingsPresentation()
+            self?.requestSettingsPresentation(focus: .general)
         }
     }
 
     @objc private func handleOpenURL(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         DispatchQueue.main.async { [weak self] in
-            self?.requestSettingsPresentation()
+            self?.requestSettingsPresentation(focus: .general)
         }
     }
 
-    private func requestSettingsPresentation() {
+    private func requestSettingsPresentation(focus: SettingsFocus) {
         guard !isSettingsPresentationPending else { return }
         isSettingsPresentationPending = true
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
             guard let self else { return }
             self.isSettingsPresentationPending = false
-            self.showSettings?()
+            self.showSettings?(focus)
         }
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let shouldOpenUpdates = (response.notification.request.content.userInfo["codexLimitWidgetAction"] as? String) == "openUpdates"
+        Task { @MainActor [weak self] in
+            if shouldOpenUpdates {
+                self?.requestSettingsPresentation(focus: .updates)
+            }
+        }
+        completionHandler()
+    }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
 
@@ -728,6 +757,62 @@ private struct ReleaseNotesView: View {
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
             ReleaseNoteItem(
+                id: "reliable-update-checks",
+                introducedIn: "1.2.301",
+                icon: "hourglass.badge.checkmark",
+                title: "Reliable update checks",
+                detail: "Update checks stop after 20 seconds instead of staying on Checking forever."
+            ),
+            ReleaseNoteItem(
+                id: "reliable-update-downloads",
+                introducedIn: "1.2.301",
+                icon: "arrow.down.doc",
+                title: "Reliable update downloads",
+                detail: "The updater retries a release ZIP with a fresh URL when a CDN cache serves an older asset."
+            ),
+            ReleaseNoteItem(
+                id: "green-update-indicator",
+                introducedIn: "1.2.301",
+                icon: "arrow.up.right",
+                title: "Green update indicator",
+                detail: "The update arrow stays green in both percent and detailed menu-bar modes."
+            ),
+            ReleaseNoteItem(
+                id: "update-notifications",
+                introducedIn: "1.2.301",
+                icon: "bell.badge",
+                title: "Update notifications",
+                detail: "A new-version notification opens Settings directly at Updates."
+            ),
+            ReleaseNoteItem(
+                id: "notifications-first-launch",
+                introducedIn: "1.2.301",
+                icon: "bell.and.waves.left.and.right",
+                title: "Notifications on first launch",
+                detail: "The app asks for notification permission on first launch and enables system alerts when allowed."
+            ),
+            ReleaseNoteItem(
+                id: "auto-refresh-explained",
+                introducedIn: "1.2.301",
+                icon: "arrow.clockwise.circle",
+                title: "Clear auto-refresh description",
+                detail: "Settings explains that auto-refresh updates limit percentages, credits, token data, and related values."
+            ),
+            ReleaseNoteItem(
+                id: "release-page-flow",
+                introducedIn: "1.2.301",
+                icon: "safari",
+                title: "Cleaner release-page flow",
+                detail: "The Settings window closes before the release page opens."
+            ),
+            ReleaseNoteItem(
+                id: "full-credit-balance",
+                introducedIn: "1.2.301",
+                icon: "textformat.123",
+                title: "Full credit balance",
+                detail: "Compact menu-bar credits keep the T suffix and enough width for values such as 200.95T."
+            ),
+            ReleaseNoteItem(
                 id: "credit-balance",
                 introducedIn: "1.2.253",
                 icon: "creditcard",
@@ -873,8 +958,14 @@ private enum MenuBarPercentImageRenderer {
     }
 
     static func size(for value: String, hasUpdate: Bool) -> NSSize {
-        let valueWidth: CGFloat = value.hasSuffix("%") ? 30 : 40
+        let valueWidth = value.hasSuffix("%") ? 30 : creditValueWidth(for: value)
         return NSSize(width: valueWidth + (hasUpdate ? 10 : 0), height: 18)
+    }
+
+    private static func creditValueWidth(for value: String) -> CGFloat {
+        let font = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+        let measuredWidth = (value as NSString).size(withAttributes: [.font: font]).width
+        return max(40, ceil(measuredWidth) + 4)
     }
 
     static func image(percent: Int, hasUpdate: Bool) -> NSImage {
@@ -883,7 +974,7 @@ private enum MenuBarPercentImageRenderer {
 
     static func image(value: String, hasUpdate: Bool) -> NSImage {
         let isPercent = value.hasSuffix("%")
-        let meterWidth: CGFloat = isPercent ? 30 : 40
+        let meterWidth: CGFloat = isPercent ? 30 : creditValueWidth(for: value)
         let clampedPercent = Int(value.dropLast()) ?? 0
         let size = size(for: value, hasUpdate: hasUpdate)
         let image = NSImage(size: size)
@@ -921,12 +1012,12 @@ private enum MenuBarPercentImageRenderer {
                     in: NSRect(x: meterWidth, y: 3.5, width: 10, height: 14),
                     withAttributes: [
                         .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold),
-                        .foregroundColor: NSColor.white,
+                        .foregroundColor: NSColor.systemGreen,
                         .paragraphStyle: updateParagraph
                     ]
                 )
             }
-            image.isTemplate = true
+            image.isTemplate = false
             return image
         }
 
@@ -953,13 +1044,13 @@ private enum MenuBarPercentImageRenderer {
                 in: NSRect(x: 30, y: 3.5, width: 10, height: 14),
                 withAttributes: [
                     .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold),
-                    .foregroundColor: NSColor.white,
+                    .foregroundColor: NSColor.systemGreen,
                     .paragraphStyle: updateParagraph
                 ]
             )
         }
 
-        image.isTemplate = true
+        image.isTemplate = false
         return image
     }
 }
@@ -976,9 +1067,18 @@ final class SettingsWindowPresenter: NSObject, ObservableObject, NSWindowDelegat
     private var windowController: NSWindowController?
     private weak var viewModel: LimitViewModel?
 
-    func show(viewModel: LimitViewModel, updateController: AppUpdateController) {
+    func show(
+        viewModel: LimitViewModel,
+        updateController: AppUpdateController,
+        focus: SettingsFocus = .general
+    ) {
         self.viewModel = viewModel
-        let contentView = LocalizedSettingsRoot(viewModel: viewModel, updateController: updateController)
+        let contentView = LocalizedSettingsRoot(
+            viewModel: viewModel,
+            updateController: updateController,
+            focus: focus,
+            close: { [weak self] in self?.close() }
+        )
 
         if let window = windowController?.window {
             window.contentViewController = NSHostingController(rootView: contentView)
@@ -1031,6 +1131,10 @@ final class SettingsWindowPresenter: NSObject, ObservableObject, NSWindowDelegat
         window.orderFrontRegardless()
     }
 
+    func close() {
+        windowController?.close()
+    }
+
     private func centerOnMainScreen(_ window: NSWindow) {
         centerWindowOnMainScreen(window)
     }
@@ -1043,9 +1147,16 @@ final class SettingsWindowPresenter: NSObject, ObservableObject, NSWindowDelegat
 private struct LocalizedSettingsRoot: View {
     @ObservedObject var viewModel: LimitViewModel
     @ObservedObject var updateController: AppUpdateController
+    let focus: SettingsFocus
+    let close: () -> Void
 
     var body: some View {
-        AppSettingsView(viewModel: viewModel, updateController: updateController)
+        AppSettingsView(
+            viewModel: viewModel,
+            updateController: updateController,
+            focus: focus,
+            close: close
+        )
             .environment(\.locale, viewModel.preferences.appLanguage.locale)
     }
 }
@@ -1053,6 +1164,8 @@ private struct LocalizedSettingsRoot: View {
 struct AppSettingsView: View {
     @ObservedObject var viewModel: LimitViewModel
     @ObservedObject var updateController: AppUpdateController
+    let focus: SettingsFocus
+    let close: () -> Void
     @Environment(\.colorScheme) private var colorScheme
     @State private var showsCLIInstallConfirmation = false
 
@@ -1067,8 +1180,9 @@ struct AppSettingsView: View {
                 .fill(palette.rule)
                 .frame(height: 1)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 24) {
                     VStack(alignment: .leading, spacing: 12) {
                         SettingsSectionTitle("Application", palette: palette)
 
@@ -1202,6 +1316,7 @@ struct AppSettingsView: View {
 
                             if updateController.isUpdateAvailable {
                                 Button("Open release page") {
+                                    close()
                                     updateController.openReleasePage()
                                 }
                                 .buttonStyle(.plain)
@@ -1228,13 +1343,14 @@ struct AppSettingsView: View {
                             }
                         }
                     }
+                    .id(SettingsFocus.updates)
 
                     SettingsRule(palette: palette)
 
                     HStack(alignment: .center, spacing: 18) {
                         VStack(alignment: .leading, spacing: 4) {
                             SettingsSectionTitle("Auto refresh", palette: palette)
-                            Text("Runs every minute while the app is open.")
+                            Text("Refreshes limit percentages, credits, and token data every minute while the app is open.")
                                 .font(palette.noteFont)
                                 .foregroundStyle(palette.mutedText)
                         }
@@ -1250,11 +1366,18 @@ struct AppSettingsView: View {
                     }
 
                     Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 36)
+                    .padding(.top, 28)
+                    .padding(.bottom, 32)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(.horizontal, 36)
-                .padding(.top, 28)
-                .padding(.bottom, 32)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .onAppear {
+                    guard focus == .updates else { return }
+                    DispatchQueue.main.async {
+                        proxy.scrollTo(SettingsFocus.updates, anchor: .top)
+                    }
+                }
             }
         }
         .frame(minWidth: 540, minHeight: 460, alignment: .topLeading)

@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import CryptoKit
 import Foundation
+import UserNotifications
 
 struct AppUpdateRelease: Equatable, Sendable {
     let version: String
@@ -28,7 +29,8 @@ final class AppUpdateController: ObservableObject {
     @Published private(set) var errorMessage: String?
     @Published private(set) var lastCheckedAt: Date?
 
-    private let releasesURL = URL(string: "https://api.github.com/repos/sergeylopukhov/codex-limit-widget/releases/latest")!
+    private nonisolated static let releasesURL = URL(string: "https://api.github.com/repos/sergeylopukhov/codex-limit-widget/releases/latest")!
+    private static let updateNotificationVersionKey = "lastNotifiedUpdateVersion"
     private var timer: Timer?
     private var started = false
     private var activeCheckID: UUID?
@@ -42,18 +44,29 @@ final class AppUpdateController: ObservableObject {
     }
 
     var isBusy: Bool {
-        phase == .checking || phase == .downloading || phase == .installing
+        phase == .downloading || phase == .installing || (phase == .checking && availableRelease == nil)
+    }
+
+    var menuActionTitle: String {
+        switch phase {
+        case .downloading:
+            return "Downloading"
+        case .installing:
+            return "Installing"
+        default:
+            return "Update"
+        }
     }
 
     var menuStatusText: String? {
         guard let release = availableRelease else { return nil }
         switch phase {
         case .downloading:
-            return "Downloading v\(release.version)…"
+            return Self.localized("Downloading v%@…", release.version)
         case .installing:
-            return "Installing v\(release.version)…"
+            return Self.localized("Installing v%@…", release.version)
         default:
-            return "Version \(release.version) available"
+            return Self.localized("Version %@ available", release.version)
         }
     }
 
@@ -61,25 +74,25 @@ final class AppUpdateController: ObservableObject {
         if let release = availableRelease {
             switch phase {
             case .downloading:
-                return "Downloading version \(release.version)…"
+                return Self.localized("Downloading version %@…", release.version)
             case .installing:
-                return "Installing version \(release.version)…"
+                return Self.localized("Installing version %@…", release.version)
             case .failed:
-                return "Version \(release.version) is still available."
+                return Self.localized("Version %@ is still available.", release.version)
             default:
-                return "Version \(release.version) is available."
+                return Self.localized("Version %@ is available.", release.version)
             }
         }
 
         switch phase {
         case .checking:
-            return "Checking GitHub Releases…"
+            return NSLocalizedString("Checking GitHub Releases…", comment: "Update status")
         case .upToDate:
-            return "You have the latest version."
+            return NSLocalizedString("You have the latest version.", comment: "Update status")
         case .failed:
-            return "Could not check for updates."
+            return NSLocalizedString("Could not check for updates.", comment: "Update status")
         default:
-            return "Updates are checked automatically."
+            return NSLocalizedString("Updates are checked automatically.", comment: "Update status")
         }
     }
 
@@ -96,25 +109,15 @@ final class AppUpdateController: ObservableObject {
     }
 
     func checkForUpdates() async {
-        guard phase != .downloading, phase != .installing else { return }
+        guard phase != .downloading, phase != .installing, phase != .checking else { return }
 
         let checkID = UUID()
         activeCheckID = checkID
         phase = .checking
         errorMessage = nil
 
-        let timeoutTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 20_000_000_000)
-            guard !Task.isCancelled, let self, self.activeCheckID == checkID else { return }
-
-            self.activeCheckID = nil
-            self.phase = self.availableRelease == nil ? .failed : .available
-            self.errorMessage = "Update check timed out. Please try again."
-        }
-        defer { timeoutTask.cancel() }
-
         do {
-            let release = try await fetchLatestRelease()
+            let release = try await Self.fetchLatestReleaseWithTimeout(currentVersion: currentVersion)
             guard activeCheckID == checkID else { return }
 
             activeCheckID = nil
@@ -123,10 +126,15 @@ final class AppUpdateController: ObservableObject {
             if Self.isVersion(release.version, newerThan: currentVersion) {
                 availableRelease = release
                 phase = .available
+                notifyAboutAvailableUpdate(release)
             } else {
                 availableRelease = nil
                 phase = .upToDate
             }
+        } catch is CancellationError {
+            guard activeCheckID == checkID else { return }
+            activeCheckID = nil
+            phase = availableRelease == nil ? .idle : .available
         } catch {
             guard activeCheckID == checkID else { return }
 
@@ -143,13 +151,8 @@ final class AppUpdateController: ObservableObject {
         errorMessage = nil
 
         do {
-            let (downloadURL, response) = try await URLSession.shared.download(from: release.assetURL)
-            try Self.validateHTTPResponse(response)
-
+            let prepared = try await Self.downloadAndPrepareUpdate(for: release)
             phase = .installing
-            let prepared = try await Task.detached(priority: .userInitiated) {
-                try Self.prepareUpdate(downloadURL: downloadURL, release: release)
-            }.value
 
             try launchInstaller(for: prepared)
         } catch {
@@ -161,6 +164,50 @@ final class AppUpdateController: ObservableObject {
     func openReleasePage() {
         guard let pageURL = availableRelease?.pageURL else { return }
         NSWorkspace.shared.open(pageURL)
+    }
+
+    private func notifyAboutAvailableUpdate(_ release: AppUpdateRelease) {
+        let defaults = UserDefaults.standard
+        guard defaults.string(forKey: Self.updateNotificationVersionKey) != release.version else { return }
+
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            let authorized: Bool
+
+            switch settings.authorizationStatus {
+            case .authorized, .provisional:
+                authorized = true
+            case .notDetermined:
+                authorized = (try? await center.requestAuthorization(options: [.alert, .sound])) == true
+            default:
+                authorized = false
+            }
+
+            guard authorized else { return }
+
+            let content = UNMutableNotificationContent()
+            content.title = NSLocalizedString("Codex Limit Widget", comment: "Update notification title")
+            content.body = String(
+                format: NSLocalizedString("New version %@ is available.", comment: "Update notification body"),
+                release.version
+            )
+            content.sound = .default
+            content.userInfo = ["codexLimitWidgetAction": "openUpdates"]
+
+            let request = UNNotificationRequest(
+                identifier: "codex-limit-widget.update.\(release.version)",
+                content: content,
+                trigger: nil
+            )
+
+            do {
+                try await center.add(request)
+                defaults.set(release.version, forKey: Self.updateNotificationVersionKey)
+            } catch {
+                return
+            }
+        }
     }
 
     nonisolated static func isVersion(_ candidate: String, newerThan current: String) -> Bool {
@@ -179,9 +226,28 @@ final class AppUpdateController: ObservableObject {
         return false
     }
 
-    private func fetchLatestRelease() async throws -> AppUpdateRelease {
+    private nonisolated static func fetchLatestReleaseWithTimeout(currentVersion: String) async throws -> AppUpdateRelease {
+        try await withThrowingTaskGroup(of: AppUpdateRelease.self) { group in
+            group.addTask {
+                try await Self.fetchLatestRelease(currentVersion: currentVersion)
+            }
+            group.addTask {
+                try await Task.sleep(nanoseconds: 20_000_000_000)
+                throw AppUpdateError.updateCheckTimedOut
+            }
+
+            defer { group.cancelAll() }
+            guard let result = try await group.next() else {
+                throw AppUpdateError.updateCheckTimedOut
+            }
+            return result
+        }
+    }
+
+    private nonisolated static func fetchLatestRelease(currentVersion: String) async throws -> AppUpdateRelease {
         var request = URLRequest(url: releasesURL)
-        request.timeoutInterval = 20
+        request.timeoutInterval = 15
+        request.cachePolicy = .reloadIgnoringLocalCacheData
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("CodexLimitWidget/\(currentVersion)", forHTTPHeaderField: "User-Agent")
         request.setValue("2022-11-28", forHTTPHeaderField: "X-GitHub-Api-Version")
@@ -207,8 +273,46 @@ final class AppUpdateController: ObservableObject {
             pageURL: pageURL,
             assetURL: assetURL,
             assetName: asset.name,
-            sha256: asset.digest?.replacingOccurrences(of: "sha256:", with: "")
+            sha256: asset.digest?.replacingOccurrences(of: "sha256:", with: "", options: [.caseInsensitive])
         )
+    }
+
+    private nonisolated static func downloadAndPrepareUpdate(for release: AppUpdateRelease) async throws -> PreparedUpdate {
+        var candidateURLs = [release.assetURL]
+        if let cacheBustedURL = cacheBustedURL(for: release.assetURL) {
+            candidateURLs.append(cacheBustedURL)
+        }
+
+        for (index, candidateURL) in candidateURLs.enumerated() {
+            do {
+                var request = URLRequest(url: candidateURL)
+                request.timeoutInterval = 120
+                request.cachePolicy = .reloadIgnoringLocalCacheData
+                let (downloadURL, response) = try await URLSession.shared.download(for: request)
+                try validateHTTPResponse(response)
+
+                return try await Task.detached(priority: .userInitiated) {
+                    try Self.prepareUpdate(downloadURL: downloadURL, release: release)
+                }.value
+            } catch {
+                guard let updateError = error as? AppUpdateError,
+                      updateError == .checksumMismatch,
+                      index < candidateURLs.count - 1
+                else {
+                    throw error
+                }
+            }
+        }
+
+        throw AppUpdateError.checksumMismatch
+    }
+
+    private nonisolated static func cacheBustedURL(for url: URL) -> URL? {
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        var queryItems = components.queryItems ?? []
+        queryItems.append(URLQueryItem(name: "codex_update", value: UUID().uuidString))
+        components.queryItems = queryItems
+        return components.url
     }
 
     private func launchInstaller(for prepared: PreparedUpdate) throws {
@@ -357,6 +461,10 @@ final class AppUpdateController: ObservableObject {
         return error.localizedDescription
     }
 
+    private nonisolated static func localized(_ key: String, _ arguments: CVarArg...) -> String {
+        String(format: NSLocalizedString(key, comment: "Update status"), arguments: arguments)
+    }
+
     private nonisolated static var installDestination: URL {
         let currentBundleURL = Bundle.main.bundleURL.standardizedFileURL
         if currentBundleURL.path.hasPrefix("/Applications/") {
@@ -395,7 +503,8 @@ private struct GitHubReleaseAsset: Decodable, Sendable {
     }
 }
 
-private enum AppUpdateError: LocalizedError {
+private enum AppUpdateError: LocalizedError, Equatable {
+    case updateCheckTimedOut
     case missingReleaseAsset
     case invalidServerResponse
     case checksumMismatch
@@ -406,20 +515,22 @@ private enum AppUpdateError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
+        case .updateCheckTimedOut:
+            return NSLocalizedString("Update check timed out. Please try again.", comment: "Update check timeout")
         case .missingReleaseAsset:
-            return "The release does not contain a macOS ZIP archive."
+            return NSLocalizedString("The release does not contain a macOS ZIP archive.", comment: "Missing update asset")
         case .invalidServerResponse:
-            return "GitHub returned an invalid response."
+            return NSLocalizedString("GitHub returned an invalid response.", comment: "Invalid update response")
         case .checksumMismatch:
-            return "The downloaded update failed its SHA-256 check."
+            return NSLocalizedString("The downloaded update failed its SHA-256 check. Try again.", comment: "Update checksum error")
         case .missingAppBundle:
-            return "The downloaded archive does not contain the application."
+            return NSLocalizedString("The downloaded archive does not contain the application.", comment: "Missing application bundle")
         case .invalidAppBundle:
-            return "The downloaded application identity or version is invalid."
+            return NSLocalizedString("The downloaded application identity or version is invalid.", comment: "Invalid application bundle")
         case .applicationsFolderNotWritable:
-            return "The Applications folder is not writable. Open the release page to install manually."
+            return NSLocalizedString("The Applications folder is not writable. Open the release page to install manually.", comment: "Applications folder error")
         case .commandFailed:
-            return "The downloaded application failed verification."
+            return NSLocalizedString("The downloaded application failed verification.", comment: "Application verification error")
         }
     }
 }

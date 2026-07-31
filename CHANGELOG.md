@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.2.301 - 2026-07-31
+
+- Fixed the update flow: checks now have a bounded timeout, and update downloads retry with a fresh URL when a CDN cache returns an older asset.
+- Fixed the Update button in both Settings and the menu-bar popover; it remains available when a release has already been found.
+- Added a system notification when a new version appears; clicking it opens Settings directly at Updates.
+- The first launch requests notification permission and enables system alerts when macOS allows it.
+- Made the update arrow green in both percent and detailed menu-bar modes.
+- Fixed compact credit rendering so the full value, including the `T` suffix and values such as `200.95T`, remains visible.
+- Added a clear Auto refresh explanation for limit percentages, credits, token data, and related values.
+- The Settings window now closes before opening the release page.
+- Added version-aware What’s New notes for all changes in this release; older upgrades include the intermediate notes.
+- Bumped the internal build to 149.
+
 ## 1.2.253 - 2026-07-31
 
 - Shows the remaining Codex credit balance in the menu bar as `250T` or `∞T` when the selected limit is exhausted.
