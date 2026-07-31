@@ -342,6 +342,7 @@ private struct RateLimitsResult: Decodable {
                     resetsAt: window.resetsAt.map { Date(timeIntervalSince1970: TimeInterval($0)) }
                 )
             },
+            credits: codex.credits,
             planType: codex.planType,
             usage: usage,
             updatedAt: Date(),
@@ -354,7 +355,25 @@ private struct RateLimitSnapshotDTO: Decodable {
     var limitId: String?
     var primary: RateLimitWindowDTO?
     var secondary: RateLimitWindowDTO?
+    var credits: CreditsSnapshot?
     var planType: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case limitId
+        case primary
+        case secondary
+        case credits
+        case planType
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        limitId = try container.decodeIfPresent(String.self, forKey: .limitId)
+        primary = try container.decodeIfPresent(RateLimitWindowDTO.self, forKey: .primary)
+        secondary = try container.decodeIfPresent(RateLimitWindowDTO.self, forKey: .secondary)
+        credits = try? container.decode(CreditsSnapshot.self, forKey: .credits)
+        planType = try container.decodeIfPresent(String.self, forKey: .planType)
+    }
 }
 
 private struct RateLimitWindowDTO: Decodable {

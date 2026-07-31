@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1
+
+- Shows the available Codex credit balance in the menu bar when a rate-limit window is exhausted, including support for unlimited credits.
+- Keeps the existing percentage display when credits are unavailable or malformed.
+- Preserves weekly-only account compatibility and the existing detailed and compact menu-bar modes.
+
 ## 1.2.0
 
 - Refined the Dark and Beige widgets, menu bar popover, and Settings into clearer, denser layouts.

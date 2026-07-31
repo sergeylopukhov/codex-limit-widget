@@ -12,6 +12,7 @@ struct LimitSnapshot: Codable, Equatable {
     // so the UI renders only the limits that actually exist for the account.
     var fiveHour: LimitWindowSnapshot?
     var weekly: LimitWindowSnapshot?
+    var credits: CreditsSnapshot?
     var planType: String?
     var usage: AccountUsageSnapshot?
     var updatedAt: Date
@@ -24,6 +25,7 @@ struct LimitSnapshot: Codable, Equatable {
     static let placeholder = LimitSnapshot(
         fiveHour: nil,
         weekly: LimitWindowSnapshot(label: "Week", usedPercent: 4, windowDurationMins: 10080, resetsAt: Date().addingTimeInterval(3600 * 24 * 6)),
+        credits: nil,
         planType: "pro",
         usage: AccountUsageSnapshot(
             lifetimeTokens: 3_968_663_548,
@@ -40,6 +42,25 @@ struct LimitSnapshot: Codable, Equatable {
         updatedAt: Date(),
         errorMessage: nil
     )
+}
+
+struct CreditsSnapshot: Codable, Equatable {
+    var hasCredits: Bool
+    var unlimited: Bool
+    var balance: String?
+
+    var displayText: String? {
+        guard hasCredits else { return nil }
+        if unlimited {
+            return "∞ cr"
+        }
+
+        guard let balance, !balance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return nil
+        }
+
+        return "\(balance) cr"
+    }
 }
 
 struct LimitWindowSnapshot: Codable, Equatable {

@@ -46,6 +46,21 @@ jobs:
               echo
               echo "Download \`CodexLimitWidget-1.2.0-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
             } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.1" ]; then
+            {
+              echo "## What's New"
+              echo
+              echo "This release shows the available Codex credit balance in the menu bar after a rate-limit window is exhausted."
+              echo
+              echo "- Replaces \`0%\` with the current balance, such as \`250 cr\`, when credits are available."
+              echo "- Shows \`∞ cr\` for unlimited credits."
+              echo "- Keeps the existing percentage display when credit data is unavailable or malformed."
+              echo "- Preserves weekly-only accounts and both detailed and compact menu-bar modes."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.1-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
+            } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
             {
               echo "## Release Notes"
