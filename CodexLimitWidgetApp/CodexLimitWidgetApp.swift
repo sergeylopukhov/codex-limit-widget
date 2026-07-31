@@ -224,12 +224,15 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
             button.title = ""
             button.attributedTitle = NSAttributedString(string: "")
             button.image = MenuBarPercentImageRenderer.image(
-                percent: viewModel.compactMenuBarPercent,
+                value: viewModel.compactMenuBarValue,
                 hasUpdate: updateController.isUpdateAvailable
             )
             button.imagePosition = .imageOnly
             button.imageScaling = .scaleNone
-            statusItem?.length = MenuBarPercentImageRenderer.size(hasUpdate: updateController.isUpdateAvailable).width
+            statusItem?.length = MenuBarPercentImageRenderer.size(
+                for: viewModel.compactMenuBarValue,
+                hasUpdate: updateController.isUpdateAvailable
+            ).width
         case .detailed:
             button.image = nil
             button.imageScaling = .scaleProportionallyDown
@@ -682,12 +685,23 @@ struct MenuBarPercentMeter: View {
 
 private enum MenuBarPercentImageRenderer {
     static func size(hasUpdate: Bool) -> NSSize {
-        NSSize(width: hasUpdate ? 40 : 30, height: 18)
+        size(for: "0%", hasUpdate: hasUpdate)
+    }
+
+    static func size(for value: String, hasUpdate: Bool) -> NSSize {
+        let valueWidth: CGFloat = value.hasSuffix("%") ? 30 : 40
+        return NSSize(width: valueWidth + (hasUpdate ? 10 : 0), height: 18)
     }
 
     static func image(percent: Int, hasUpdate: Bool) -> NSImage {
-        let clampedPercent = max(0, min(100, percent))
-        let size = size(hasUpdate: hasUpdate)
+        image(value: "\(max(0, min(100, percent)))%", hasUpdate: hasUpdate)
+    }
+
+    static func image(value: String, hasUpdate: Bool) -> NSImage {
+        let isPercent = value.hasSuffix("%")
+        let meterWidth: CGFloat = isPercent ? 30 : 40
+        let clampedPercent = Int(value.dropLast()) ?? 0
+        let size = size(for: value, hasUpdate: hasUpdate)
         let image = NSImage(size: size)
 
         image.lockFocus()
@@ -699,8 +713,7 @@ private enum MenuBarPercentImageRenderer {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
 
-        let meterWidth: CGFloat = 30
-        let text = "\(clampedPercent)%" as NSString
+        let text = value as NSString
         text.draw(
             in: NSRect(x: 0, y: 6, width: meterWidth, height: 10),
             withAttributes: [
@@ -709,6 +722,23 @@ private enum MenuBarPercentImageRenderer {
                 .paragraphStyle: paragraph
             ]
         )
+
+        guard isPercent else {
+            if hasUpdate {
+                let updateParagraph = NSMutableParagraphStyle()
+                updateParagraph.alignment = .center
+                ("↑" as NSString).draw(
+                    in: NSRect(x: meterWidth, y: 3.5, width: 10, height: 14),
+                    withAttributes: [
+                        .font: NSFont.monospacedDigitSystemFont(ofSize: 11, weight: .bold),
+                        .foregroundColor: NSColor.white,
+                        .paragraphStyle: updateParagraph
+                    ]
+                )
+            }
+            image.isTemplate = true
+            return image
+        }
 
         let trackRect = NSRect(x: 1, y: 2.5, width: meterWidth - 2, height: 2)
         let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.25, yRadius: 1.25)

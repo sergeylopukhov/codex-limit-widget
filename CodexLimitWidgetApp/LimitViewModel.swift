@@ -119,15 +119,38 @@ final class LimitViewModel: ObservableObject {
         case .detailed:
             var parts: [String] = []
             if let fiveHour = snapshot.fiveHour {
-                parts.append("5H \(fiveHour.leftPercent)%")
+                parts.append("5H \(menuBarValue(for: fiveHour))")
             }
             if let weekly = snapshot.weekly {
-                parts.append("7D \(weekly.leftPercent)%")
+                parts.append("7D \(menuBarValue(for: weekly))")
             }
             return parts.isEmpty ? "Codex --" : parts.joined(separator: " ")
         case .percentOnly:
-            return "\(compactMenuBarPercent)%"
+            return compactMenuBarValue
         }
+    }
+
+    private func menuBarValue(for window: LimitWindowSnapshot) -> String {
+        if window.usedPercent >= 100, let creditsText = snapshot?.credits?.displayText {
+            return creditsText
+        }
+
+        return "\(window.leftPercent)%"
+    }
+
+    var compactMenuBarValue: String {
+        guard let snapshot else { return "0%" }
+
+        let window: LimitWindowSnapshot?
+        switch preferences.compactMenuBarMetric {
+        case .fiveHour:
+            window = snapshot.fiveHour ?? snapshot.weekly
+        case .weekly:
+            window = snapshot.weekly ?? snapshot.fiveHour
+        }
+
+        guard let window else { return "0%" }
+        return menuBarValue(for: window)
     }
 
     var compactMenuBarPercent: Int {
