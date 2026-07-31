@@ -25,6 +25,10 @@
 "Credit values use the full menu-bar height and no longer leave space for the percentage meter." = "Credit values use the full menu-bar height and no longer leave space for the percentage meter.";
 "Version-aware update notes" = "Version-aware update notes";
 "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes." = "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes.";
+"Consistent detailed credit display" = "Consistent detailed credit display";
+"Detailed mode keeps the credit balance without 5H or 7D labels and shows up to four fractional digits." = "Detailed mode keeps the credit balance without 5H or 7D labels and shows up to four fractional digits.";
+"Pinned What's New action" = "Pinned What's New action";
+"Long update notes scroll inside the window while the Got it button stays pinned in the bottom-right corner." = "Long update notes scroll inside the window while the Got it button stays pinned in the bottom-right corner.";
 "One login item" = "One login item";
 "Only the installed release app can register at login; Debug and temporary copies stay out." = "Only the installed release app can register at login; Debug and temporary copies stay out.";
 "Reliable update notes" = "Reliable update notes";

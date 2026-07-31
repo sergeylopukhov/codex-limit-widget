@@ -4,8 +4,11 @@
 
 - Shows the remaining Codex credit balance in the menu bar as `250T` or `∞T` when the selected limit is exhausted.
 - Makes the compact credit value larger and vertically centered across the menu-bar height, without reserving space for the percentage meter.
+- Keeps the detailed mode on the same compact credit value without `5H`/`7D` labels and displays up to four fractional digits.
 - Keeps the percentage display unchanged when credit data is unavailable.
+- Keeps long “What’s New” notes scrollable while pinning the “Got it” button to the bottom-right corner.
 - Expands the localized “What’s New” window with version-aware notes: users upgrading from 1.2.251 see only these changes, while users coming from older versions see the intermediate changes as well.
+- Republished the same user-facing version as internal build 148.
 
 ## 1.2.251 - 2026-07-31 (Bugfix)
 

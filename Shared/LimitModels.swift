@@ -65,11 +65,35 @@ struct CreditsSnapshot: Codable, Equatable {
             return "∞T"
         }
 
-        guard let balance, !balance.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+        guard let balance = formattedBalance else {
             return nil
         }
 
         return "\(balance)T"
+    }
+
+    private var formattedBalance: String? {
+        guard let balance else { return nil }
+        let trimmed = balance.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let normalized = trimmed.replacingOccurrences(of: ",", with: ".")
+        guard Decimal(string: normalized, locale: Locale(identifier: "en_US_POSIX")) != nil else {
+            return nil
+        }
+
+        guard let separatorIndex = normalized.firstIndex(of: ".") else {
+            return normalized
+        }
+
+        let integerPart = normalized[..<separatorIndex]
+        let fractionalStart = normalized.index(after: separatorIndex)
+        let fractionalPart = normalized[fractionalStart...]
+        guard !fractionalPart.isEmpty else {
+            return String(integerPart)
+        }
+
+        return "\(integerPart).\(fractionalPart.prefix(4))"
     }
 }
 

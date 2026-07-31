@@ -678,10 +678,9 @@ private struct ReleaseNotesView: View {
                     }
                 }
             }
-            .frame(maxHeight: 390)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .layoutPriority(1)
             .foregroundStyle(palette.primaryText)
-
-            Spacer(minLength: 18)
 
             HStack {
                 Spacer()
@@ -693,6 +692,8 @@ private struct ReleaseNotesView: View {
                     action: dismiss
                 )
             }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.top, 18)
         }
         .padding(30)
         .frame(width: 560, height: 620, alignment: .topLeading)
@@ -746,6 +747,20 @@ private struct ReleaseNotesView: View {
                 icon: "clock.arrow.circlepath",
                 title: "Version-aware update notes",
                 detail: "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes."
+            ),
+            ReleaseNoteItem(
+                id: "detailed-credit-balance",
+                introducedIn: "1.2.253",
+                icon: "textformat.123",
+                title: "Consistent detailed credit display",
+                detail: "Detailed mode keeps the credit balance without 5H or 7D labels and shows up to four fractional digits."
+            ),
+            ReleaseNoteItem(
+                id: "pinned-release-notes-action",
+                introducedIn: "1.2.253",
+                icon: "pin.fill",
+                title: "Pinned What's New action",
+                detail: "Long update notes scroll inside the window while the Got it button stays pinned in the bottom-right corner."
             ),
             ReleaseNoteItem(
                 id: "login-item",

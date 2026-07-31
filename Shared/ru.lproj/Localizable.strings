@@ -69,6 +69,10 @@
 "Credit values use the full menu-bar height and no longer leave space for the percentage meter." = "Значение кредитов использует всю высоту строки меню и больше не оставляет место под процентный индикатор.";
 "Version-aware update notes" = "Заметки с учётом версии";
 "Updates from 1.2.251 show only the latest changes; older upgrades include the intermediate release notes." = "При обновлении с 1.2.251 показываются только последние изменения, а при переходе со старых версий — заметки промежуточных релизов.";
+"Consistent detailed credit display" = "Единое отображение кредитов подробно";
+"Detailed mode keeps the credit balance without 5H or 7D labels and shows up to four fractional digits." = "В подробном режиме баланс кредитов показывается без обозначений 5H и 7D, максимум с четырьмя знаками после точки.";
+"Pinned What's New action" = "Закреплённая кнопка в «Что нового»";
+"Long update notes scroll inside the window while the Got it button stays pinned in the bottom-right corner." = "Длинные заметки прокручиваются внутри окна, а кнопка «Понятно» всегда закреплена в правом нижнем углу.";
 "One login item" = "Один объект входа";
 "Only the installed release app can register at login; Debug and temporary copies stay out." = "При входе регистрируется только установленный релиз; Debug- и временные копии не добавляются.";
 "Reliable update notes" = "Надёжное окно изменений";

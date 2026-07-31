@@ -300,6 +300,10 @@ final class LimitViewModel: ObservableObject {
 
         switch preferences.menuBarMode {
         case .detailed:
+            if let creditsText = detailedMenuBarCreditValue {
+                return creditsText
+            }
+
             var parts: [String] = []
             if let fiveHour = snapshot.fiveHour {
                 parts.append("5H \(menuBarValue(for: fiveHour))")
@@ -311,6 +315,18 @@ final class LimitViewModel: ObservableObject {
         case .percentOnly:
             return compactMenuBarValue
         }
+    }
+
+    private var detailedMenuBarCreditValue: String? {
+        guard let snapshot,
+              let creditsText = snapshot.credits?.displayText,
+              (snapshot.fiveHour?.usedPercent ?? 0) >= 100 ||
+              (snapshot.weekly?.usedPercent ?? 0) >= 100
+        else {
+            return nil
+        }
+
+        return creditsText
     }
 
     private func menuBarValue(for window: LimitWindowSnapshot) -> String {
