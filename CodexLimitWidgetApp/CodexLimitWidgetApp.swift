@@ -474,6 +474,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+enum ReleaseNotesPresentationPolicy {
+    static func shouldShow(
+        currentVersionIdentifier: String,
+        lastShownVersionIdentifier: String?
+    ) -> Bool {
+        lastShownVersionIdentifier != currentVersionIdentifier
+    }
+}
+
 @MainActor
 final class ReleaseNotesWindowPresenter: ObservableObject {
     private let lastShownVersionKey = "lastReleaseNotesVersion"
@@ -483,17 +492,28 @@ final class ReleaseNotesWindowPresenter: ObservableObject {
     func showIfNeeded(viewModel: LimitViewModel, onDismiss: @escaping () -> Void) -> Bool {
         let version = currentVersionIdentifier
         let defaults = UserDefaults.standard
-        defer { defaults.set(version, forKey: lastShownVersionKey) }
+        let lastShownVersion = defaults.string(forKey: lastShownVersionKey)
 
-        guard let lastShownVersion = defaults.string(forKey: lastShownVersionKey),
-              lastShownVersion != version
+        guard ReleaseNotesPresentationPolicy.shouldShow(
+            currentVersionIdentifier: version,
+            lastShownVersionIdentifier: lastShownVersion
+        )
         else { return false }
 
-        show(viewModel: viewModel, onDismiss: onDismiss)
+        show(
+            viewModel: viewModel,
+            previousVersion: lastShownVersion.flatMap { ReleaseNotesVersion($0) },
+            onDismiss: onDismiss
+        )
+        defaults.set(version, forKey: lastShownVersionKey)
         return true
     }
 
-    private func show(viewModel: LimitViewModel, onDismiss: @escaping () -> Void) {
+    private func show(
+        viewModel: LimitViewModel,
+        previousVersion: ReleaseNotesVersion?,
+        onDismiss: @escaping () -> Void
+    ) {
         let window = CustomSettingsWindow(
             contentRect: NSRect(x: 0, y: 0, width: 560, height: 620),
             styleMask: [.borderless],
@@ -504,6 +524,7 @@ final class ReleaseNotesWindowPresenter: ObservableObject {
         window.contentViewController = NSHostingController(
             rootView: ReleaseNotesView(
                 viewModel: viewModel,
+                previousVersion: previousVersion,
                 dismiss: { [weak self] in
                     self?.windowController?.close()
                     DispatchQueue.main.async(execute: onDismiss)
@@ -546,6 +567,29 @@ final class ReleaseNotesWindowPresenter: ObservableObject {
     }
 }
 
+private struct ReleaseNotesVersion: Comparable, Equatable {
+    let components: [Int]
+
+    init?(_ value: String) {
+        let versionPart = String(value.split(separator: " ", maxSplits: 1).first ?? Substring(value))
+            .trimmingCharacters(in: CharacterSet(charactersIn: "vV"))
+        let rawComponents = versionPart.split(separator: ".")
+        let components = rawComponents.compactMap { Int($0) }
+        guard !rawComponents.isEmpty, components.count == rawComponents.count else { return nil }
+        self.components = components
+    }
+
+    static func < (lhs: ReleaseNotesVersion, rhs: ReleaseNotesVersion) -> Bool {
+        let count = max(lhs.components.count, rhs.components.count)
+        for index in 0..<count {
+            let left = index < lhs.components.count ? lhs.components[index] : 0
+            let right = index < rhs.components.count ? rhs.components[index] : 0
+            if left != right { return left < right }
+        }
+        return false
+    }
+}
+
 @MainActor
 private func centerReleaseNotesWindow(_ window: NSWindow) {
     guard let screen = NSScreen.main ?? NSScreen.screens.first else {
@@ -580,6 +624,7 @@ private func centerWindowOnMainScreen(_ window: NSWindow) {
 
 private struct ReleaseNotesView: View {
     @ObservedObject var viewModel: LimitViewModel
+    let previousVersion: ReleaseNotesVersion?
     let dismiss: () -> Void
     @Environment(\.colorScheme) private var colorScheme
 
@@ -606,48 +651,30 @@ private struct ReleaseNotesView: View {
                 Spacer()
             }
 
-            Text("What's new in v\(currentVersion)")
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(palette.mutedText)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(palette.backgroundHighlight))
-                .padding(.top, 14)
+            HStack(spacing: 8) {
+                Text("What's new in v\(currentVersion)")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(palette.mutedText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(palette.backgroundHighlight))
+
+                Text("Bug fix")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(palette.mutedText)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Capsule().fill(palette.backgroundHighlight))
+            }
+            .padding(.top, 14)
 
             SettingsRule(palette: palette)
                 .padding(.vertical, 18)
 
             VStack(alignment: .leading, spacing: 12) {
-                ReleaseNoteRow(
-                    icon: "terminal",
-                    title: "Codex CLI status",
-                    detail: "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed."
-                )
-                ReleaseNoteRow(
-                    icon: "person.badge.key",
-                    title: "Authorize from the app",
-                    detail: "Start the normal ChatGPT browser sign-in with one click; the app does not read or store tokens."
-                )
-                ReleaseNoteRow(
-                    icon: "arrow.down.circle",
-                    title: "Install Codex CLI",
-                    detail: "Install the official CLI for this user in ~/.local/bin when ChatGPT Desktop is installed without the CLI."
-                )
-                ReleaseNoteRow(
-                    icon: "clock.badge.exclamationmark",
-                    title: "Stale data is marked",
-                    detail: "The last successful snapshot stays visible during errors, but stale percentages are not presented as current in the menu bar."
-                )
-                ReleaseNoteRow(
-                    icon: "checkmark.shield",
-                    title: "Safe widgets",
-                    detail: "Widgets never install or authorize CLI; clicking a widget opens the app."
-                )
-                ReleaseNoteRow(
-                    icon: "exclamationmark.bubble",
-                    title: "Clear recovery steps",
-                    detail: "Installation and login errors explain what happened and show the official manual command when needed."
-                )
+                ForEach(visibleReleaseNotes) { note in
+                    ReleaseNoteRow(icon: note.icon, title: note.title, detail: note.detail)
+                }
             }
             .foregroundStyle(palette.primaryText)
 
@@ -677,6 +704,91 @@ private struct ReleaseNotesView: View {
     private var currentVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
     }
+
+    private var visibleReleaseNotes: [ReleaseNoteItem] {
+        let notes = allReleaseNotes
+        guard let previousVersion else { return notes }
+
+        let newNotes = notes.filter { note in
+            guard let introducedIn = ReleaseNotesVersion(note.introducedIn) else { return true }
+            return introducedIn > previousVersion
+        }
+
+        if !newNotes.isEmpty { return newNotes }
+
+        return notes.filter { note in
+            note.introducedIn == currentVersion
+        }
+    }
+
+    private var allReleaseNotes: [ReleaseNoteItem] {
+        [
+            ReleaseNoteItem(
+                id: "login-item",
+                introducedIn: "1.2.251",
+                icon: "checkmark.circle",
+                title: "One login item",
+                detail: "Only the installed release app can register at login; Debug and temporary copies stay out."
+            ),
+            ReleaseNoteItem(
+                id: "release-notes",
+                introducedIn: "1.2.251",
+                icon: "sparkles",
+                title: "Reliable update notes",
+                detail: "The What's New window now opens after an update, including the upgrade from 1.2.25 to 1.2.251."
+            ),
+            ReleaseNoteItem(
+                id: "cli-status",
+                introducedIn: "1.2.25",
+                icon: "terminal",
+                title: "Codex CLI status",
+                detail: "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed."
+            ),
+            ReleaseNoteItem(
+                id: "authorize",
+                introducedIn: "1.2.25",
+                icon: "person.badge.key",
+                title: "Authorize from the app",
+                detail: "Start the normal ChatGPT browser sign-in with one click; the app does not read or store tokens."
+            ),
+            ReleaseNoteItem(
+                id: "install-cli",
+                introducedIn: "1.2.25",
+                icon: "arrow.down.circle",
+                title: "Install Codex CLI",
+                detail: "Install the official CLI for this user in ~/.local/bin when ChatGPT Desktop is installed without the CLI."
+            ),
+            ReleaseNoteItem(
+                id: "stale-data",
+                introducedIn: "1.2.25",
+                icon: "clock.badge.exclamationmark",
+                title: "Stale data is marked",
+                detail: "The last successful snapshot stays visible during errors, but stale percentages are not presented as current in the menu bar."
+            ),
+            ReleaseNoteItem(
+                id: "safe-widgets",
+                introducedIn: "1.2.25",
+                icon: "checkmark.shield",
+                title: "Safe widgets",
+                detail: "Widgets never install or authorize CLI; clicking a widget opens the app."
+            ),
+            ReleaseNoteItem(
+                id: "recovery-steps",
+                introducedIn: "1.2.25",
+                icon: "exclamationmark.bubble",
+                title: "Clear recovery steps",
+                detail: "Installation and login errors explain what happened and show the official manual command when needed."
+            )
+        ]
+    }
+}
+
+private struct ReleaseNoteItem: Identifiable {
+    let id: String
+    let introducedIn: String
+    let icon: String
+    let title: String
+    let detail: String
 }
 
 private struct ReleaseNoteRow: View {

@@ -61,6 +61,11 @@
 "WEEKLY RESET" = "СБРОС НЕДЕЛИ";
 "What's new" = "Что нового";
 "What's new in v%@" = "Что нового в v%@";
+"Bug fix" = "Багфикс";
+"One login item" = "Один объект входа";
+"Only the installed release app can register at login; Debug and temporary copies stay out." = "При входе регистрируется только установленный релиз; Debug- и временные копии не добавляются.";
+"Reliable update notes" = "Надёжное окно изменений";
+"The What's New window now opens after an update, including the upgrade from 1.2.25 to 1.2.251." = "Окно «Что нового» теперь открывается после обновления, включая переход с 1.2.25 на 1.2.251.";
 "Codex CLI status" = "Состояние Codex CLI";
 "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed." = "Приложение показывает, подключён ли Codex CLI, требуется ли авторизация или CLI не установлен.";
 "Authorize from the app" = "Авторизация из приложения";

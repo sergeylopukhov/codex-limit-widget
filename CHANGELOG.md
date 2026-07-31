@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.251 - 2026-07-31 (Bugfix)
+
+- Fixed duplicate macOS login items: only the canonical release app in `/Applications/Codex Limit Widget.app` with the correct Bundle ID can register at login.
+- Prevented Debug, test, temporary, and malformed copies from registering themselves as login items.
+- Made login-item registration idempotent by checking the existing `SMAppService` status before registering.
+- Added regression tests for the login-item registration policy.
+- Fixed the localized “What’s New” window so it appears on the first launch after an update, including upgrades from 1.2.25 and the previous 1.2.251 build.
+- Bumped the internal build number to 146 while keeping the user-facing version at 1.2.251.
+
 ## 1.2.25 - 2026-07-31
 
 - Added a clear Codex CLI status: connected, authorization required, not installed, installing, or failed.

@@ -17,6 +17,11 @@
 "The official Codex CLI installer will be downloaded and installed for this user in ~/.local/bin. No administrator password is required." = "The official Codex CLI installer will be downloaded and installed for this user in ~/.local/bin. No administrator password is required.";
 "What's new" = "What's new";
 "What's new in v%@" = "What's new in v%@";
+"Bug fix" = "Bug fix";
+"One login item" = "One login item";
+"Only the installed release app can register at login; Debug and temporary copies stay out." = "Only the installed release app can register at login; Debug and temporary copies stay out.";
+"Reliable update notes" = "Reliable update notes";
+"The What's New window now opens after an update, including the upgrade from 1.2.25 to 1.2.251." = "The What's New window now opens after an update, including the upgrade from 1.2.25 to 1.2.251.";
 "Codex CLI status" = "Codex CLI status";
 "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed." = "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed.";
 "Authorize from the app" = "Authorize from the app";

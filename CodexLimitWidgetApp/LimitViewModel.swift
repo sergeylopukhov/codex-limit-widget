@@ -4,6 +4,26 @@ import ServiceManagement
 @preconcurrency import UserNotifications
 import WidgetKit
 
+enum LoginItemRegistrationPolicy {
+    static let canonicalBundleIdentifier = "com.sergeylopukhov.CodexLimitWidget"
+    static let canonicalApplicationPath = "/Applications/Codex Limit Widget.app"
+
+    static func shouldRegister(bundleIdentifier: String?, bundleURL: URL, isDebugBuild: Bool) -> Bool {
+        guard !isDebugBuild,
+              bundleIdentifier == canonicalBundleIdentifier
+        else { return false }
+
+        let canonicalURL = URL(fileURLWithPath: canonicalApplicationPath)
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+        let candidateURL = bundleURL
+            .standardizedFileURL
+            .resolvingSymlinksInPath()
+
+        return candidateURL.path == canonicalURL.path
+    }
+}
+
 @MainActor
 final class LimitViewModel: ObservableObject {
     @Published private(set) var snapshot: LimitSnapshot?
@@ -364,7 +384,21 @@ final class LimitViewModel: ObservableObject {
 
     private func configureLoginItem() {
         if #available(macOS 13.0, *) {
-            try? SMAppService.mainApp.register()
+            #if DEBUG
+            let isDebugBuild = true
+            #else
+            let isDebugBuild = false
+            #endif
+
+            guard LoginItemRegistrationPolicy.shouldRegister(
+                bundleIdentifier: Bundle.main.bundleIdentifier,
+                bundleURL: Bundle.main.bundleURL,
+                isDebugBuild: isDebugBuild
+            ) else { return }
+
+            let service = SMAppService.mainApp
+            guard service.status == .notRegistered else { return }
+            try? service.register()
         }
     }
 

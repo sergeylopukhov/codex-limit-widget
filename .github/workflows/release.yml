@@ -28,7 +28,11 @@ jobs:
       - name: Prepare release description
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
+          if [ "$GITHUB_REF_NAME" = "v1.2.251" ]; then
+            echo "RELEASE_NAME=Codex Limit Widget $VERSION (Bugfix)" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
+          fi
 
           if [ "$GITHUB_REF_NAME" = "v1.2.0" ]; then
             {
@@ -77,6 +81,23 @@ jobs:
               echo "## Installation"
               echo
               echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.251" ]; then
+            {
+              echo "## What's New"
+              echo
+              echo "Codex Limit Widget 1.2.251 fixes duplicate macOS login items."
+              echo
+              echo "- Only the canonical release app at \`/Applications/Codex Limit Widget.app\` with the correct Bundle ID can register at login."
+              echo "- Debug, test, temporary, and malformed copies no longer add themselves to Login Items."
+              echo "- Registration checks the existing \`SMAppService\` status before creating a login item."
+              echo "- Existing stale entries created by older copies may need to be removed once in System Settings."
+              echo "- Fixed the localized What’s New window so it appears after upgrades from 1.2.25 and the previous 1.2.251 build."
+              echo "- Kept the user-facing version at 1.2.251 and raised the internal build to 146 for this republished build."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.251-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
             } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
             {

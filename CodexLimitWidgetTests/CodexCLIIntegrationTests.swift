@@ -44,4 +44,69 @@ final class CodexCLIIntegrationTests: XCTestCase {
         XCTAssertTrue(result.succeeded)
         XCTAssertEqual(result.combinedOutput, "Logged in using ChatGPT")
     }
+
+
+    func testLoginItemPolicyAcceptsOnlyCanonicalReleaseCopy() {
+        XCTAssertTrue(
+            LoginItemRegistrationPolicy.shouldRegister(
+                bundleIdentifier: LoginItemRegistrationPolicy.canonicalBundleIdentifier,
+                bundleURL: URL(fileURLWithPath: LoginItemRegistrationPolicy.canonicalApplicationPath),
+                isDebugBuild: false
+            )
+        )
+        XCTAssertFalse(
+            LoginItemRegistrationPolicy.shouldRegister(
+                bundleIdentifier: LoginItemRegistrationPolicy.canonicalBundleIdentifier,
+                bundleURL: URL(fileURLWithPath: "/tmp/Codex Limit Widget.app"),
+                isDebugBuild: false
+            )
+        )
+    }
+
+    func testLoginItemPolicyRejectsDebugBuildsAndWrongBundleIDs() {
+        XCTAssertFalse(
+            LoginItemRegistrationPolicy.shouldRegister(
+                bundleIdentifier: LoginItemRegistrationPolicy.canonicalBundleIdentifier,
+                bundleURL: URL(fileURLWithPath: LoginItemRegistrationPolicy.canonicalApplicationPath),
+                isDebugBuild: true
+            )
+        )
+        XCTAssertFalse(
+            LoginItemRegistrationPolicy.shouldRegister(
+                bundleIdentifier: "$(PRODUCT_BUNDLE_IDENTIFIER)",
+                bundleURL: URL(fileURLWithPath: LoginItemRegistrationPolicy.canonicalApplicationPath),
+                isDebugBuild: false
+            )
+        )
+    }
+
+    func testReleaseNotesShowWhenNoPreviousVersionWasRecorded() {
+        XCTAssertTrue(
+            ReleaseNotesPresentationPolicy.shouldShow(
+                currentVersionIdentifier: "1.2.251 (146)",
+                lastShownVersionIdentifier: nil
+            )
+        )
+    }
+
+    func testReleaseNotesShowAfterOlderBuildAndSkipSameBuild() {
+        XCTAssertTrue(
+            ReleaseNotesPresentationPolicy.shouldShow(
+                currentVersionIdentifier: "1.2.251 (146)",
+                lastShownVersionIdentifier: "1.2.25 (144)"
+            )
+        )
+        XCTAssertTrue(
+            ReleaseNotesPresentationPolicy.shouldShow(
+                currentVersionIdentifier: "1.2.251 (146)",
+                lastShownVersionIdentifier: "1.2.251 (145)"
+            )
+        )
+        XCTAssertFalse(
+            ReleaseNotesPresentationPolicy.shouldShow(
+                currentVersionIdentifier: "1.2.251 (146)",
+                lastShownVersionIdentifier: "1.2.251 (146)"
+            )
+        )
+    }
 }
