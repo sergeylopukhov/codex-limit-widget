@@ -61,6 +61,23 @@ jobs:
               echo
               echo "Download \`CodexLimitWidget-1.2.1-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
             } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.25" ]; then
+            {
+              echo "## What's New"
+              echo
+              echo "Codex Limit Widget 1.2.25 adds a complete recovery flow for Codex CLI access."
+              echo
+              echo "- Shows whether Codex CLI is connected, needs authorization, is being installed, or is unavailable."
+              echo "- Starts the normal ChatGPT browser authorization flow from the app without reading or storing tokens."
+              echo "- Installs the official Codex CLI for the current user in \`~/.local/bin\` when ChatGPT Desktop is installed without the CLI."
+              echo "- Keeps the last successful snapshot visible during errors, marks stale data, and avoids showing stale percentages as current in the menu bar."
+              echo "- Keeps widgets passive: they do not install or authorize CLI; clicking a widget opens the app."
+              echo "- Shows actionable installation and login errors, including the official manual command when needed."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.1.9" ]; then
             {
               echo "## Release Notes"

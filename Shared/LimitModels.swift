@@ -2,6 +2,16 @@ import Foundation
 
 let widgetKindIdentifier = "Codex Limit Widget"
 
+enum CodexConnectionState: Equatable {
+    case checking
+    case ready
+    case authenticationRequired
+    case cliNotInstalled
+    case installing
+    case authenticating
+    case failed
+}
+
 struct WidgetPayload: Codable, Equatable {
     var snapshot: LimitSnapshot?
     var preferences: LimitPreferences

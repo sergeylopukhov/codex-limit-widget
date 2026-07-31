@@ -36,6 +36,13 @@ struct LimitGaugeView: View {
 struct SnapshotDetailView: View {
     let snapshot: LimitSnapshot?
     let isRefreshing: Bool
+    let showsConnectionStatus: Bool
+    let connectionTitle: String
+    let connectionDetail: String?
+    let connectionActionTitle: String?
+    let connectionActionIcon: String
+    let isConnectionActionBusy: Bool
+    let connectionAction: () -> Void
     var design: MenuWindowDesign = .terminal
     let refresh: () -> Void
 
@@ -46,12 +53,26 @@ struct SnapshotDetailView: View {
             TerminalSnapshotDetailView(
                 snapshot: snapshot,
                 isRefreshing: isRefreshing,
+                showsConnectionStatus: showsConnectionStatus,
+                connectionTitle: connectionTitle,
+                connectionDetail: connectionDetail,
+                connectionActionTitle: connectionActionTitle,
+                connectionActionIcon: connectionActionIcon,
+                isConnectionActionBusy: isConnectionActionBusy,
+                connectionAction: connectionAction,
                 refresh: refresh
             )
         case .editorial:
             EditorialSnapshotDetailView(
                 snapshot: snapshot,
                 isRefreshing: isRefreshing,
+                showsConnectionStatus: showsConnectionStatus,
+                connectionTitle: connectionTitle,
+                connectionDetail: connectionDetail,
+                connectionActionTitle: connectionActionTitle,
+                connectionActionIcon: connectionActionIcon,
+                isConnectionActionBusy: isConnectionActionBusy,
+                connectionAction: connectionAction,
                 refresh: refresh
             )
         }
@@ -61,6 +82,13 @@ struct SnapshotDetailView: View {
 private struct TerminalSnapshotDetailView: View {
     let snapshot: LimitSnapshot?
     let isRefreshing: Bool
+    let showsConnectionStatus: Bool
+    let connectionTitle: String
+    let connectionDetail: String?
+    let connectionActionTitle: String?
+    let connectionActionIcon: String
+    let isConnectionActionBusy: Bool
+    let connectionAction: () -> Void
     let refresh: () -> Void
 
     var body: some View {
@@ -86,34 +114,49 @@ private struct TerminalSnapshotDetailView: View {
             }
             TerminalPopupDivider(color: mutedAccent)
 
-            if let snapshot {
-                if let fiveHour = snapshot.fiveHour {
-                    LimitGaugeView(window: fiveHour, compact: true)
-                }
-                if let weekly = snapshot.weekly {
-                    LimitGaugeView(window: weekly, compact: true)
-                    Text("Weekly reset: \(weekly.resetDateTimeText)")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(dimText)
-                        .lineLimit(1)
-                }
+            if showsConnectionStatus {
+                CodexConnectionStatusView(
+                    title: connectionTitle,
+                    detail: connectionDetail,
+                    actionTitle: connectionActionTitle,
+                    actionIcon: connectionActionIcon,
+                    isActionBusy: isConnectionActionBusy,
+                    isEditorial: false,
+                    action: connectionAction
+                )
+            }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    if let planType = snapshot.planType {
-                        Text("Plan: \(planType)")
+            if let snapshot {
+                Group {
+                    if let fiveHour = snapshot.fiveHour {
+                        LimitGaugeView(window: fiveHour, compact: true)
                     }
-                    if snapshot.isStale {
-                        Text("Data is older than 5 minutes")
-                            .foregroundStyle(.orange)
+                    if let weekly = snapshot.weekly {
+                        LimitGaugeView(window: weekly, compact: true)
+                        Text("Weekly reset: \(weekly.resetDateTimeText)")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(dimText)
+                            .lineLimit(1)
                     }
-                    if let errorMessage = snapshot.errorMessage {
-                        Text(errorMessage)
-                            .foregroundStyle(Color(red: 1.0, green: 0.38, blue: 0.32))
-                            .lineLimit(3)
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let planType = snapshot.planType {
+                            Text("Plan: \(planType)")
+                        }
+                        if snapshot.isStale {
+                            Text("Data is older than 5 minutes")
+                                .foregroundStyle(.orange)
+                        }
+                        if let errorMessage = snapshot.errorMessage {
+                            Text(errorMessage)
+                                .foregroundStyle(Color(red: 1.0, green: 0.38, blue: 0.32))
+                                .lineLimit(3)
+                        }
                     }
+                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                    .foregroundStyle(dimText)
                 }
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundStyle(dimText)
+                .opacity(showsConnectionStatus ? 0.58 : 1)
             } else {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("> no limit data")
@@ -137,6 +180,13 @@ private struct TerminalSnapshotDetailView: View {
 private struct EditorialSnapshotDetailView: View {
     let snapshot: LimitSnapshot?
     let isRefreshing: Bool
+    let showsConnectionStatus: Bool
+    let connectionTitle: String
+    let connectionDetail: String?
+    let connectionActionTitle: String?
+    let connectionActionIcon: String
+    let isConnectionActionBusy: Bool
+    let connectionAction: () -> Void
     let refresh: () -> Void
 
     var body: some View {
@@ -167,64 +217,79 @@ private struct EditorialSnapshotDetailView: View {
 
             EditorialPopupDivider()
 
+            if showsConnectionStatus {
+                CodexConnectionStatusView(
+                    title: connectionTitle,
+                    detail: connectionDetail,
+                    actionTitle: connectionActionTitle,
+                    actionIcon: connectionActionIcon,
+                    isActionBusy: isConnectionActionBusy,
+                    isEditorial: true,
+                    action: connectionAction
+                )
+            }
+
             if let snapshot, let metric = snapshot.fiveHour ?? snapshot.weekly {
-                let metricLabel = snapshot.fiveHour == nil ? "WEEK" : "5 HOURS"
-                let metricResetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
-                HStack(alignment: .top, spacing: 12) {
-                    VStack(alignment: .leading, spacing: -5) {
-                        Text("\(metric.leftPercent)%")
-                            .font(.system(size: 50, weight: .regular, design: .serif))
-                            .foregroundStyle(MenuWindowVisuals.editorialInk)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.62)
+                Group {
+                    let metricLabel = snapshot.fiveHour == nil ? "WEEK" : "5 HOURS"
+                    let metricResetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: -5) {
+                            Text("\(metric.leftPercent)%")
+                                .font(.system(size: 50, weight: .regular, design: .serif))
+                                .foregroundStyle(MenuWindowVisuals.editorialInk)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.62)
 
-                        Text("Remaining")
-                            .font(.system(size: 18, weight: .regular, design: .serif))
-                            .foregroundStyle(MenuWindowVisuals.editorialInk)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
+                            Text("Remaining")
+                                .font(.system(size: 18, weight: .regular, design: .serif))
+                                .foregroundStyle(MenuWindowVisuals.editorialInk)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                        }
+                        .layoutPriority(2)
+
+                        Spacer(minLength: 4)
+
+                        VStack(alignment: .trailing, spacing: 4) {
+                            editorialCompactStat(metricResetLabel, metric.resetText)
+                            editorialCompactStat("PLAN", (snapshot.planType ?? "--").uppercased())
+                        }
+                        .padding(.top, 5)
                     }
-                    .layoutPriority(2)
 
-                    Spacer(minLength: 4)
-
-                    VStack(alignment: .trailing, spacing: 4) {
-                        editorialCompactStat(metricResetLabel, metric.resetText)
-                        editorialCompactStat("PLAN", (snapshot.planType ?? "--").uppercased())
-                    }
-                    .padding(.top, 5)
-                }
-
-                EditorialPopupMeter(title: metricLabel, percent: metric.leftPercent)
-                if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
-                    EditorialPopupMeter(title: "WEEK", percent: weekly.leftPercent)
-                }
-
-                HStack(spacing: 10) {
-                    editorialCompactStat("USED", "\(metric.usedPercent)%")
+                    EditorialPopupMeter(title: metricLabel, percent: metric.leftPercent)
                     if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
-                        EditorialPopupVerticalRule()
-                        editorialCompactStat("WEEKLY", "\(weekly.leftPercent)%")
+                        EditorialPopupMeter(title: "WEEK", percent: weekly.leftPercent)
+                    }
+
+                    HStack(spacing: 10) {
+                        editorialCompactStat("USED", "\(metric.usedPercent)%")
+                        if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
+                            EditorialPopupVerticalRule()
+                            editorialCompactStat("WEEKLY", "\(weekly.leftPercent)%")
+                        }
+                    }
+
+                    if let weekly = snapshot.weekly {
+                        editorialWeeklyReset(weekly.resetDateTimeText)
+                    }
+
+                    if snapshot.isStale {
+                        Text("Data is older than 5 minutes")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.31, blue: 0.16))
+                            .lineLimit(1)
+                    }
+
+                    if let errorMessage = snapshot.errorMessage {
+                        Text(errorMessage)
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(Color(red: 0.55, green: 0.16, blue: 0.14))
+                            .lineLimit(2)
                     }
                 }
-
-                if let weekly = snapshot.weekly {
-                    editorialWeeklyReset(weekly.resetDateTimeText)
-                }
-
-                if snapshot.isStale {
-                    Text("Data is older than 5 minutes")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.31, blue: 0.16))
-                        .lineLimit(1)
-                }
-
-                if let errorMessage = snapshot.errorMessage {
-                    Text(errorMessage)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color(red: 0.55, green: 0.16, blue: 0.14))
-                        .lineLimit(2)
-                }
+                .opacity(showsConnectionStatus ? 0.58 : 1)
             } else {
                 VStack(alignment: .leading, spacing: 5) {
                     Text("No limit data")
@@ -294,6 +359,66 @@ private struct TerminalPopupMeter: View {
             }
         }
         .frame(height: 7)
+    }
+}
+
+private struct CodexConnectionStatusView: View {
+    let title: String
+    let detail: String?
+    let actionTitle: String?
+    let actionIcon: String
+    let isActionBusy: Bool
+    let isEditorial: Bool
+    let action: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                Image(systemName: actionTitle == nil ? "hourglass" : "exclamationmark.triangle")
+                    .font(.system(size: 11, weight: .bold))
+                Text(LocalizedStringKey(title))
+                    .font(.system(size: 11, weight: .bold, design: isEditorial ? .default : .monospaced))
+                    .lineLimit(2)
+            }
+            .foregroundStyle(isEditorial ? Color(red: 0.55, green: 0.16, blue: 0.14) : Color(red: 1.0, green: 0.62, blue: 0.32))
+
+            if let detail {
+                Text(LocalizedStringKey(detail))
+                    .font(.system(size: 10, weight: .medium, design: isEditorial ? .default : .monospaced))
+                    .foregroundStyle(isEditorial ? MenuWindowVisuals.editorialMutedInk : Color(red: 0.64, green: 0.86, blue: 0.58))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if let actionTitle {
+                Button(action: action) {
+                    HStack(spacing: 6) {
+                        if isActionBusy {
+                            ProgressView()
+                                .controlSize(.mini)
+                        } else {
+                            Image(systemName: actionIcon)
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        Text(LocalizedStringKey(actionTitle))
+                            .font(.system(size: 10, weight: .bold, design: isEditorial ? .default : .monospaced))
+                    }
+                    .foregroundStyle(isEditorial ? MenuWindowVisuals.editorialInk : Color(red: 0.08, green: 0.16, blue: 0.07))
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(isEditorial ? Color(red: 0.76, green: 0.63, blue: 0.35).opacity(isActionBusy ? 0.35 : 0.78) : Color(red: 0.52, green: 0.95, blue: 0.43).opacity(isActionBusy ? 0.35 : 0.9))
+                    )
+                }
+                .buttonStyle(.plain)
+                .disabled(isActionBusy)
+            }
+        }
+        .padding(9)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(isEditorial ? Color(red: 0.82, green: 0.73, blue: 0.55).opacity(0.22) : Color(red: 0.24, green: 0.33, blue: 0.20).opacity(0.55))
+        )
     }
 }
 

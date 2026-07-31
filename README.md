@@ -44,7 +44,9 @@ Starting with version 1.1.8, later releases can be installed from inside the app
 Requirements:
 
 - macOS 14 or newer.
-- Codex CLI installed and authenticated.
+- Codex CLI installed. If the CLI is missing or not authenticated, the app offers to install it and start sign-in.
+
+Codex in the ChatGPT desktop app does not replace Codex CLI for this app: limits are read through the local CLI. The app can launch the official CLI installer after the user confirms the installation.
 
 ## Add The Widget
 

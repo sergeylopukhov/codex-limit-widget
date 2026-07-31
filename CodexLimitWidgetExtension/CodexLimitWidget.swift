@@ -78,7 +78,16 @@ struct CodexLimitWidgetEntryView: View {
                     EditorialWidgetBackground()
                 }
             case .system:
-                EmptyView()
+                // Keep a visible widget even if WidgetKit delivers a stale
+                // system-design value before the appearance resolution runs.
+                TerminalLimitWidgetView(
+                    snapshot: entry.snapshot,
+                    preferences: entry.preferences,
+                    family: family
+                )
+                .containerBackground(for: .widget) {
+                    TerminalWidgetBackground()
+                }
             }
         }
         .environment(\.locale, entry.preferences.appLanguage.locale)

@@ -1,13 +1,244 @@
 import Darwin
 import Foundation
 
+struct CodexCLI: Sendable, Equatable {
+    let executableURL: URL
+    let environment: [String: String]
+
+    static func resolve() throws -> CodexCLI {
+        let environment = makeEnvironment()
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let preferredCandidates = [
+            homeDirectory.appendingPathComponent(".local/bin/codex"),
+            URL(fileURLWithPath: "/opt/homebrew/bin/codex"),
+            URL(fileURLWithPath: "/usr/local/bin/codex")
+        ]
+
+        let pathCandidates = (environment["PATH"] ?? "")
+            .split(separator: ":")
+            .map { URL(fileURLWithPath: String($0)).appendingPathComponent("codex") }
+
+        var seenPaths = Set<String>()
+        for candidate in preferredCandidates + pathCandidates {
+            guard seenPaths.insert(candidate.path).inserted else { continue }
+            guard FileManager.default.isExecutableFile(atPath: candidate.path) else { continue }
+            return CodexCLI(executableURL: candidate, environment: environment)
+        }
+
+        throw CodexRateLimitError.codexNotFound
+    }
+
+    static func makeEnvironment() -> [String: String] {
+        var environment = ProcessInfo.processInfo.environment
+        let homeDirectory = FileManager.default.homeDirectoryForCurrentUser
+        let additionalPaths = [
+            homeDirectory.appendingPathComponent(".local/bin").path,
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+            "/usr/bin",
+            "/bin"
+        ]
+        let inheritedPaths = environment["PATH"]?.split(separator: ":").map(String.init) ?? []
+        var paths = Set<String>()
+        let orderedPaths = (additionalPaths + inheritedPaths).filter { paths.insert($0).inserted }
+        environment["PATH"] = orderedPaths.joined(separator: ":")
+        if environment["HOME"] == nil {
+            environment["HOME"] = homeDirectory.path
+        }
+        return environment
+    }
+
+    func run(arguments: [String], environmentOverrides: [String: String] = [:]) async throws -> CodexCLICommandResult {
+        var commandEnvironment = environment
+        for (key, value) in environmentOverrides {
+            commandEnvironment[key] = value
+        }
+
+        return try await CodexCLIProcessRunner.run(
+            executableURL: executableURL,
+            arguments: arguments,
+            environment: commandEnvironment
+        )
+    }
+
+    func authenticationStatus() async throws -> CodexCLIAuthenticationStatus {
+        let result = try await run(arguments: ["login", "status"])
+        return result.terminationStatus == 0 ? .loggedIn : .notLoggedIn
+    }
+
+    func version() async throws -> String {
+        let result = try await run(arguments: ["--version"])
+        guard result.succeeded, !result.combinedOutput.isEmpty else {
+            throw CodexCLICommandError.versionCheckFailed(result.combinedOutput)
+        }
+        return result.combinedOutput
+    }
+}
+
+enum CodexCLIAuthenticationStatus: Equatable, Sendable {
+    case loggedIn
+    case notLoggedIn
+}
+
+struct CodexCLICommandResult: Sendable, Equatable {
+    let terminationStatus: Int32
+    let standardOutput: String
+    let standardError: String
+
+    var succeeded: Bool { terminationStatus == 0 }
+
+    var combinedOutput: String {
+        [standardError, standardOutput]
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+private enum CodexCLIProcessRunner {
+    static func run(
+        executableURL: URL,
+        arguments: [String],
+        environment: [String: String]
+    ) async throws -> CodexCLICommandResult {
+        try await Task.detached(priority: .userInitiated) {
+            let fileManager = FileManager.default
+            let temporaryDirectory = fileManager.temporaryDirectory
+            let identifier = UUID().uuidString
+            let standardOutputURL = temporaryDirectory.appendingPathComponent("codex-limit-\(identifier)-stdout")
+            let standardErrorURL = temporaryDirectory.appendingPathComponent("codex-limit-\(identifier)-stderr")
+
+            defer {
+                try? fileManager.removeItem(at: standardOutputURL)
+                try? fileManager.removeItem(at: standardErrorURL)
+            }
+
+            fileManager.createFile(atPath: standardOutputURL.path, contents: nil)
+            fileManager.createFile(atPath: standardErrorURL.path, contents: nil)
+
+            let standardOutputHandle = try FileHandle(forWritingTo: standardOutputURL)
+            let standardErrorHandle = try FileHandle(forWritingTo: standardErrorURL)
+            defer {
+                try? standardOutputHandle.close()
+                try? standardErrorHandle.close()
+            }
+
+            let process = Process()
+            process.executableURL = executableURL
+            process.arguments = arguments
+            process.environment = environment
+            process.standardInput = FileHandle.nullDevice
+            process.standardOutput = standardOutputHandle
+            process.standardError = standardErrorHandle
+
+            try process.run()
+            process.waitUntilExit()
+            try? standardOutputHandle.close()
+            try? standardErrorHandle.close()
+
+            let standardOutput = String(
+                data: try Data(contentsOf: standardOutputURL),
+                encoding: .utf8
+            )?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let standardError = String(
+                data: try Data(contentsOf: standardErrorURL),
+                encoding: .utf8
+            )?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+
+            return CodexCLICommandResult(
+                terminationStatus: process.terminationStatus,
+                standardOutput: standardOutput,
+                standardError: standardError
+            )
+        }.value
+    }
+}
+
+enum CodexCLIInstaller {
+    static let scriptURL = URL(string: "https://chatgpt.com/codex/install.sh")!
+    static let manualInstallCommand = "curl -fsSL https://chatgpt.com/codex/install.sh | sh"
+
+    static func install() async throws {
+        let (data, response) = try await URLSession.shared.data(from: scriptURL)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode)
+        else {
+            throw CodexCLIInstallError.downloadFailed
+        }
+
+        guard data.count <= 2_000_000,
+              let script = String(data: data, encoding: .utf8),
+              script.hasPrefix("#!/bin/sh")
+        else {
+            throw CodexCLIInstallError.invalidScript
+        }
+
+        let fileManager = FileManager.default
+        let temporaryDirectory = fileManager.temporaryDirectory
+            .appendingPathComponent("CodexLimitCLIInstall-\(UUID().uuidString)", isDirectory: true)
+        try fileManager.createDirectory(at: temporaryDirectory, withIntermediateDirectories: true)
+        defer { try? fileManager.removeItem(at: temporaryDirectory) }
+
+        let scriptURL = temporaryDirectory.appendingPathComponent("install.sh")
+        try data.write(to: scriptURL, options: [.atomic])
+
+        var environment = CodexCLI.makeEnvironment()
+        environment["CODEX_NON_INTERACTIVE"] = "1"
+        if environment["CODEX_INSTALL_DIR"] == nil {
+            environment["CODEX_INSTALL_DIR"] = fileManager.homeDirectoryForCurrentUser
+                .appendingPathComponent(".local/bin")
+                .path
+        }
+
+        let result = try await CodexCLIProcessRunner.run(
+            executableURL: URL(fileURLWithPath: "/bin/sh"),
+            arguments: [scriptURL.path],
+            environment: environment
+        )
+        guard result.succeeded else {
+            throw CodexCLIInstallError.commandFailed(result.combinedOutput)
+        }
+    }
+}
+
+enum CodexCLIInstallError: LocalizedError, Equatable {
+    case downloadFailed
+    case invalidScript
+    case commandFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .downloadFailed:
+            return "The official Codex CLI installer could not be downloaded."
+        case .invalidScript:
+            return "The downloaded Codex CLI installer was not recognized."
+        case let .commandFailed(output):
+            return output.isEmpty ? "The Codex CLI installer failed." : output
+        }
+    }
+}
+
+enum CodexCLICommandError: LocalizedError, Equatable {
+    case loginFailed(String)
+    case versionCheckFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .loginFailed(output):
+            return output.isEmpty ? "Codex login did not complete." : output
+        case let .versionCheckFailed(output):
+            return output.isEmpty ? "Codex CLI version could not be checked." : output
+        }
+    }
+}
+
 struct CodexRateLimitClient {
     func fetch() async throws -> LimitSnapshot {
-        let codexURL = try resolveCodexExecutable()
+        let cli = try CodexCLI.resolve()
         let process = Process()
-        process.executableURL = codexURL
+        process.executableURL = cli.executableURL
         process.arguments = ["app-server", "--stdio"]
-        process.environment = environment()
+        process.environment = cli.environment
 
         let input = Pipe()
         let output = Pipe()
@@ -68,52 +299,11 @@ struct CodexRateLimitClient {
         }
     }
 
-    private func resolveCodexExecutable() throws -> URL {
-        let candidates = [
-            "/Users/sergeylopukhov/.local/bin/codex",
-            "/opt/homebrew/bin/codex",
-            "/usr/local/bin/codex"
-        ]
-
-        for path in candidates where FileManager.default.isExecutableFile(atPath: path) {
-            return URL(fileURLWithPath: path)
-        }
-
-        let env = Process()
-        env.executableURL = URL(fileURLWithPath: "/usr/bin/env")
-        env.arguments = ["which", "codex"]
-        let output = Pipe()
-        env.standardOutput = output
-        try env.run()
-        env.waitUntilExit()
-
-        guard env.terminationStatus == 0,
-              let data = try output.fileHandleForReading.readToEnd(),
-              let path = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !path.isEmpty
-        else {
-            throw CodexRateLimitError.codexNotFound
-        }
-
-        return URL(fileURLWithPath: path)
-    }
-
-    private func environment() -> [String: String] {
-        var env = ProcessInfo.processInfo.environment
-        let additions = [
-            "/Users/sergeylopukhov/.local/bin",
-            "/opt/homebrew/bin",
-            "/usr/local/bin",
-            "/usr/bin",
-            "/bin"
-        ]
-        env["PATH"] = (env["PATH"].map { additions.joined(separator: ":") + ":" + $0 }) ?? additions.joined(separator: ":")
-        return env
-    }
 }
 
 enum CodexRateLimitError: LocalizedError {
     case codexNotFound
+    case authenticationRequired
     case timeout
     case missingCodexLimit
     case invalidWindow
@@ -122,6 +312,8 @@ enum CodexRateLimitError: LocalizedError {
         switch self {
         case .codexNotFound:
             return "codex was not found in PATH or fallback paths."
+        case .authenticationRequired:
+            return "Codex CLI authentication is required."
         case .timeout:
             return "Codex app-server did not respond in time."
         case .missingCodexLimit:
@@ -129,6 +321,19 @@ enum CodexRateLimitError: LocalizedError {
         case .invalidWindow:
             return "The Codex response does not include an available limit window."
         }
+    }
+
+    static func isAuthenticationError(code: Int?, message: String) -> Bool {
+        let normalized = message.lowercased()
+        if code == 401 || code == 403 {
+            return true
+        }
+
+        return normalized.contains("authentication required")
+            || normalized.contains("not logged in")
+            || normalized.contains("unauthorized")
+            || normalized.contains("unauthenticated")
+            || normalized.contains("login required")
     }
 }
 
@@ -165,10 +370,14 @@ private final class JSONLineReader: @unchecked Sendable {
                 guard meta.id == id else { continue }
 
                 if let error = try JSONDecoder().decode(JSONRPCErrorEnvelope.self, from: line).error {
+                    let message = error.message ?? "Codex app-server returned an error."
+                    if CodexRateLimitError.isAuthenticationError(code: error.code, message: message) {
+                        throw CodexRateLimitError.authenticationRequired
+                    }
                     throw NSError(
                         domain: "CodexAppServer",
                         code: error.code ?? id,
-                        userInfo: [NSLocalizedDescriptionKey: error.message ?? "Codex app-server returned an error."]
+                        userInfo: [NSLocalizedDescriptionKey: message]
                     )
                 }
 
@@ -210,6 +419,7 @@ private final class JSONLineReader: @unchecked Sendable {
     private func nextLine() async throws -> Data? {
         try await iterator.next()
     }
+
 }
 
 private func withTimeout<T: Sendable>(

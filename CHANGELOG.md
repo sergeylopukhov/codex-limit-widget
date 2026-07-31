@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.25 - 2026-07-31
+
+- Added a clear Codex CLI status: connected, authorization required, not installed, installing, or failed.
+- Added browser authorization from the app with the normal ChatGPT account flow; the app does not read or store tokens.
+- Added official Codex CLI installation for the current user in `~/.local/bin`, including support for Macs with ChatGPT Desktop but no CLI.
+- Kept the last successful limit snapshot visible during errors while marking stale data and hiding stale percentages from the menu bar metric.
+- Kept widgets passive: they never install or authorize Codex CLI, and clicking a widget opens the app.
+- Added actionable installation and login errors with the official manual command when automatic recovery is unavailable.
+- Updated the localized “What’s New” window with the changes in version 1.2.25.
+
 ## 1.2.1
 
 - Shows the available Codex credit balance in the menu bar when a rate-limit window is exhausted, including support for unlimited credits.

@@ -8,6 +8,10 @@ import WidgetKit
 final class LimitViewModel: ObservableObject {
     @Published private(set) var snapshot: LimitSnapshot?
     @Published private(set) var isRefreshing = false
+    @Published private(set) var isAuthenticating = false
+    @Published private(set) var isInstallingCLI = false
+    @Published private(set) var connectionState: CodexConnectionState = .checking
+    @Published private(set) var connectionMessage: String?
     @Published private(set) var preferences: LimitPreferences
 
     private let client = CodexRateLimitClient()
@@ -39,8 +43,10 @@ final class LimitViewModel: ObservableObject {
     }
 
     func refresh() async {
-        guard !isRefreshing else { return }
+        guard !isRefreshing, !isAuthenticating, !isInstallingCLI else { return }
         isRefreshing = true
+        connectionState = .checking
+        connectionMessage = nil
         defer { isRefreshing = false }
 
         do {
@@ -53,14 +59,171 @@ final class LimitViewModel: ObservableObject {
             try? LimitStore.write(fresh)
             reloadWidgets()
             await lowLimitNotificationManager.deliverIfNeeded(for: fresh, preferences: preferences)
+            connectionState = .ready
         } catch {
-            let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-            if var current = snapshot {
-                current.errorMessage = message
-                snapshot = current
-                try? LimitStore.write(current)
-                reloadWidgets()
+            handleRefreshFailure(error)
+        }
+    }
+
+    func authenticate() async {
+        guard !isAuthenticating, !isInstallingCLI, !isRefreshing else { return }
+
+        let cli: CodexCLI
+        do {
+            cli = try CodexCLI.resolve()
+        } catch {
+            connectionState = .cliNotInstalled
+            connectionMessage = nil
+            return
+        }
+
+        isAuthenticating = true
+        connectionState = .authenticating
+        connectionMessage = nil
+
+        do {
+            let result = try await cli.run(arguments: ["login"])
+            guard result.succeeded else {
+                throw CodexCLICommandError.loginFailed(result.combinedOutput)
             }
+
+            let authenticationStatus = try await cli.authenticationStatus()
+            isAuthenticating = false
+
+            switch authenticationStatus {
+            case .loggedIn:
+                await refresh()
+            case .notLoggedIn:
+                connectionState = .authenticationRequired
+                connectionMessage = "Codex login did not complete."
+            }
+        } catch {
+            isAuthenticating = false
+            connectionState = .authenticationRequired
+            connectionMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    func installCLI() async {
+        guard !isInstallingCLI, !isAuthenticating, !isRefreshing else { return }
+
+        isInstallingCLI = true
+        connectionState = .installing
+        connectionMessage = nil
+
+        do {
+            try await CodexCLIInstaller.install()
+            let cli = try CodexCLI.resolve()
+            _ = try await cli.version()
+            let authenticationStatus = try await cli.authenticationStatus()
+            isInstallingCLI = false
+
+            switch authenticationStatus {
+            case .loggedIn:
+                await refresh()
+            case .notLoggedIn:
+                await authenticate()
+            }
+        } catch {
+            isInstallingCLI = false
+            connectionState = .cliNotInstalled
+            connectionMessage = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        }
+    }
+
+    var isCodexActionBusy: Bool {
+        isRefreshing || isAuthenticating || isInstallingCLI
+    }
+
+    var connectionStateTitle: String {
+        switch connectionState {
+        case .checking:
+            return "Checking Codex CLI"
+        case .ready:
+            return "Codex CLI connected"
+        case .authenticationRequired:
+            return "Codex CLI authentication required"
+        case .cliNotInstalled:
+            return "Codex CLI is not installed"
+        case .installing:
+            return "Installing Codex CLI"
+        case .authenticating:
+            return "Waiting for browser authorization"
+        case .failed:
+            return "Codex CLI error"
+        }
+    }
+
+    var connectionStateDetail: String? {
+        switch connectionState {
+        case .cliNotInstalled:
+            let base = "ChatGPT Desktop with Codex does not provide CLI access for this app."
+            guard let connectionMessage else { return base }
+            return "\(connectionMessage)\nManual install: \(CodexCLIInstaller.manualInstallCommand)"
+        case .authenticationRequired:
+            let base = "Sign in to Codex CLI with your ChatGPT account."
+            guard let connectionMessage else { return base }
+            return "\(base)\n\(connectionMessage)"
+        case .installing:
+            return "Downloading the official installer and checking the user installation."
+        case .authenticating:
+            return "Complete the sign-in in your browser."
+        case .failed:
+            return connectionMessage
+        case .checking, .ready:
+            return nil
+        }
+    }
+
+    var connectionActionTitle: String? {
+        switch connectionState {
+        case .authenticationRequired:
+            return "Authorize"
+        case .cliNotInstalled:
+            return "Install Codex CLI"
+        default:
+            return nil
+        }
+    }
+
+    var connectionActionIcon: String {
+        connectionState == .cliNotInstalled ? "arrow.down.circle" : "person.badge.key"
+    }
+
+    var showsConnectionStatus: Bool {
+        switch connectionState {
+        case .checking, .ready:
+            return false
+        case .authenticationRequired, .cliNotInstalled, .installing, .authenticating, .failed:
+            return true
+        }
+    }
+
+    private func handleRefreshFailure(_ error: Error) {
+        let message = (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
+        let knownState: CodexConnectionState?
+
+        if let rateLimitError = error as? CodexRateLimitError {
+            switch rateLimitError {
+            case .codexNotFound:
+                knownState = .cliNotInstalled
+            case .authenticationRequired:
+                knownState = .authenticationRequired
+            case .timeout, .missingCodexLimit, .invalidWindow:
+                knownState = nil
+            }
+        } else {
+            knownState = nil
+        }
+
+        connectionState = knownState ?? .failed
+        connectionMessage = knownState == nil ? message : nil
+
+        if var current = snapshot {
+            current.errorMessage = knownState == nil ? message : nil
+            snapshot = current
+            try? LimitStore.write(current)
+            reloadWidgets()
         }
     }
 
@@ -113,7 +276,7 @@ final class LimitViewModel: ObservableObject {
     }
 
     var menuBarTitle: String {
-        guard let snapshot else { return "Codex --" }
+        guard let snapshot, !hidesCurrentMenuBarMetric else { return "Codex --" }
 
         switch preferences.menuBarMode {
         case .detailed:
@@ -139,7 +302,7 @@ final class LimitViewModel: ObservableObject {
     }
 
     var compactMenuBarValue: String {
-        guard let snapshot else { return "0%" }
+        guard let snapshot, !hidesCurrentMenuBarMetric else { return "—" }
 
         let window: LimitWindowSnapshot?
         switch preferences.compactMenuBarMetric {
@@ -154,7 +317,7 @@ final class LimitViewModel: ObservableObject {
     }
 
     var compactMenuBarPercent: Int {
-        guard let snapshot else { return 0 }
+        guard let snapshot, !hidesCurrentMenuBarMetric else { return 0 }
 
         switch preferences.compactMenuBarMetric {
         case .fiveHour:
@@ -188,6 +351,15 @@ final class LimitViewModel: ObservableObject {
 
         preferences.compactMenuBarMetric = fallbackMetric
         try? LimitPreferencesStore.write(preferences)
+    }
+
+    private var hidesCurrentMenuBarMetric: Bool {
+        switch connectionState {
+        case .authenticationRequired, .cliNotInstalled, .installing, .authenticating:
+            return true
+        case .checking, .ready, .failed:
+            return false
+        }
     }
 
     private func configureLoginItem() {

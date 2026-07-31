@@ -49,6 +49,7 @@ struct MenuBarContentView: View {
     @ObservedObject var updateController: AppUpdateController
     @ObservedObject var settingsWindowPresenter: SettingsWindowPresenter
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showsCLIInstallConfirmation = false
     var close: () -> Void = {}
 
     var body: some View {
@@ -58,6 +59,13 @@ struct MenuBarContentView: View {
             SnapshotDetailView(
                 snapshot: viewModel.snapshot,
                 isRefreshing: viewModel.isRefreshing,
+                showsConnectionStatus: viewModel.showsConnectionStatus,
+                connectionTitle: viewModel.connectionStateTitle,
+                connectionDetail: viewModel.connectionStateDetail,
+                connectionActionTitle: viewModel.connectionActionTitle,
+                connectionActionIcon: viewModel.connectionActionIcon,
+                isConnectionActionBusy: viewModel.isCodexActionBusy,
+                connectionAction: handleConnectionAction,
                 design: design,
                 refresh: { Task { await viewModel.refresh() } }
             )
@@ -94,6 +102,25 @@ struct MenuBarContentView: View {
         }
         .frame(width: 286, alignment: .top)
         .background(MenuWindowVisuals.popoverBackground(for: design))
+        .alert("Install Codex CLI", isPresented: $showsCLIInstallConfirmation) {
+            Button("Install") {
+                Task { await viewModel.installCLI() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The official Codex CLI installer will be downloaded and installed for this user in ~/.local/bin. No administrator password is required.")
+        }
+    }
+
+    private func handleConnectionAction() {
+        switch viewModel.connectionState {
+        case .cliNotInstalled:
+            showsCLIInstallConfirmation = true
+        case .authenticationRequired:
+            Task { await viewModel.authenticate() }
+        default:
+            break
+        }
     }
 }
 
@@ -171,6 +198,13 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
         viewModel.$isRefreshing
             .sink { [weak self] _ in
                 self?.syncStatusItem()
+            }
+            .store(in: &cancellables)
+
+        viewModel.$connectionState
+            .sink { [weak self] _ in
+                self?.syncStatusItem()
+                self?.resizePopoverIfNeeded()
             }
             .store(in: &cancellables)
 
@@ -302,7 +336,11 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     }
 
     private var preferredPopoverSize: NSSize {
-        NSSize(width: 286, height: updateController.isUpdateAvailable ? 334 : 272)
+        var height = updateController.isUpdateAvailable ? 334 : 272
+        if viewModel.showsConnectionStatus {
+            height += 82
+        }
+        return NSSize(width: 286, height: height)
     }
 
     private func resizePopoverIfNeeded() {
@@ -568,7 +606,7 @@ private struct ReleaseNotesView: View {
                 Spacer()
             }
 
-            Text("Since v1.1.1")
+            Text("What's new in v\(currentVersion)")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(palette.mutedText)
                 .padding(.horizontal, 10)
@@ -581,39 +619,34 @@ private struct ReleaseNotesView: View {
 
             VStack(alignment: .leading, spacing: 12) {
                 ReleaseNoteRow(
-                    icon: "rectangle.3.group",
-                    title: "Refined widget and app design",
-                    detail: "Dark and Beige widgets, the popover, and Settings now use clearer, denser layouts."
+                    icon: "terminal",
+                    title: "Codex CLI status",
+                    detail: "The app clearly shows whether Codex CLI is connected, needs authorization, or is not installed."
+                )
+                ReleaseNoteRow(
+                    icon: "person.badge.key",
+                    title: "Authorize from the app",
+                    detail: "Start the normal ChatGPT browser sign-in with one click; the app does not read or store tokens."
+                )
+                ReleaseNoteRow(
+                    icon: "arrow.down.circle",
+                    title: "Install Codex CLI",
+                    detail: "Install the official CLI for this user in ~/.local/bin when ChatGPT Desktop is installed without the CLI."
+                )
+                ReleaseNoteRow(
+                    icon: "clock.badge.exclamationmark",
+                    title: "Stale data is marked",
+                    detail: "The last successful snapshot stays visible during errors, but stale percentages are not presented as current in the menu bar."
                 )
                 ReleaseNoteRow(
                     icon: "checkmark.shield",
-                    title: "Reliable limit data",
-                    detail: "Weekly-only accounts work without 5-hour placeholders, and widgets keep the latest successful data."
+                    title: "Safe widgets",
+                    detail: "Widgets never install or authorize CLI; clicking a widget opens the app."
                 )
                 ReleaseNoteRow(
-                    icon: "calendar.badge.clock",
-                    title: "Usage and reset details",
-                    detail: "Weekly reset times and usage details stay visible across refreshes."
-                )
-                ReleaseNoteRow(
-                    icon: "arrow.down.app",
-                    title: "Built-in updates",
-                    detail: "The app checks GitHub Releases and installs verified updates in one click."
-                )
-                ReleaseNoteRow(
-                    icon: "bell.badge",
-                    title: "Low limit alerts",
-                    detail: "Choose up to five thresholds for the 5-hour and weekly limits."
-                )
-                ReleaseNoteRow(
-                    icon: "cursorarrow.click",
-                    title: "Widget opens the app",
-                    detail: "Click a widget to open Codex Limit Widget settings."
-                )
-                ReleaseNoteRow(
-                    icon: "circle.lefthalf.filled",
-                    title: "System language and appearance",
-                    detail: "Choose Russian or English, or follow macOS. The window and widget follow system appearance."
+                    icon: "exclamationmark.bubble",
+                    title: "Clear recovery steps",
+                    detail: "Installation and login errors explain what happened and show the official manual command when needed."
                 )
             }
             .foregroundStyle(palette.primaryText)
@@ -864,6 +897,7 @@ struct AppSettingsView: View {
     @ObservedObject var viewModel: LimitViewModel
     @ObservedObject var updateController: AppUpdateController
     @Environment(\.colorScheme) private var colorScheme
+    @State private var showsCLIInstallConfirmation = false
 
     var body: some View {
         let design = viewModel.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark)
@@ -928,6 +962,41 @@ struct AppSettingsView: View {
                             .foregroundStyle(palette.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
                             .padding(.top, 2)
+                    }
+
+                    SettingsRule(palette: palette)
+
+                    VStack(alignment: .leading, spacing: 12) {
+                        SettingsSectionTitle("Codex CLI", palette: palette)
+
+                        HStack(alignment: .center, spacing: 18) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(LocalizedStringKey(viewModel.connectionStateTitle))
+                                    .font(palette.noteFont)
+                                    .foregroundStyle(viewModel.connectionState == .ready ? palette.accent : palette.mutedText)
+                                    .fixedSize(horizontal: false, vertical: true)
+
+                                if let detail = viewModel.connectionStateDetail {
+                                    Text(LocalizedStringKey(detail))
+                                        .font(palette.noteFont)
+                                        .foregroundStyle(palette.mutedText)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+
+                            Spacer(minLength: 16)
+
+                            if let actionTitle = viewModel.connectionActionTitle {
+                                SettingsActionButton(
+                                    title: actionTitle,
+                                    systemImage: viewModel.connectionActionIcon,
+                                    isDisabled: viewModel.isCodexActionBusy,
+                                    palette: palette
+                                ) {
+                                    handleConnectionAction()
+                                }
+                            }
+                        }
                     }
 
                     SettingsRule(palette: palette)
@@ -1038,6 +1107,25 @@ struct AppSettingsView: View {
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .stroke(palette.border, lineWidth: 1)
         )
+        .alert("Install Codex CLI", isPresented: $showsCLIInstallConfirmation) {
+            Button("Install") {
+                Task { await viewModel.installCLI() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The official Codex CLI installer will be downloaded and installed for this user in ~/.local/bin. No administrator password is required.")
+        }
+    }
+
+    private func handleConnectionAction() {
+        switch viewModel.connectionState {
+        case .cliNotInstalled:
+            showsCLIInstallConfirmation = true
+        case .authenticationRequired:
+            Task { await viewModel.authenticate() }
+        default:
+            break
+        }
     }
 
     private func binding<Value>(_ keyPath: WritableKeyPath<LimitPreferences, Value>) -> Binding<Value> {
