@@ -5,6 +5,8 @@
 </p>
 
 <div align="center">
+  <img src="assets/screenshots/readme/beige-large.png" width="520" alt="Codex Limit Widget large widget in Beige design">
+
   <p>
     A macOS menu bar app and desktop widget for keeping Codex limits visible.
   </p>
@@ -56,13 +58,71 @@ The widget design is controlled in the app settings. Choose `Dark` or `Beige`; a
 
 The menu bar item can show detailed limits or a compact percent indicator. Click it to open a popover with the available limit windows, reset times, data freshness, and settings. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
 
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/popover-window-beige.png" width="100%" alt="Menu bar popover in Beige design"><br>
+      <sub>Beige</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/popover-window-dark.png" width="100%" alt="Menu bar popover in Dark design"><br>
+      <sub>Dark</sub>
+    </td>
+  </tr>
+</table>
+
 ## Widgets
 
-The widget is available in Small, Medium, and Large sizes, with Dark and Beige designs.
+<table>
+  <tr>
+    <td width="40%" align="center">
+      <img src="assets/screenshots/readme/beige-large.png" width="100%" alt="Large Codex Limit Widget in Beige design"><br>
+      <sub>Large</sub>
+    </td>
+    <td width="38%" align="center">
+      <img src="assets/screenshots/readme/beige-medium.png" width="100%" alt="Medium Codex Limit Widget in Beige design"><br>
+      <sub>Medium</sub>
+    </td>
+    <td width="22%" align="center">
+      <img src="assets/screenshots/readme/beige-small.png" width="100%" alt="Small Codex Limit Widget in Beige design"><br>
+      <sub>Small</sub>
+    </td>
+  </tr>
+</table>
+
+<table>
+  <tr>
+    <td width="40%" align="center">
+      <img src="assets/screenshots/readme/dark-large.png" width="100%" alt="Large Codex Limit Widget in Dark design"><br>
+      <sub>Large</sub>
+    </td>
+    <td width="38%" align="center">
+      <img src="assets/screenshots/readme/dark-medium.png" width="100%" alt="Medium Codex Limit Widget in Dark design"><br>
+      <sub>Medium</sub>
+    </td>
+    <td width="22%" align="center">
+      <img src="assets/screenshots/readme/dark-small.png" width="100%" alt="Small Codex Limit Widget in Dark design"><br>
+      <sub>Small</sub>
+    </td>
+  </tr>
+</table>
 
 ## Settings
 
 Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. The Updates section shows the installed version, the latest check result, and the update action.
+
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/settings-window-beige.png" width="100%" alt="Settings window with Beige design selected"><br>
+      <sub>Beige</sub>
+    </td>
+    <td width="50%" align="center">
+      <img src="assets/screenshots/readme/settings-window-dark.png" width="100%" alt="Settings window with Dark design selected"><br>
+      <sub>Dark</sub>
+    </td>
+  </tr>
+</table>
 
 ## Updates
 
