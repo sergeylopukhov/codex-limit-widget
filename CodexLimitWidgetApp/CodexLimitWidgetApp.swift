@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 import Combine
 import Carbon.HIToolbox
-import UserNotifications
+@preconcurrency import UserNotifications
 
 @main
 struct CodexLimitWidgetApp: App {

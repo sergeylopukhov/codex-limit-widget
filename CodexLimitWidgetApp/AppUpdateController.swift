@@ -2,7 +2,7 @@ import AppKit
 import Combine
 import CryptoKit
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 struct AppUpdateRelease: Equatable, Sendable {
     let version: String
