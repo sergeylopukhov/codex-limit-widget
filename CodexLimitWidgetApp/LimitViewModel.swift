@@ -38,6 +38,7 @@ final class LimitViewModel: ObservableObject {
     private let widgetBridge = LoopbackWidgetBridge()
     private let lowLimitNotificationManager = LowLimitNotificationManager()
     private let notificationSetupKey = "systemNotificationsConfigured"
+    private let loginItemSetupKey = "loginItemRegistrationCompleted"
     private var timer: Timer?
     private var started = false
 
@@ -402,6 +403,9 @@ final class LimitViewModel: ObservableObject {
 
     private func configureLoginItem() {
         if #available(macOS 13.0, *) {
+            let defaults = UserDefaults.standard
+            guard !defaults.bool(forKey: loginItemSetupKey) else { return }
+
             #if DEBUG
             let isDebugBuild = true
             #else
@@ -415,8 +419,22 @@ final class LimitViewModel: ObservableObject {
             ) else { return }
 
             let service = SMAppService.mainApp
-            guard service.status == .notRegistered else { return }
+            guard service.status == .notRegistered else {
+                defaults.set(true, forKey: loginItemSetupKey)
+                return
+            }
+
+            // Existing installations have already passed their first launch.
+            // Do not register them again when an update leaves SMAppService in
+            // a transient `notRegistered` state.
+            guard !LimitPreferencesStore.hasStoredPreferences,
+                  !LimitStore.hasStoredSnapshot else {
+                defaults.set(true, forKey: loginItemSetupKey)
+                return
+            }
+
             try? service.register()
+            defaults.set(true, forKey: loginItemSetupKey)
         }
     }
 

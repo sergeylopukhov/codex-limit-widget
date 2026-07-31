@@ -45,6 +45,12 @@
 "Clear recovery steps" = "Clear recovery steps";
 "Installation and login errors explain what happened and show the official manual command when needed." = "Installation and login errors explain what happened and show the official manual command when needed.";
 "Got it" = "Got it";
+"One-time Login Item setup" = "One-time Login Item setup";
+"The app registers at login only during a clean installation; updates and restarts never register it again." = "The app registers at login only during a clean installation; updates and restarts never register it again.";
+"Adaptive glass widget background" = "Adaptive glass widget background";
+"Desktop widgets use the system glass appearance when macOS dims them behind another window." = "Desktop widgets use the system glass appearance when macOS dims them behind another window.";
+"Four-decimal credit balance" = "Four-decimal credit balance";
+"Compact credit balances retain four fractional digits, including values such as 200.9500T." = "Compact credit balances retain four fractional digits, including values such as 200.9500T.";
 "Codex Limit Widget" = "Codex Limit Widget";
 "New version %@ is available." = "New version %@ is available.";
 "Downloading v%@…" = "Downloading v%@…";

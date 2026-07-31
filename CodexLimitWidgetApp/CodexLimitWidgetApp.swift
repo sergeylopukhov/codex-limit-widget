@@ -757,6 +757,27 @@ private struct ReleaseNotesView: View {
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
             ReleaseNoteItem(
+                id: "login-item-once",
+                introducedIn: "1.2.302",
+                icon: "checkmark.shield",
+                title: "One-time Login Item setup",
+                detail: "The app registers at login only during a clean installation; updates and restarts never register it again."
+            ),
+            ReleaseNoteItem(
+                id: "widget-glass-background",
+                introducedIn: "1.2.302",
+                icon: "rectangle.on.rectangle.angled",
+                title: "Adaptive glass widget background",
+                detail: "Desktop widgets use the system glass appearance when macOS dims them behind another window."
+            ),
+            ReleaseNoteItem(
+                id: "four-decimal-credit-balance",
+                introducedIn: "1.2.302",
+                icon: "textformat.123",
+                title: "Four-decimal credit balance",
+                detail: "Compact credit balances retain four fractional digits, including values such as 200.9500T."
+            ),
+            ReleaseNoteItem(
                 id: "reliable-update-checks",
                 introducedIn: "1.2.301",
                 icon: "hourglass.badge.checkmark",

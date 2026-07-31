@@ -93,7 +93,9 @@ struct CreditsSnapshot: Codable, Equatable {
             return String(integerPart)
         }
 
-        return "\(integerPart).\(fractionalPart.prefix(4))"
+        let displayedFraction = String(fractionalPart.prefix(4))
+            .padding(toLength: 4, withPad: "0", startingAt: 0)
+        return "\(integerPart).\(displayedFraction)"
     }
 }
 
@@ -319,6 +321,12 @@ enum MenuWindowDesign: String, Codable, CaseIterable, Identifiable {
 enum LimitStore {
     static let filename = "codex-limit-snapshot.json"
 
+    static var hasStoredSnapshot: Bool {
+        storageURLs(filename: filename).contains {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
+    }
+
     static func read() -> LimitSnapshot? {
         for url in storageURLs(filename: filename) {
             do {
@@ -369,6 +377,12 @@ enum LimitStore {
 
 enum LimitPreferencesStore {
     static let filename = "codex-limit-settings.json"
+
+    static var hasStoredPreferences: Bool {
+        LimitStore.storageURLs(filename: filename).contains {
+            FileManager.default.fileExists(atPath: $0.path)
+        }
+    }
 
     static func read() -> LimitPreferences {
         for url in LimitStore.storageURLs(filename: filename) {

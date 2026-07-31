@@ -54,6 +54,12 @@ struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetRenderingMode) private var widgetRenderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
+
+    private var usesSystemGlass: Bool {
+        widgetRenderingMode != .fullColor || !showsWidgetContainerBackground
+    }
 
     @ViewBuilder
     var body: some View {
@@ -65,8 +71,9 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     family: family
                 )
+                .widgetAccentable()
                 .containerBackground(for: .widget) {
-                    TerminalWidgetBackground()
+                    terminalContainerBackground
                 }
             case .editorial:
                 EditorialLimitWidgetView(
@@ -74,8 +81,9 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     variant: EditorialWidgetVariant(family: family)
                 )
+                .widgetAccentable()
                 .containerBackground(for: .widget) {
-                    EditorialWidgetBackground()
+                    editorialContainerBackground
                 }
             case .system:
                 // Keep a visible widget even if WidgetKit delivers a stale
@@ -85,13 +93,32 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     family: family
                 )
+                .widgetAccentable()
                 .containerBackground(for: .widget) {
-                    TerminalWidgetBackground()
+                    terminalContainerBackground
                 }
             }
         }
         .environment(\.locale, entry.preferences.appLanguage.locale)
         .widgetURL(URL(string: "codexlimitwidget://open"))
+    }
+
+    @ViewBuilder
+    private var terminalContainerBackground: some View {
+        if usesSystemGlass {
+            Color.clear
+        } else {
+            TerminalWidgetBackground()
+        }
+    }
+
+    @ViewBuilder
+    private var editorialContainerBackground: some View {
+        if usesSystemGlass {
+            Color.clear
+        } else {
+            EditorialWidgetBackground()
+        }
     }
 }
 

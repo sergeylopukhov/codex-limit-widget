@@ -127,6 +127,12 @@
 "Clear recovery steps" = "Понятные шаги восстановления";
 "Installation and login errors explain what happened and show the official manual command when needed." = "Ошибки установки и входа объясняют причину и при необходимости показывают официальную команду для ручного запуска.";
 "Got it" = "Понятно";
+"One-time Login Item setup" = "Однократная настройка объекта входа";
+"The app registers at login only during a clean installation; updates and restarts never register it again." = "Приложение добавляется в объекты входа только при чистой установке; при обновлениях и перезапусках регистрация не повторяется.";
+"Adaptive glass widget background" = "Адаптивный стеклянный фон виджета";
+"Desktop widgets use the system glass appearance when macOS dims them behind another window." = "Когда macOS затемняет виджет за другим окном, он использует системный стеклянный фон.";
+"Four-decimal credit balance" = "Баланс кредитов с четырьмя знаками";
+"Compact credit balances retain four fractional digits, including values such as 200.9500T." = "В компактном балансе сохраняются четыре знака после точки, например 200.9500T.";
 "Codex Limit Widget Settings" = "Настройки Codex Limit Widget";
 "CODEX LIMIT" = "CODEX LIMIT";
 "Codex Limit" = "Codex Limit";
