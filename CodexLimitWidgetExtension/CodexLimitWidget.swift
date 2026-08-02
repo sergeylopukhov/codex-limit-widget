@@ -57,20 +57,32 @@ struct CodexLimitWidgetEntryView: View {
 
     @ViewBuilder
     var body: some View {
-        Group {
-            switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
+        widgetContent
+            .environment(\.locale, entry.preferences.appLanguage.locale)
+            .widgetURL(URL(string: "codexlimitwidget://open"))
+    }
+
+    @ViewBuilder
+    private var widgetContent: some View {
+        switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
             case .terminal:
                 TerminalLimitWidgetView(
                     snapshot: entry.snapshot,
                     preferences: entry.preferences,
                     family: family
                 )
+                .containerBackground(for: .widget) {
+                    TerminalWidgetBackground()
+                }
             case .editorial:
                 EditorialLimitWidgetView(
                     snapshot: entry.snapshot,
                     preferences: entry.preferences,
                     variant: EditorialWidgetVariant(family: family)
                 )
+                .containerBackground(for: .widget) {
+                    EditorialWidgetBackground()
+                }
             case .system:
                 // Keep a visible widget even if WidgetKit delivers a stale
                 // system-design value before the appearance resolution runs.
@@ -79,18 +91,10 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     family: family
                 )
-            }
+                .containerBackground(for: .widget) {
+                    TerminalWidgetBackground()
+                }
         }
-        .containerBackground(for: .widget) {
-            switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
-            case .editorial:
-                EditorialWidgetBackground()
-            case .terminal, .system:
-                TerminalWidgetBackground()
-            }
-        }
-        .environment(\.locale, entry.preferences.appLanguage.locale)
-        .widgetURL(URL(string: "codexlimitwidget://open"))
     }
 }
 
