@@ -90,7 +90,8 @@ jobs:
               echo
               echo "- Restores macOS's system-managed glass container when a desktop widget is dimmed behind another window."
               echo "- Prevents the widget from merely becoming darker while preserving the selected full-color design in the foreground."
-              echo "- Restores the container-background behavior that worked in version 1.1.1."
+              echo "- Restores the stable container-background structure that worked in version 1.1.1."
+              echo "- Republishes version 1.2.303 as internal build 152."
               echo
               echo "## Installation"
               echo

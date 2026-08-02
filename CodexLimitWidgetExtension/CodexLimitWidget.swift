@@ -57,6 +57,18 @@ struct CodexLimitWidgetEntryView: View {
 
     @ViewBuilder
     var body: some View {
+        ZStack {
+            widgetContent
+        }
+        .containerBackground(for: .widget) {
+            widgetBackground
+        }
+        .environment(\.locale, entry.preferences.appLanguage.locale)
+        .widgetURL(URL(string: "codexlimitwidget://open"))
+    }
+
+    @ViewBuilder
+    private var widgetContent: some View {
         switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
         case .terminal:
             TerminalLimitWidgetView(
@@ -64,22 +76,12 @@ struct CodexLimitWidgetEntryView: View {
                 preferences: entry.preferences,
                 family: family
             )
-            .environment(\.locale, entry.preferences.appLanguage.locale)
-            .widgetURL(URL(string: "codexlimitwidget://open"))
-            .containerBackground(for: .widget) {
-                TerminalWidgetBackground()
-            }
         case .editorial:
             EditorialLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
                 variant: EditorialWidgetVariant(family: family)
             )
-            .environment(\.locale, entry.preferences.appLanguage.locale)
-            .widgetURL(URL(string: "codexlimitwidget://open"))
-            .containerBackground(for: .widget) {
-                EditorialWidgetBackground()
-            }
         case .system:
             // Keep a visible widget even if WidgetKit delivers a stale
             // system-design value before the appearance resolution runs.
@@ -88,11 +90,16 @@ struct CodexLimitWidgetEntryView: View {
                 preferences: entry.preferences,
                 family: family
             )
-            .environment(\.locale, entry.preferences.appLanguage.locale)
-            .widgetURL(URL(string: "codexlimitwidget://open"))
-            .containerBackground(for: .widget) {
-                TerminalWidgetBackground()
-            }
+        }
+    }
+
+    @ViewBuilder
+    private var widgetBackground: some View {
+        switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
+        case .editorial:
+            EditorialWidgetBackground()
+        case .terminal, .system:
+            TerminalWidgetBackground()
         }
     }
 }

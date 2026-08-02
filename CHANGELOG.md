@@ -4,7 +4,8 @@
 
 - Fixed the desktop widget glass regression: when macOS dims a widget behind another window, it now keeps the system-managed glass container instead of only becoming darker.
 - Restored the 1.1.1 container-background behavior while preserving the selected full-color widget design in the foreground.
-- Bumped the internal build to 151.
+- Uses one unconditional WidgetKit root view for the removable system background while keeping the selected full-color design inside it.
+- Republished the same user-facing version as internal build 152.
 
 ## 1.2.302 - 2026-07-31 (Bugfix)
 
