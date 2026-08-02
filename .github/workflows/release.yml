@@ -28,7 +28,7 @@ jobs:
       - name: Prepare release description
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ] || [ "$GITHUB_REF_NAME" = "v1.2.303" ]; then
             echo "RELEASE_NAME=Codex Limit Widget $VERSION (Bugfix)" >> "$GITHUB_ENV"
           else
             echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
@@ -81,6 +81,20 @@ jobs:
               echo "## Installation"
               echo
               echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.303" ]; then
+            {
+              echo "## What's New Since 1.2.302"
+              echo
+              echo "Codex Limit Widget 1.2.303 is a focused bug-fix release for desktop widget appearance."
+              echo
+              echo "- Restores macOS's system-managed glass container when a desktop widget is dimmed behind another window."
+              echo "- Prevents the widget from merely becoming darker while preserving the selected full-color design in the foreground."
+              echo "- Restores the container-background behavior that worked in version 1.1.1."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.303-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
             } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.2.302" ]; then
             {

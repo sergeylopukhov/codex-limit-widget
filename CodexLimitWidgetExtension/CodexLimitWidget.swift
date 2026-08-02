@@ -54,12 +54,6 @@ struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.widgetRenderingMode) private var widgetRenderingMode
-    @Environment(\.showsWidgetContainerBackground) private var showsWidgetContainerBackground
-
-    private var usesSystemGlass: Bool {
-        widgetRenderingMode != .fullColor || !showsWidgetContainerBackground
-    }
 
     @ViewBuilder
     var body: some View {
@@ -71,20 +65,12 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     family: family
                 )
-                .widgetAccentable()
-                .containerBackground(for: .widget) {
-                    terminalContainerBackground
-                }
             case .editorial:
                 EditorialLimitWidgetView(
                     snapshot: entry.snapshot,
                     preferences: entry.preferences,
                     variant: EditorialWidgetVariant(family: family)
                 )
-                .widgetAccentable()
-                .containerBackground(for: .widget) {
-                    editorialContainerBackground
-                }
             case .system:
                 // Keep a visible widget even if WidgetKit delivers a stale
                 // system-design value before the appearance resolution runs.
@@ -93,32 +79,18 @@ struct CodexLimitWidgetEntryView: View {
                     preferences: entry.preferences,
                     family: family
                 )
-                .widgetAccentable()
-                .containerBackground(for: .widget) {
-                    terminalContainerBackground
-                }
+            }
+        }
+        .containerBackground(for: .widget) {
+            switch entry.preferences.menuWindowDesign.resolved(isDark: colorScheme == .dark) {
+            case .editorial:
+                EditorialWidgetBackground()
+            case .terminal, .system:
+                TerminalWidgetBackground()
             }
         }
         .environment(\.locale, entry.preferences.appLanguage.locale)
         .widgetURL(URL(string: "codexlimitwidget://open"))
-    }
-
-    @ViewBuilder
-    private var terminalContainerBackground: some View {
-        if usesSystemGlass {
-            Color.clear
-        } else {
-            TerminalWidgetBackground()
-        }
-    }
-
-    @ViewBuilder
-    private var editorialContainerBackground: some View {
-        if usesSystemGlass {
-            Color.clear
-        } else {
-            EditorialWidgetBackground()
-        }
     }
 }
 

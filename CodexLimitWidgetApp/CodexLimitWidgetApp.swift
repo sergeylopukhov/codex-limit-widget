@@ -757,6 +757,13 @@ private struct ReleaseNotesView: View {
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
             ReleaseNoteItem(
+                id: "widget-glass-regression-fix",
+                introducedIn: "1.2.303",
+                icon: "rectangle.on.rectangle.angled",
+                title: "Desktop widget glass fix",
+                detail: "When macOS dims a widget behind another window, it keeps the system glass container instead of only becoming darker."
+            ),
+            ReleaseNoteItem(
                 id: "login-item-once",
                 introducedIn: "1.2.302",
                 icon: "checkmark.shield",
