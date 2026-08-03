@@ -757,6 +757,13 @@ private struct ReleaseNotesView: View {
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
             ReleaseNoteItem(
+                id: "menu-bar-template-color",
+                introducedIn: "1.2.304",
+                icon: "menubar.rectangle",
+                title: "Menu bar color correction",
+                detail: "The compact indicator now automatically matches the system menu bar: black on light backgrounds and white on dark ones."
+            ),
+            ReleaseNoteItem(
                 id: "widget-glass-regression-fix",
                 introducedIn: "1.2.303",
                 icon: "rectangle.on.rectangle.angled",
@@ -1027,7 +1034,7 @@ private enum MenuBarPercentImageRenderer {
                     ofSize: isPercent ? 9.5 : 13,
                     weight: .semibold
                 ),
-                .foregroundColor: NSColor.white,
+                .foregroundColor: NSColor.black,
                 .paragraphStyle: paragraph
             ]
         )
@@ -1045,13 +1052,13 @@ private enum MenuBarPercentImageRenderer {
                     ]
                 )
             }
-            image.isTemplate = false
+            image.isTemplate = true
             return image
         }
 
         let trackRect = NSRect(x: 1, y: 2.5, width: meterWidth - 2, height: 2)
         let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.25, yRadius: 1.25)
-        NSColor.white.withAlphaComponent(0.28).setFill()
+        NSColor.black.withAlphaComponent(0.28).setFill()
         track.fill()
 
         let fillWidth = trackRect.width * CGFloat(clampedPercent) / 100
@@ -1061,7 +1068,7 @@ private enum MenuBarPercentImageRenderer {
                 xRadius: 1.25,
                 yRadius: 1.25
             )
-            NSColor.white.setFill()
+            NSColor.black.setFill()
             fill.fill()
         }
 
@@ -1078,7 +1085,7 @@ private enum MenuBarPercentImageRenderer {
             )
         }
 
-        image.isTemplate = false
+        image.isTemplate = true
         return image
     }
 }

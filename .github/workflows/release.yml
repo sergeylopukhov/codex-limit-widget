@@ -28,7 +28,7 @@ jobs:
       - name: Prepare release description
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ] || [ "$GITHUB_REF_NAME" = "v1.2.303" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ] || [ "$GITHUB_REF_NAME" = "v1.2.303" ] || [ "$GITHUB_REF_NAME" = "v1.2.304" ]; then
             echo "RELEASE_NAME=Codex Limit Widget $VERSION (Bugfix)" >> "$GITHUB_ENV"
           else
             echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
@@ -81,6 +81,19 @@ jobs:
               echo "## Installation"
               echo
               echo "Download \`CodexLimitWidget-1.2.25-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`."
+            } > release-description.md
+          elif [ "$GITHUB_REF_NAME" = "v1.2.304" ]; then
+            {
+              echo "## What's New Since 1.2.303"
+              echo
+              echo "Codex Limit Widget 1.2.304 is a focused menu-bar color bug fix."
+              echo
+              echo "- Makes the compact menu-bar indicator a system template image."
+              echo "- The indicator now automatically matches the system menu bar: black on light backgrounds and white on dark ones."
+              echo
+              echo "## Installation"
+              echo
+              echo "Download \`CodexLimitWidget-1.2.304-macOS.dmg\`, open it, and drag \`Codex Limit Widget.app\` to \`Applications\`. Existing users can install this version from inside the app."
             } > release-description.md
           elif [ "$GITHUB_REF_NAME" = "v1.2.303" ]; then
             {

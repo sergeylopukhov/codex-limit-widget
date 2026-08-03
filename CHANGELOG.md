@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.304 - 2026-08-03 (Bugfix)
+
+- Makes the compact menu-bar indicator a system template image, so macOS automatically uses the correct black or white color for the current menu-bar appearance.
+- Bumped the internal build to 153.
+
 ## 1.2.303 - 2026-08-02 (Bugfix)
 
 - Fixed the desktop widget glass regression: when macOS dims a widget behind another window, it now keeps the system-managed glass container instead of only becoming darker.
