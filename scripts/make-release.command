@@ -3,7 +3,7 @@ set -euo pipefail
 
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIGURATION="Release"
-VERSION="1.2.304"
+VERSION="1.2.400"
 APP_NAME="Codex Limit Widget.app"
 BUILT_APP="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/$APP_NAME"
 BUILT_APPEX="$PROJECT_DIR/build/DerivedData/Build/Products/$CONFIGURATION/CodexLimitWidgetExtension.appex"
@@ -14,10 +14,29 @@ DMG_PATH="$PROJECT_DIR/release/CodexLimitWidget-$VERSION-macOS.dmg"
 DMG_TEMP_PATH="$PROJECT_DIR/release/CodexLimitWidget-$VERSION-macOS-rw.dmg"
 DMG_VOLUME_NAME="Codex Limit Widget $VERSION"
 DMG_BACKGROUND="$DMG_STAGING_DIR/.background/background.png"
+TRASH_DIR="$PROJECT_DIR/.trash"
+
+# Move build output out of the way instead of deleting it: a local trash folder keeps
+# the script reversible and works on a clean macOS GitHub runner, where no trash CLI exists.
+retire() {
+  local stamp="$TRASH_DIR/$(date +%Y%m%d-%H%M%S)-$$"
+  local item destination
+  for item in "$@"; do
+    [[ -e "$item" ]] || continue
+    mkdir -p "$stamp"
+    destination="$stamp/$(basename "$item")"
+    if [[ -e "$destination" ]]; then
+      destination="$destination.$RANDOM"
+    fi
+    mv "$item" "$destination"
+  done
+}
 
 cd "$PROJECT_DIR"
 mkdir -p build outputs release
 touch build/.metadata_never_index outputs/.metadata_never_index
+mkdir -p "$TRASH_DIR"
+touch "$TRASH_DIR/.metadata_never_index"
 
 xcodebuild \
   -project CodexLimitWidget.xcodeproj \
@@ -27,7 +46,7 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO \
   build
 
-rm -rf "$RELEASE_DIR" "$ZIP_PATH" "$DMG_STAGING_DIR" "$DMG_PATH" "$DMG_TEMP_PATH"
+retire "$RELEASE_DIR" "$ZIP_PATH" "$DMG_STAGING_DIR" "$DMG_PATH" "$DMG_TEMP_PATH"
 mkdir -p "$RELEASE_DIR"
 cp -R "$BUILT_APP" "$RELEASE_DIR/$APP_NAME"
 
@@ -160,7 +179,7 @@ COPYFILE_DISABLE=1 hdiutil convert "$DMG_TEMP_PATH" \
 
 COPYFILE_DISABLE=1 ditto -c -k --norsrc --keepParent "$RELEASE_DIR" "$ZIP_PATH"
 codesign --verify --deep --strict --verbose=2 "$RELEASE_DIR/$APP_NAME"
-rm -rf "$DMG_STAGING_DIR" "$DMG_TEMP_PATH" "$RELEASE_DIR" "$BUILT_APP" "$BUILT_APPEX"
+retire "$DMG_STAGING_DIR" "$DMG_TEMP_PATH" "$RELEASE_DIR" "$BUILT_APP" "$BUILT_APPEX"
 
 echo "$DMG_PATH"
 echo "$ZIP_PATH"

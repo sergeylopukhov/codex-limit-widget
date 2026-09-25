@@ -33,6 +33,9 @@ final class LimitViewModel: ObservableObject {
     @Published private(set) var connectionState: CodexConnectionState = .checking
     @Published private(set) var connectionMessage: String?
     @Published private(set) var preferences: LimitPreferences
+    @Published private(set) var lastSuccessfulSyncAt: Date?
+    @Published private(set) var lastCLIErrorMessage: String?
+    @Published private(set) var lastCLIErrorAt: Date?
 
     private let client = CodexRateLimitClient()
     private let widgetBridge = LoopbackWidgetBridge()
@@ -41,10 +44,15 @@ final class LimitViewModel: ObservableObject {
     private let loginItemSetupKey = "loginItemRegistrationCompleted"
     private var timer: Timer?
     private var started = false
+    /// Bumped by `resetLocalAppData()` so an in-flight refresh cannot write
+    /// freshly fetched data back over a just-cleared local state.
+    private var dataGeneration = 0
 
     init() {
         snapshot = LimitStore.read()
         preferences = LimitPreferencesStore.read()
+        lastSuccessfulSyncAt = snapshot?.updatedAt
+        lastCLIErrorMessage = snapshot?.errorMessage
         Task { @MainActor [weak self] in
             self?.start()
         }
@@ -71,19 +79,25 @@ final class LimitViewModel: ObservableObject {
         connectionState = .checking
         connectionMessage = nil
         defer { isRefreshing = false }
+        let generation = dataGeneration
 
         do {
             var fresh = try await client.fetch()
+            guard generation == dataGeneration else { return }
             if fresh.usage == nil {
                 fresh.usage = snapshot?.usage
             }
             normalizeCompactMenuBarMetric(for: fresh)
             snapshot = fresh
             try? LimitStore.write(fresh)
+            lastSuccessfulSyncAt = fresh.updatedAt
+            lastCLIErrorMessage = nil
+            lastCLIErrorAt = nil
             reloadWidgets()
             await lowLimitNotificationManager.deliverIfNeeded(for: fresh, preferences: preferences)
             connectionState = .ready
         } catch {
+            guard generation == dataGeneration else { return }
             handleRefreshFailure(error)
         }
     }
@@ -241,6 +255,8 @@ final class LimitViewModel: ObservableObject {
 
         connectionState = knownState ?? .failed
         connectionMessage = knownState == nil ? message : nil
+        lastCLIErrorMessage = message
+        lastCLIErrorAt = Date()
 
         if var current = snapshot {
             current.errorMessage = knownState == nil ? message : nil
@@ -296,6 +312,59 @@ final class LimitViewModel: ObservableObject {
         let compacted = preferences.lowLimitNotificationThresholds.compactMap { $0 }
         guard compacted.count != preferences.lowLimitNotificationThresholds.count else { return }
         updatePreferences { $0.lowLimitNotificationThresholds = compacted }
+    }
+
+    // MARK: - Diagnostics
+
+    /// Where the displayed limits come from. The app never reads a cached
+    /// third-party service; every successful sync goes through the local CLI.
+    var dataSourceDescription: String {
+        "Codex CLI (codex app-server --stdio, account/rateLimits/read)"
+    }
+
+    /// Formatted time of the last successful sync, or nil before the first one.
+    var lastSyncText: String? {
+        guard let lastSuccessfulSyncAt else { return nil }
+        return formattedDiagnosticsDate(lastSuccessfulSyncAt)
+    }
+
+    /// Last CLI/app-server failure in the current app language, with its time.
+    var lastErrorText: String? {
+        guard let lastCLIErrorMessage, !lastCLIErrorMessage.isEmpty else { return nil }
+        guard let lastCLIErrorAt else { return lastCLIErrorMessage }
+        return "\(formattedDiagnosticsDate(lastCLIErrorAt)): \(lastCLIErrorMessage)"
+    }
+
+    private func formattedDiagnosticsDate(_ date: Date) -> String {
+        let locale = preferences.appLanguage.locale
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.dateFormat = locale.identifier.lowercased().hasPrefix("ru") ? "d MMM, HH:mm" : "MMM d, HH:mm"
+        return formatter.string(from: date)
+    }
+
+    // MARK: - Local data reset
+
+    /// Removes only this app's local data: stored snapshot, preferences, widget
+    /// payload, and notification history. The Codex account, CLI installation,
+    /// and CLI authentication are never touched.
+    func resetLocalAppData() async {
+        dataGeneration += 1
+
+        LimitStore.removeStoredSnapshot()
+        LimitPreferencesStore.removeStoredPreferences()
+        WidgetPayloadStore.removeStoredPayload()
+        await lowLimitNotificationManager.resetHistory()
+
+        snapshot = nil
+        preferences = .default
+        lastSuccessfulSyncAt = nil
+        lastCLIErrorMessage = nil
+        lastCLIErrorAt = nil
+        connectionMessage = nil
+        connectionState = .checking
+
+        reloadWidgets()
     }
 
     var menuBarTitle: String {
@@ -480,10 +549,17 @@ private actor LowLimitNotificationManager {
         // Keep the old string keys while users upgrade from 1.2.0. They stop
         // the same alert from being sent twice during the current reset cycle.
         var legacyDeliveryKeys: Set<String> = []
+        // Reset cycle (quarter-hour index) in which a limit was last seen
+        // depleted, keyed by window kind. A later, different cycle means the
+        // limit came back and a restoration alert is due once per cycle.
+        var depletedCycles: [String: Int64] = [:]
+        var restoredCycles: [String: Int64] = [:]
 
         private enum CodingKeys: String, CodingKey {
             case deliveries
             case deliveredKeys
+            case depletedCycles
+            case restoredCycles
         }
 
         init() {}
@@ -492,6 +568,8 @@ private actor LowLimitNotificationManager {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             deliveries = try container.decodeIfPresent([NotificationDelivery].self, forKey: .deliveries) ?? []
             legacyDeliveryKeys = try container.decodeIfPresent(Set<String>.self, forKey: .deliveredKeys) ?? []
+            depletedCycles = try container.decodeIfPresent([String: Int64].self, forKey: .depletedCycles) ?? [:]
+            restoredCycles = try container.decodeIfPresent([String: Int64].self, forKey: .restoredCycles) ?? [:]
         }
 
         func contains(_ cycle: LimitWindowCycle, threshold: Int, legacyKey: String?) -> Bool {
@@ -503,17 +581,41 @@ private actor LowLimitNotificationManager {
             deliveries.append(NotificationDelivery(cycle: cycle, threshold: threshold, deliveredAt: deliveredAt))
         }
 
+        func depletedCycle(for kind: LimitWindowKind) -> Int64? {
+            depletedCycles[kind.rawValue]
+        }
+
+        mutating func recordDepleted(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) {
+            depletedCycles[kind.rawValue] = cycleAtQuarterHour
+        }
+
+        mutating func clearDepleted(for kind: LimitWindowKind) {
+            depletedCycles.removeValue(forKey: kind.rawValue)
+        }
+
+        func didRestore(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) -> Bool {
+            restoredCycles[kind.rawValue] == cycleAtQuarterHour
+        }
+
+        mutating func recordRestored(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) {
+            restoredCycles[kind.rawValue] = cycleAtQuarterHour
+        }
+
         mutating func removeExpiredEntries(now: Date) {
             // A weekly cycle can remain active for seven days. Retain completed
             // cycles for 30 days so partial API responses cannot erase history.
             let cutoff = Int64(now.addingTimeInterval(-30 * 24 * 60 * 60).timeIntervalSince1970 / 900)
             deliveries.removeAll { $0.cycle.resetAtQuarterHour < cutoff }
+            restoredCycles = restoredCycles.filter { $0.value >= cutoff }
+            depletedCycles = depletedCycles.filter { $0.value >= cutoff }
         }
 
         func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(deliveries, forKey: .deliveries)
             try container.encode(legacyDeliveryKeys, forKey: .deliveredKeys)
+            try container.encode(depletedCycles, forKey: .depletedCycles)
+            try container.encode(restoredCycles, forKey: .restoredCycles)
         }
     }
 
@@ -531,13 +633,46 @@ private actor LowLimitNotificationManager {
         }
     }
 
+    /// Authorization check that never raises the system prompt.
+    private func hasNotificationAuthorization() async -> Bool {
+        let settings = await center.notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional:
+            return true
+        default:
+            return false
+        }
+    }
+
+    /// Clears this app's notification history: the delivery ledger plus any
+    /// notifications the app already posted or scheduled. Both are app-owned:
+    /// the ledger is this app's file in Application Support and
+    /// `UNUserNotificationCenter.current()` is scoped to this app's bundle.
+    func resetHistory() async {
+        try? FileManager.default.removeItem(at: ledgerURL())
+        center.removeAllPendingNotificationRequests()
+        center.removeAllDeliveredNotifications()
+    }
+
     func deliverIfNeeded(for snapshot: LimitSnapshot, preferences: LimitPreferences) async {
-        guard preferences.lowLimitNotificationsEnabled,
-              await requestAuthorization()
-        else { return }
+        let sendsLowLimitAlerts = preferences.lowLimitNotificationsEnabled
+        let sendsRestorationAlerts = preferences.restorationNotificationsEnabled
+        guard sendsLowLimitAlerts || sendsRestorationAlerts else { return }
+
+        // Only the low-limit toggle may raise the system prompt. Restoration
+        // alerts reuse an authorization the user already granted.
+        let isAuthorized = sendsLowLimitAlerts
+            ? await requestAuthorization()
+            : await hasNotificationAuthorization()
+        guard isAuthorized else { return }
+
+        let now = Date()
+        // Quiet hours suppress low-limit alerts only; a limit that came back is
+        // still worth reporting, so restoration alerts are never held back.
+        let suppressLowLimitAlerts = preferences.isQuietHoursActive(at: now)
 
         var ledger = readLedger()
-        ledger.removeExpiredEntries(now: Date())
+        ledger.removeExpiredEntries(now: now)
         let windows: [(LimitWindowKind, LimitWindowSnapshot)] = [
             snapshot.fiveHour.map { (.fiveHour, $0) },
             snapshot.weekly.map { (.weekly, $0) }
@@ -545,6 +680,30 @@ private actor LowLimitNotificationManager {
 
         for (kind, window) in windows {
             guard let cycle = cycle(for: window, kind: kind) else { continue }
+            let isDepleted = window.usedPercent >= 100
+
+            if !isDepleted, let depletedCycle = ledger.depletedCycle(for: kind), depletedCycle != cycle.resetAtQuarterHour {
+                if sendsRestorationAlerts, !ledger.didRestore(for: kind, cycleAtQuarterHour: cycle.resetAtQuarterHour) {
+                    if await deliverRestorationNotification(
+                        for: window,
+                        kind: kind,
+                        cycleAtQuarterHour: cycle.resetAtQuarterHour,
+                        preferences: preferences
+                    ) {
+                        ledger.recordRestored(for: kind, cycleAtQuarterHour: cycle.resetAtQuarterHour)
+                        ledger.clearDepleted(for: kind)
+                    }
+                } else {
+                    ledger.clearDepleted(for: kind)
+                }
+            }
+
+            if isDepleted {
+                ledger.recordDepleted(for: kind, cycleAtQuarterHour: cycle.resetAtQuarterHour)
+            }
+
+            guard sendsLowLimitAlerts, !suppressLowLimitAlerts else { continue }
+
             // Several thresholds can match if the app first sees an already-low
             // value. Alert only for the nearest one; lower thresholds can still
             // alert later as the remaining percentage continues to fall.
@@ -575,6 +734,42 @@ private actor LowLimitNotificationManager {
             }
         }
         writeLedger(ledger)
+    }
+
+    /// Sends the once-per-cycle "limit is available again" alert in the app language.
+    private func deliverRestorationNotification(
+        for window: LimitWindowSnapshot,
+        kind: LimitWindowKind,
+        cycleAtQuarterHour: Int64,
+        preferences: LimitPreferences
+    ) async -> Bool {
+        let isRussian = preferences.appLanguage.locale.identifier.lowercased().hasPrefix("ru")
+        let windowName: String
+        switch kind {
+        case .fiveHour:
+            windowName = isRussian ? "5 часов" : "5 hours"
+        case .weekly:
+            windowName = isRussian ? "Неделя" : "Week"
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = isRussian ? "Лимит Codex восстановлен" : "Codex limit restored"
+        content.body = isRussian
+            ? "\(windowName): лимит сброшен, снова доступно \(window.leftPercent)%."
+            : "\(windowName): the limit reset and \(window.leftPercent)% is available again."
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "codex-limit.restored.\(kind.rawValue).\(cycleAtQuarterHour)",
+            content: content,
+            trigger: nil
+        )
+
+        do {
+            try await center.add(request)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func cycle(for window: LimitWindowSnapshot, kind: LimitWindowKind) -> LimitWindowCycle? {

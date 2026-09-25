@@ -26,8 +26,11 @@ While the app is running, it refreshes the local data once per minute and passes
 
 - Every limit window available to the account: weekly, plus 5-hour when Codex provides it.
 - Reset date and time for each available limit.
-- Current Codex plan.
+- Current Codex plan, shown as a readable name such as `Pro 5x`, `Pro 20x`, or `Plus`.
 - Usage stats: total tokens, peak day, last day, streak, and max turn.
+- Remaining percent colored by level: normal, warning below 50%, and critical below 20%.
+- The time of the last successful sync in the widget, with a setting that turns the line on or off.
+- A seven-day token chart with date labels in the large Beige widget. When the newest token data is from the current UTC day, the widget labels it `TODAY` instead of `LAST DAY`.
 - Compact or detailed menu bar status.
 - One macOS widget in Small, Medium, and Large sizes.
 - Two designs: Dark and Beige.
@@ -56,7 +59,9 @@ The widget design is controlled in the app settings. Choose `Dark` or `Beige`; a
 
 ## Menu Bar
 
-The menu bar item can show detailed limits or a compact percent indicator. Click it to open a popover with the available limit windows, reset times, data freshness, and settings. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
+The menu bar item can show detailed limits or a compact percent indicator. The left-click action is configurable in Settings: the popover, Settings, or Codex. Right-clicking the item opens a menu with refresh, copy status, and quit; a refresh shows that data is loading while it runs.
+
+The popover lists the available limit windows, reset times, data freshness, and settings, and its `Copy status` button copies the plan, percentage, and reset time of each window as text. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
 
 <table>
   <tr>
@@ -111,6 +116,8 @@ The menu bar item can show detailed limits or a compact percent indicator. Click
 
 Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. The Updates section shows the installed version, the latest check result, and the update action.
 
+Further settings cover the menu bar left-click action, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that brings the detailed limits window to the front from any app, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
+
 <table>
   <tr>
     <td width="50%" align="center">
@@ -123,6 +130,12 @@ Use settings to choose the window design and menu bar mode. When both limit wind
     </td>
   </tr>
 </table>
+
+## Notifications
+
+Low-limit alerts follow the thresholds you set in Settings. Quiet hours suppress low-limit alerts during the hours you choose; they do not affect the restored-limit message.
+
+The restored-limit notification covers only an exhaustion the app has seen: the app has to record the window at 100% and be running when the quota comes back. It also needs notification permission in macOS, which the app asks for once and reuses for this message.
 
 ## Updates
 

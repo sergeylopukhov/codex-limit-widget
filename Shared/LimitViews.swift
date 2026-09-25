@@ -1,11 +1,53 @@
 import SwiftUI
 
+/// Severity of the remaining limit. The percentage changes color in the popover
+/// and in the widgets so a low remainder is visible at a glance.
+enum LimitRemainingLevel {
+    case normal
+    case warning
+    case critical
+
+    static func resolve(remainingPercent: Int) -> LimitRemainingLevel {
+        if remainingPercent < 20 { return .critical }
+        if remainingPercent < 50 { return .warning }
+        return .normal
+    }
+
+    static func terminalColor(for remainingPercent: Int) -> Color {
+        switch resolve(remainingPercent: remainingPercent) {
+        case .normal: return Color(red: 0.52, green: 0.95, blue: 0.43)
+        case .warning: return Color(red: 1.00, green: 0.72, blue: 0.28)
+        case .critical: return Color(red: 1.00, green: 0.42, blue: 0.34)
+        }
+    }
+
+    static func editorialColor(for remainingPercent: Int) -> Color {
+        switch resolve(remainingPercent: remainingPercent) {
+        case .normal: return MenuWindowVisuals.editorialInk
+        case .warning: return Color(red: 0.60, green: 0.38, blue: 0.06)
+        case .critical: return Color(red: 0.62, green: 0.16, blue: 0.12)
+        }
+    }
+}
+
+/// Formats the time of the last successful sync for the widget and the popover.
+enum LimitSyncTimeText {
+    static func make(for date: Date, now: Date = Date()) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = Calendar.current.isDate(date, inSameDayAs: now) ? "HH:mm" : "MMM d, HH:mm"
+        return formatter.string(from: date)
+    }
+}
+
 struct LimitGaugeView: View {
     let window: LimitWindowSnapshot
     var compact: Bool = false
     var showsResetTime: Bool = true
 
     var body: some View {
+        let levelColor = LimitRemainingLevel.terminalColor(for: window.leftPercent)
+
         VStack(alignment: .leading, spacing: compact ? 4 : 6) {
             HStack(alignment: .firstTextBaseline) {
                 Text(window.label)
@@ -14,11 +56,11 @@ struct LimitGaugeView: View {
                 Spacer()
                 Text("\(window.leftPercent)%")
                     .font(.system(size: compact ? 15 : 24, weight: .black, design: .monospaced))
-                    .foregroundStyle(Self.accent)
+                    .foregroundStyle(levelColor)
                     .lineLimit(1)
             }
 
-            TerminalPopupMeter(percent: window.leftPercent, color: Self.accent)
+            TerminalPopupMeter(percent: window.leftPercent, color: levelColor)
 
             if showsResetTime {
                 Text("Reset: \(window.resetText)")
@@ -44,6 +86,9 @@ struct SnapshotDetailView: View {
     let isConnectionActionBusy: Bool
     let connectionAction: () -> Void
     var design: MenuWindowDesign = .terminal
+    var showsCopyStatus: Bool = true
+    var onCopyStatus: (@MainActor () -> Void)? = nil
+    var showsLastUpdated: Bool = false
     let refresh: () -> Void
 
     @ViewBuilder
@@ -60,6 +105,9 @@ struct SnapshotDetailView: View {
                 connectionActionIcon: connectionActionIcon,
                 isConnectionActionBusy: isConnectionActionBusy,
                 connectionAction: connectionAction,
+                showsCopyStatus: showsCopyStatus,
+                onCopyStatus: onCopyStatus,
+                showsLastUpdated: showsLastUpdated,
                 refresh: refresh
             )
         case .editorial:
@@ -73,6 +121,9 @@ struct SnapshotDetailView: View {
                 connectionActionIcon: connectionActionIcon,
                 isConnectionActionBusy: isConnectionActionBusy,
                 connectionAction: connectionAction,
+                showsCopyStatus: showsCopyStatus,
+                onCopyStatus: onCopyStatus,
+                showsLastUpdated: showsLastUpdated,
                 refresh: refresh
             )
         }
@@ -89,6 +140,9 @@ private struct TerminalSnapshotDetailView: View {
     let connectionActionIcon: String
     let isConnectionActionBusy: Bool
     let connectionAction: () -> Void
+    var showsCopyStatus: Bool = true
+    var onCopyStatus: (@MainActor () -> Void)? = nil
+    var showsLastUpdated: Bool = false
     let refresh: () -> Void
 
     var body: some View {
@@ -98,6 +152,13 @@ private struct TerminalSnapshotDetailView: View {
                     .font(.system(size: 15, weight: .bold, design: .monospaced))
                     .foregroundStyle(accent)
                 Spacer()
+                if showsCopyStatus, let onCopyStatus {
+                    CopyStatusButton(
+                        isEditorial: false,
+                        isEnabled: snapshot != nil,
+                        action: { onCopyStatus() }
+                    )
+                }
                 Button(action: refresh) {
                     if isRefreshing {
                         ProgressView()
@@ -140,8 +201,11 @@ private struct TerminalSnapshotDetailView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 3) {
-                        if let planType = snapshot.planType {
-                            Text("Plan: \(planType)")
+                        if snapshot.planType != nil {
+                            Text("Plan: \(snapshot.planDisplayName)")
+                        }
+                        if showsLastUpdated {
+                            Text("Synced: \(LimitSyncTimeText.make(for: snapshot.updatedAt))")
                         }
                         if snapshot.isStale {
                             Text("Data is older than 5 minutes")
@@ -187,6 +251,9 @@ private struct EditorialSnapshotDetailView: View {
     let connectionActionIcon: String
     let isConnectionActionBusy: Bool
     let connectionAction: () -> Void
+    var showsCopyStatus: Bool = true
+    var onCopyStatus: (@MainActor () -> Void)? = nil
+    var showsLastUpdated: Bool = false
     let refresh: () -> Void
 
     var body: some View {
@@ -200,6 +267,13 @@ private struct EditorialSnapshotDetailView: View {
 
                 Spacer(minLength: 8)
 
+                if showsCopyStatus, let onCopyStatus {
+                    CopyStatusButton(
+                        isEditorial: true,
+                        isEnabled: snapshot != nil,
+                        action: { onCopyStatus() }
+                    )
+                }
                 Button(action: refresh) {
                     if isRefreshing {
                         ProgressView()
@@ -237,7 +311,7 @@ private struct EditorialSnapshotDetailView: View {
                         VStack(alignment: .leading, spacing: -5) {
                             Text("\(metric.leftPercent)%")
                                 .font(.system(size: 50, weight: .regular, design: .serif))
-                                .foregroundStyle(MenuWindowVisuals.editorialInk)
+                                .foregroundStyle(LimitRemainingLevel.editorialColor(for: metric.leftPercent))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.62)
 
@@ -253,14 +327,22 @@ private struct EditorialSnapshotDetailView: View {
 
                         VStack(alignment: .trailing, spacing: 4) {
                             editorialCompactStat(metricResetLabel, metric.resetText)
-                            editorialCompactStat("PLAN", (snapshot.planType ?? "--").uppercased())
+                            editorialCompactStat("PLAN", snapshot.planDisplayName)
                         }
                         .padding(.top, 5)
                     }
 
-                    EditorialPopupMeter(title: metricLabel, percent: metric.leftPercent)
+                    EditorialPopupMeter(
+                        title: metricLabel,
+                        percent: metric.leftPercent,
+                        color: LimitRemainingLevel.editorialColor(for: metric.leftPercent)
+                    )
                     if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
-                        EditorialPopupMeter(title: "WEEK", percent: weekly.leftPercent)
+                        EditorialPopupMeter(
+                            title: "WEEK",
+                            percent: weekly.leftPercent,
+                            color: LimitRemainingLevel.editorialColor(for: weekly.leftPercent)
+                        )
                     }
 
                     HStack(spacing: 10) {
@@ -268,6 +350,10 @@ private struct EditorialSnapshotDetailView: View {
                         if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
                             EditorialPopupVerticalRule()
                             editorialCompactStat("WEEKLY", "\(weekly.leftPercent)%")
+                        }
+                        if showsLastUpdated {
+                            EditorialPopupVerticalRule()
+                            editorialCompactStat("SYNCED", LimitSyncTimeText.make(for: snapshot.updatedAt))
                         }
                     }
 
@@ -310,7 +396,7 @@ private struct EditorialSnapshotDetailView: View {
 
     private func editorialCompactStat(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label)
+            Text(LocalizedStringKey(label))
                 .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(MenuWindowVisuals.editorialMutedInk)
                 .lineLimit(1)
@@ -425,6 +511,7 @@ private struct CodexConnectionStatusView: View {
 private struct EditorialPopupMeter: View {
     let title: String
     let percent: Int
+    var color: Color = MenuWindowVisuals.editorialFill
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -448,13 +535,45 @@ private struct EditorialPopupMeter: View {
                         )
 
                     RoundedRectangle(cornerRadius: 2, style: .continuous)
-                        .fill(MenuWindowVisuals.editorialFill)
+                        .fill(color)
                         .frame(width: proxy.size.width * CGFloat(max(0, min(100, percent))) / 100)
                 }
             }
             .frame(height: 6)
             .clipped()
         }
+    }
+}
+
+/// Icon button that hands the copy action to the host app and briefly confirms it.
+private struct CopyStatusButton: View {
+    let isEditorial: Bool
+    let isEnabled: Bool
+    let action: () -> Void
+
+    @State private var showsCopiedFeedback = false
+
+    var body: some View {
+        Button {
+            action()
+            withAnimation(.easeOut(duration: 0.16)) {
+                showsCopiedFeedback = true
+            }
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                withAnimation(.easeOut(duration: 0.16)) {
+                    showsCopiedFeedback = false
+                }
+            }
+        } label: {
+            Image(systemName: showsCopiedFeedback ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(isEditorial ? MenuWindowVisuals.editorialInk : Color(red: 0.52, green: 0.95, blue: 0.43))
+        }
+        .buttonStyle(.borderless)
+        .disabled(!isEnabled)
+        .help(Text("Copy status"))
+        .accessibilityLabel(Text("Copy status"))
     }
 }
 

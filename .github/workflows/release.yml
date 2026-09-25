@@ -34,7 +34,81 @@ jobs:
             echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
           fi
 
-          if [ "$GITHUB_REF_NAME" = "v1.2.0" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.400" ]; then
+            cat > release-description.md <<'RELEASE_NOTES_EN'
+          ## What's new in 1.2.400
+
+          Codex Limit Widget 1.2.400 adds eleven smaller improvements across the menu bar, widgets, notifications, and Settings, along with readable plan names and a weekly token chart.
+
+          ### Menu bar
+
+          - The left-click action on the menu-bar icon is configurable: popover, Settings, or Codex. Right-click opens its own menu with refresh, copy, and quit.
+          - The menu-bar menu refreshes limits on demand and shows that data is loading while the request runs.
+          - A configurable keyboard shortcut brings the detailed limits window to the front from any app.
+          - The remaining percentage in the widget and popover is color-coded as normal, warning, or critical, so a low balance is visible at a glance.
+
+          ### Widgets
+
+          - Widgets and the popover show readable plan names such as Pro 5x, Pro 20x, and Plus instead of raw plan identifiers.
+          - The large Beige widget plots token usage for the last seven days with date labels.
+          - When the newest token data is from the current day, the large Beige widget labels it TODAY instead of LAST DAY.
+          - Settings choose whether a click on a widget opens the app, the detailed limit window, or Codex.
+          - The widget shows when limits were last synced successfully, and a toggle hides that line.
+
+          ### Popover and notifications
+
+          - A button in the popover copies the current status as text: plan, percentage, and reset time for each limit window.
+          - Low-limit alerts stay quiet during the hours you choose, for example at night. Quiet hours do not mute the restored-limit message, which still needs system permission and the notification setting.
+          - If the app observes an exhausted limit, it notifies you when the quota is available again, subject to system permission and the notification setting.
+
+          ### Settings
+
+          - Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails.
+          - A confirmation-protected button deletes the stored limit snapshot, widget data, notification history, and app settings. Your Codex account and CLI sign-in stay untouched.
+
+          ## Installation
+
+          Download `CodexLimitWidget-1.2.400-macOS.dmg`, open it, and drag `Codex Limit Widget.app` to `Applications`. Existing users can install this version from inside the app.
+          RELEASE_NOTES_EN
+            cat >> release-description.md <<'RELEASE_NOTES_RU'
+
+          ---
+
+          ## Что нового в 1.2.400
+
+          Версия 1.2.400 добавляет одиннадцать небольших улучшений: настройку строки меню, виджетов, уведомлений и раздела диагностики, а также понятные названия тарифов и график расхода токенов за неделю.
+
+          ### Строка меню
+
+          - Действие по левому клику настраивается: поповер, настройки или Codex. Правый клик открывает отдельное меню с обновлением, копированием и выходом.
+          - Меню в строке меню обновляет лимиты по запросу и показывает, что данные загружаются.
+          - Настраиваемое сочетание клавиш выводит подробное окно лимитов вперёд из любого приложения.
+          - Процент остатка в виджете и поповере окрашивается по уровню: обычный, предупреждающий и критический. Низкий остаток видно сразу.
+
+          ### Виджеты
+
+          - Виджеты и поповер показывают понятные названия тарифов: Pro 5x, Pro 20x, Plus и другие вместо служебных идентификаторов.
+          - Большой бежевый виджет строит график расхода токенов за последние семь дней с подписями дат.
+          - Если свежие данные относятся к сегодняшнему дню, большой бежевый виджет подписывает строку TODAY, а не LAST DAY.
+          - В настройках выбирается, что открывает нажатие на виджет: приложение, окно лимитов или Codex.
+          - Виджет показывает время последней успешной синхронизации, строку можно скрыть тумблером.
+
+          ### Поповер и уведомления
+
+          - Кнопка в поповере копирует текущий статус текстом: тариф, процент и время сброса по каждому окну лимита.
+          - Уведомления о низком остатке не приходят в заданные часы, например ночью. Тихие часы не отключают сообщение о восстановлении лимита, но для него нужны разрешение системы и включённая настройка уведомлений.
+          - Если приложение успело заметить, что лимит исчерпан, оно сообщает, когда квота снова доступна. Для сообщения нужны разрешение системы и включённая настройка уведомлений.
+
+          ### Настройки
+
+          - Диагностика показывает источник данных, время последней успешной синхронизации и ответ CLI, если обновление не удалось.
+          - Кнопка сброса локальных данных с подтверждением удаляет снимок лимитов, данные виджетов, историю уведомлений и настройки приложения. Аккаунт Codex и вход в CLI не затрагиваются.
+
+          ## Установка
+
+          Скачайте `CodexLimitWidget-1.2.400-macOS.dmg`, откройте его и перетащите `Codex Limit Widget.app` в `Applications`. Обновиться можно и из самого приложения.
+          RELEASE_NOTES_RU
+          elif [ "$GITHUB_REF_NAME" = "v1.2.0" ]; then
             {
               echo "## What’s New Since 1.1.1"
               echo

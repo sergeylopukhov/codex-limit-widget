@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.2.400 - 2026-09-25
+
+- Added a configurable left-click action for the menu-bar icon (popover, Settings, or Codex) and a right-click menu with refresh, copy, and quit.
+- Added on-demand refresh from the menu bar that shows when data is loading.
+- Added a configurable keyboard shortcut that brings the detailed limits window to the front from any app.
+- Added color levels for the remaining percentage in the widget and popover: normal, warning, and critical.
+- Added readable plan names such as Pro 5x, Pro 20x, and Plus to the widgets and popover.
+- Added a seven-day token usage chart with date labels to the large Beige widget.
+- The large Beige widget shows TODAY instead of LAST DAY when the newest token data is from the current day.
+- Added a setting that chooses what a click on a widget opens: the app, the detailed limit window, or Codex.
+- Added the last successful sync time to the widget with a toggle that hides the line.
+- Added a Copy status button to the popover that copies the plan, percentage, and reset time of each limit window as text.
+- Added quiet hours that suppress low-limit alerts during the chosen hours. Quiet hours do not mute the restored-limit message, which still needs system permission and the notification setting.
+- Added a notification for a limit that resets after the app has observed it exhausted; the message needs system permission and the notification setting.
+- Added diagnostics in Settings with the data source, the last successful sync, and the CLI response when a refresh fails.
+- Added a confirmation-protected reset of local app data: the stored limit snapshot, widget data, notification history, and app settings are deleted, while the Codex account and CLI sign-in stay untouched.
+- Bumped the internal build to 154.
+
 ## 1.2.304 - 2026-08-03 (Bugfix)
 
 - Makes the compact menu-bar indicator a system template image, so macOS automatically uses the correct black or white color for the current menu-bar appearance.

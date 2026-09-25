@@ -32,6 +32,68 @@ struct LimitSnapshot: Codable, Equatable {
         Date().timeIntervalSince(updatedAt) > 300
     }
 
+    var planDisplayName: String {
+        switch planType?.lowercased().replacingOccurrences(of: "_", with: "") {
+        case "prolite": return "Pro 5x"
+        case "pro": return "Pro 20x"
+        case "plus": return "Plus"
+        case "free": return "Free"
+        case "team": return "Team"
+        case "business": return "Business"
+        case "enterprise": return "Enterprise"
+        default: return planType ?? "--"
+        }
+    }
+
+    /// Plain-text summary of the current limits for the copy-to-clipboard action.
+    func statusText(locale: Locale) -> String {
+        let isRussian = locale.identifier.lowercased().hasPrefix("ru")
+        func text(_ english: String, _ russian: String) -> String { isRussian ? russian : english }
+
+        var lines: [String] = []
+        lines.append(text("Codex Limit status", "Статус Codex Limit"))
+        lines.append(text("Plan: \(planDisplayName)", "План: \(planDisplayName)"))
+
+        if let fiveHour {
+            lines.append(windowStatusLine(name: text("5 hours", "5 часов"), window: fiveHour, locale: locale, isRussian: isRussian))
+        }
+        if let weekly {
+            lines.append(windowStatusLine(name: text("Week", "Неделя"), window: weekly, locale: locale, isRussian: isRussian))
+        }
+        if let creditsText = credits?.displayText(maxFractionDigits: 2) {
+            lines.append(text("Balance: \(creditsText)", "Баланс: \(creditsText)"))
+        }
+
+        lines.append(text("Updated: \(updatedText(locale: locale))", "Обновлено: \(updatedText(locale: locale))"))
+        if isStale {
+            lines.append(text("Data is older than 5 minutes", "Данные старше 5 минут"))
+        }
+        if let errorMessage, !errorMessage.isEmpty {
+            lines.append(text("Error: \(errorMessage)", "Ошибка: \(errorMessage)"))
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    private func windowStatusLine(
+        name: String,
+        window: LimitWindowSnapshot,
+        locale: Locale,
+        isRussian: Bool
+    ) -> String {
+        let remaining = isRussian ? "осталось \(window.leftPercent)%" : "\(window.leftPercent)% left"
+        guard window.resetsAt != nil else { return "\(name): \(remaining)" }
+        let resetPrefix = isRussian ? "сброс" : "reset"
+        return "\(name): \(remaining), \(resetPrefix) \(window.resetDateTimeText(locale: locale))"
+    }
+
+    private func updatedText(locale: Locale) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.dateFormat = locale.identifier.lowercased().hasPrefix("ru") ? "d MMM, HH:mm" : "MMM d, HH:mm"
+        return formatter.string(from: updatedAt)
+    }
+
     static let placeholder = LimitSnapshot(
         fiveHour: nil,
         weekly: LimitWindowSnapshot(label: "Week", usedPercent: 4, windowDurationMins: 10080, resetsAt: Date().addingTimeInterval(3600 * 24 * 6)),
@@ -157,6 +219,33 @@ struct LimitWindowSnapshot: Codable, Equatable {
 }
 
 struct AccountUsageSnapshot: Codable, Equatable {
+    var dailyTokens: [DailyTokenUsage]? = nil
+
+    var latestDayLabel: String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return lastDailyDate == formatter.string(from: Date()) ? "TODAY" : "LAST DAY"
+    }
+
+    var sevenDayTokens: [DailyTokenUsage] {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        guard let latest = dailyTokens?.map(\.date).max(), let end = formatter.date(from: latest) else {
+            return []
+        }
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        return (-6...0).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: end) else { return nil }
+            let key = formatter.string(from: date)
+            return DailyTokenUsage(date: key, tokens: dailyTokens?.last(where: { $0.date == key })?.tokens)
+        }
+    }
+
     var lifetimeTokens: Int64?
     var peakDailyTokens: Int64?
     var longestRunningTurnSec: Int64?
@@ -167,6 +256,11 @@ struct AccountUsageSnapshot: Codable, Equatable {
     var totalThreads: Int64?
     var lastDailyTokens: Int64?
     var lastDailyDate: String?
+}
+
+struct DailyTokenUsage: Codable, Equatable {
+    var date: String
+    var tokens: Int64?
 }
 
 struct LimitPreferences: Codable, Equatable {
@@ -182,6 +276,14 @@ struct LimitPreferences: Codable, Equatable {
     var appLanguage = AppLanguage.system
     var lowLimitNotificationsEnabled = false
     var lowLimitNotificationThresholds: [Int?] = [10, 15]
+    var restorationNotificationsEnabled = true
+    var quietHoursEnabled = false
+    var quietHoursStartMinutes = 22 * 60
+    var quietHoursEndMinutes = 8 * 60
+    var widgetClickAction = WidgetClickAction.app
+    var menuBarLeftClickAction = MenuBarClickAction.popover
+    var hotkeyEnabled = false
+    var hotkeyShortcut: HotkeyShortcut?
 
     static let `default` = LimitPreferences()
 
@@ -198,6 +300,14 @@ struct LimitPreferences: Codable, Equatable {
         case appLanguage
         case lowLimitNotificationsEnabled
         case lowLimitNotificationThresholds
+        case restorationNotificationsEnabled
+        case quietHoursEnabled
+        case quietHoursStartMinutes
+        case quietHoursEndMinutes
+        case widgetClickAction
+        case menuBarLeftClickAction
+        case hotkeyEnabled
+        case hotkeyShortcut
     }
 
     init() {}
@@ -207,7 +317,6 @@ struct LimitPreferences: Codable, Equatable {
         preferences.widgetShowsFiveHour = true
         preferences.widgetShowsWeekly = true
         preferences.widgetShowsResetTimes = true
-        preferences.widgetShowsLastUpdated = false
         preferences.widgetShowsStaleWarning = true
         return preferences
     }
@@ -228,11 +337,93 @@ struct LimitPreferences: Codable, Equatable {
         lowLimitNotificationThresholds = Self.normalizedNotificationThresholds(
             try container.decodeIfPresent([Int?].self, forKey: .lowLimitNotificationThresholds) ?? [10, 15]
         )
+        restorationNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .restorationNotificationsEnabled) ?? true
+        quietHoursEnabled = try container.decodeIfPresent(Bool.self, forKey: .quietHoursEnabled) ?? false
+        quietHoursStartMinutes = Self.normalizedMinutesOfDay(
+            try container.decodeIfPresent(Int.self, forKey: .quietHoursStartMinutes) ?? 22 * 60
+        )
+        quietHoursEndMinutes = Self.normalizedMinutesOfDay(
+            try container.decodeIfPresent(Int.self, forKey: .quietHoursEndMinutes) ?? 8 * 60
+        )
+        widgetClickAction = (try? container.decodeIfPresent(WidgetClickAction.self, forKey: .widgetClickAction)) ?? .app
+        menuBarLeftClickAction = (try? container.decodeIfPresent(MenuBarClickAction.self, forKey: .menuBarLeftClickAction)) ?? .popover
+        hotkeyEnabled = try container.decodeIfPresent(Bool.self, forKey: .hotkeyEnabled) ?? false
+        hotkeyShortcut = try? container.decodeIfPresent(HotkeyShortcut.self, forKey: .hotkeyShortcut)
     }
 
     static func normalizedNotificationThresholds(_ thresholds: [Int?]) -> [Int?] {
         Array(thresholds.prefix(5)).map { threshold in
             threshold.map { min(100, max(1, $0)) }
+        }
+    }
+
+    static func normalizedMinutesOfDay(_ minutes: Int) -> Int {
+        min(24 * 60 - 1, max(0, minutes))
+    }
+
+    static func minutesOfDay(from date: Date, calendar: Calendar = .current) -> Int {
+        let components = calendar.dateComponents([.hour, .minute], from: date)
+        return (components.hour ?? 0) * 60 + (components.minute ?? 0)
+    }
+
+    /// Quiet hours may wrap past midnight (22:00 -> 08:00). Equal start and end
+    /// mean the range is empty, so nothing is suppressed.
+    func isQuietHoursActive(at date: Date = Date(), calendar: Calendar = .current) -> Bool {
+        guard quietHoursEnabled else { return false }
+
+        let start = Self.normalizedMinutesOfDay(quietHoursStartMinutes)
+        let end = Self.normalizedMinutesOfDay(quietHoursEndMinutes)
+        guard start != end else { return false }
+
+        let current = Self.minutesOfDay(from: date, calendar: calendar)
+        if start < end {
+            return current >= start && current < end
+        }
+        return current >= start || current < end
+    }
+}
+
+struct HotkeyShortcut: Codable, Equatable {
+    /// Virtual key code from a captured keyboard event.
+    var keyCode: Int
+    /// Raw modifier flags (NSEvent.ModifierFlags.rawValue) captured with the key.
+    var modifiers: Int
+}
+
+enum WidgetClickAction: String, Codable, CaseIterable, Identifiable {
+    case app
+    case details
+    case codex
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .app:
+            return "Open app"
+        case .details:
+            return "Limit details"
+        case .codex:
+            return "Codex"
+        }
+    }
+}
+
+enum MenuBarClickAction: String, Codable, CaseIterable, Identifiable {
+    case popover
+    case settings
+    case codex
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .popover:
+            return "Popover"
+        case .settings:
+            return "Settings"
+        case .codex:
+            return "Codex"
         }
     }
 }
@@ -382,6 +573,26 @@ enum LimitStore {
         }
         return []
     }
+
+    /// Removes one app-owned file from every known storage location.
+    @discardableResult
+    static func removeStoredFile(named filename: String) -> Bool {
+        var didRemove = false
+        for url in storageURLs(filename: filename) where FileManager.default.fileExists(atPath: url.path) {
+            do {
+                try FileManager.default.removeItem(at: url)
+                didRemove = true
+            } catch {
+                continue
+            }
+        }
+        return didRemove
+    }
+
+    @discardableResult
+    static func removeStoredSnapshot() -> Bool {
+        removeStoredFile(named: filename)
+    }
 }
 
 enum LimitPreferencesStore {
@@ -428,6 +639,11 @@ enum LimitPreferencesStore {
             throw LimitStoreError.unavailableStorage
         }
     }
+
+    @discardableResult
+    static func removeStoredPreferences() -> Bool {
+        LimitStore.removeStoredFile(named: filename)
+    }
 }
 
 enum LimitStoreError: Error {
@@ -447,6 +663,18 @@ enum WidgetPayloadStore {
         let url = storageURL()
         try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? data.write(to: url, options: [.atomic])
+    }
+
+    @discardableResult
+    static func removeStoredPayload() -> Bool {
+        let url = storageURL()
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+        do {
+            try FileManager.default.removeItem(at: url)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private static func storageURL() -> URL {

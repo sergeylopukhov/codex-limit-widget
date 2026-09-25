@@ -604,6 +604,7 @@ private struct AccountUsageResult: Decodable {
         let lastBucket = dailyUsageBuckets?.sorted { $0.startDate < $1.startDate }.last
 
         return AccountUsageSnapshot(
+            dailyTokens: dailyUsageBuckets?.map { DailyTokenUsage(date: $0.startDate, tokens: $0.tokens) },
             lifetimeTokens: summary.lifetimeTokens,
             peakDailyTokens: summary.peakDailyTokens,
             longestRunningTurnSec: summary.longestRunningTurnSec,
