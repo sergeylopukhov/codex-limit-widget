@@ -274,44 +274,83 @@ final class LimitViewModel: ObservableObject {
         reloadWidgets()
     }
 
-    func setLowLimitNotificationsEnabled(_ isEnabled: Bool) {
+    // MARK: - Low limit alerts, per window
+
+    func lowLimitAlertsEnabled(for window: LowLimitAlertWindow) -> Bool {
+        preferences.lowLimitAlertsEnabled(for: window)
+    }
+
+    /// Turning a window on asks for system authorization first and only then
+    /// stores the setting, so the switch never claims alerts that cannot be
+    /// delivered. Turning it off is immediate.
+    func setLowLimitAlertsEnabled(_ isEnabled: Bool, for window: LowLimitAlertWindow) {
         guard isEnabled else {
-            updatePreferences { $0.lowLimitNotificationsEnabled = false }
+            updatePreferences { $0.setLowLimitAlertsEnabled(false, for: window) }
             return
         }
 
         Task { [weak self] in
             guard let self else { return }
             guard await lowLimitNotificationManager.requestAuthorization() else { return }
-            updatePreferences { $0.lowLimitNotificationsEnabled = true }
+            updatePreferences { $0.setLowLimitAlertsEnabled(true, for: window) }
             if let snapshot {
                 await lowLimitNotificationManager.deliverIfNeeded(for: snapshot, preferences: preferences)
             }
         }
     }
 
-    func addNotificationThreshold() {
+    func lowLimitThresholds(for window: LowLimitAlertWindow) -> [Int?] {
+        preferences.lowLimitThresholds(for: window)
+    }
+
+    func canAddLowLimitThreshold(for window: LowLimitAlertWindow) -> Bool {
+        lowLimitThresholds(for: window).count < LimitPreferences.maximumNotificationThresholds
+    }
+
+    func canRemoveLowLimitThreshold(for window: LowLimitAlertWindow) -> Bool {
+        !lowLimitThresholds(for: window).isEmpty
+    }
+
+    func addLowLimitThreshold(for window: LowLimitAlertWindow) {
         updatePreferences { preferences in
-            guard preferences.lowLimitNotificationThresholds.count < 5 else { return }
-            let last = preferences.lowLimitNotificationThresholds.reversed().compactMap { $0 }.first ?? 5
-            preferences.lowLimitNotificationThresholds.append(min(100, last + 5))
-            preferences.lowLimitNotificationThresholds = LimitPreferences.normalizedNotificationThresholds(
-                preferences.lowLimitNotificationThresholds
-            )
+            var thresholds = preferences.lowLimitThresholds(for: window)
+            guard thresholds.count < LimitPreferences.maximumNotificationThresholds else { return }
+            let last = thresholds.reversed().compactMap { $0 }.first ?? 5
+            thresholds.append(min(100, last + 5))
+            preferences.setLowLimitThresholds(thresholds, for: window)
         }
     }
 
-    func removeLastNotificationThreshold() {
+    func removeLastLowLimitThreshold(for window: LowLimitAlertWindow) {
         updatePreferences { preferences in
-            guard !preferences.lowLimitNotificationThresholds.isEmpty else { return }
-            preferences.lowLimitNotificationThresholds.removeLast()
+            var thresholds = preferences.lowLimitThresholds(for: window)
+            guard !thresholds.isEmpty else { return }
+            thresholds.removeLast()
+            preferences.setLowLimitThresholds(thresholds, for: window)
         }
     }
 
-    func removeEmptyNotificationThresholds() {
-        let compacted = preferences.lowLimitNotificationThresholds.compactMap { $0 }
-        guard compacted.count != preferences.lowLimitNotificationThresholds.count else { return }
-        updatePreferences { $0.lowLimitNotificationThresholds = compacted }
+    /// Writes one threshold field. `index` beyond the current list appends,
+    /// and an empty field is stored as nil so the editor can hold blank rows.
+    func setLowLimitNotificationThreshold(
+        _ value: Int?,
+        at index: Int,
+        for window: LowLimitAlertWindow
+    ) {
+        updatePreferences { preferences in
+            var thresholds = preferences.lowLimitThresholds(for: window)
+            while thresholds.count <= index {
+                thresholds.append(nil)
+            }
+            thresholds[index] = value
+            preferences.setLowLimitThresholds(thresholds, for: window)
+        }
+    }
+
+    func removeEmptyLowLimitThresholds(for window: LowLimitAlertWindow) {
+        let compacted = lowLimitThresholds(for: window).compactMap { $0 }
+        guard compacted.count != lowLimitThresholds(for: window).count else { return }
+        updatePreferences { $0.setLowLimitThresholds(compacted, for: window) }
     }
 
     // MARK: - Diagnostics
@@ -515,7 +554,9 @@ final class LimitViewModel: ObservableObject {
             guard let self else { return }
             let isAuthorized = await lowLimitNotificationManager.requestAuthorization()
             updatePreferences { preferences in
-                preferences.lowLimitNotificationsEnabled = isAuthorized
+                for window in LowLimitAlertWindow.allCases {
+                    preferences.setLowLimitAlertsEnabled(isAuthorized, for: window)
+                }
             }
             UserDefaults.standard.set(true, forKey: notificationSetupKey)
         }
@@ -528,13 +569,8 @@ final class LimitViewModel: ObservableObject {
 }
 
 private actor LowLimitNotificationManager {
-    private enum LimitWindowKind: String, Codable {
-        case fiveHour
-        case weekly
-    }
-
     private struct LimitWindowCycle: Codable, Equatable {
-        let kind: LimitWindowKind
+        let kind: LowLimitAlertWindow
         let resetAtQuarterHour: Int64
     }
 
@@ -581,23 +617,23 @@ private actor LowLimitNotificationManager {
             deliveries.append(NotificationDelivery(cycle: cycle, threshold: threshold, deliveredAt: deliveredAt))
         }
 
-        func depletedCycle(for kind: LimitWindowKind) -> Int64? {
+        func depletedCycle(for kind: LowLimitAlertWindow) -> Int64? {
             depletedCycles[kind.rawValue]
         }
 
-        mutating func recordDepleted(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) {
+        mutating func recordDepleted(for kind: LowLimitAlertWindow, cycleAtQuarterHour: Int64) {
             depletedCycles[kind.rawValue] = cycleAtQuarterHour
         }
 
-        mutating func clearDepleted(for kind: LimitWindowKind) {
+        mutating func clearDepleted(for kind: LowLimitAlertWindow) {
             depletedCycles.removeValue(forKey: kind.rawValue)
         }
 
-        func didRestore(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) -> Bool {
+        func didRestore(for kind: LowLimitAlertWindow, cycleAtQuarterHour: Int64) -> Bool {
             restoredCycles[kind.rawValue] == cycleAtQuarterHour
         }
 
-        mutating func recordRestored(for kind: LimitWindowKind, cycleAtQuarterHour: Int64) {
+        mutating func recordRestored(for kind: LowLimitAlertWindow, cycleAtQuarterHour: Int64) {
             restoredCycles[kind.rawValue] = cycleAtQuarterHour
         }
 
@@ -655,15 +691,17 @@ private actor LowLimitNotificationManager {
     }
 
     func deliverIfNeeded(for snapshot: LimitSnapshot, preferences: LimitPreferences) async {
-        let sendsLowLimitAlerts = preferences.lowLimitNotificationsEnabled
         let sendsRestorationAlerts = preferences.restorationNotificationsEnabled
-        guard sendsLowLimitAlerts || sendsRestorationAlerts else { return }
+        // Each window keeps its own switch, so authorization and delivery are
+        // decided per window rather than by one shared flag.
+        let alertWindows = LowLimitAlertWindow.allCases.filter { preferences.lowLimitAlertsEnabled(for: $0) }
+        guard !alertWindows.isEmpty || sendsRestorationAlerts else { return }
 
         // Only the low-limit toggle may raise the system prompt. Restoration
         // alerts reuse an authorization the user already granted.
-        let isAuthorized = sendsLowLimitAlerts
-            ? await requestAuthorization()
-            : await hasNotificationAuthorization()
+        let isAuthorized = alertWindows.isEmpty
+            ? await hasNotificationAuthorization()
+            : await requestAuthorization()
         guard isAuthorized else { return }
 
         let now = Date()
@@ -673,7 +711,7 @@ private actor LowLimitNotificationManager {
 
         var ledger = readLedger()
         ledger.removeExpiredEntries(now: now)
-        let windows: [(LimitWindowKind, LimitWindowSnapshot)] = [
+        let windows: [(LowLimitAlertWindow, LimitWindowSnapshot)] = [
             snapshot.fiveHour.map { (.fiveHour, $0) },
             snapshot.weekly.map { (.weekly, $0) }
         ].compactMap { $0 }
@@ -702,12 +740,12 @@ private actor LowLimitNotificationManager {
                 ledger.recordDepleted(for: kind, cycleAtQuarterHour: cycle.resetAtQuarterHour)
             }
 
-            guard sendsLowLimitAlerts, !suppressLowLimitAlerts else { continue }
+            guard preferences.lowLimitAlertsEnabled(for: kind), !suppressLowLimitAlerts else { continue }
 
             // Several thresholds can match if the app first sees an already-low
             // value. Alert only for the nearest one; lower thresholds can still
             // alert later as the remaining percentage continues to fall.
-            guard let threshold = preferences.lowLimitNotificationThresholds
+            guard let threshold = preferences.lowLimitThresholds(for: kind)
                 .compactMap({ $0 })
                 .filter({ window.leftPercent <= $0 })
                 .min()
@@ -739,7 +777,7 @@ private actor LowLimitNotificationManager {
     /// Sends the once-per-cycle "limit is available again" alert in the app language.
     private func deliverRestorationNotification(
         for window: LimitWindowSnapshot,
-        kind: LimitWindowKind,
+        kind: LowLimitAlertWindow,
         cycleAtQuarterHour: Int64,
         preferences: LimitPreferences
     ) async -> Bool {
@@ -772,7 +810,7 @@ private actor LowLimitNotificationManager {
         }
     }
 
-    private func cycle(for window: LimitWindowSnapshot, kind: LimitWindowKind) -> LimitWindowCycle? {
+    private func cycle(for window: LimitWindowSnapshot, kind: LowLimitAlertWindow) -> LimitWindowCycle? {
         guard let resetsAt = window.resetsAt else { return nil }
         // The API can shift a reset timestamp by seconds between refreshes.
         // Rounding to 15-minute buckets keeps one real reset cycle stable.

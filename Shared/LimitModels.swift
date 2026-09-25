@@ -263,6 +263,14 @@ struct DailyTokenUsage: Codable, Equatable {
     var tokens: Int64?
 }
 
+/// Low-limit alerts are configured independently for each limit window.
+enum LowLimitAlertWindow: String, Codable, CaseIterable, Identifiable {
+    case fiveHour
+    case weekly
+
+    var id: String { rawValue }
+}
+
 struct LimitPreferences: Codable, Equatable {
     var widgetShowsFiveHour = true
     var widgetShowsWeekly = true
@@ -274,16 +282,22 @@ struct LimitPreferences: Codable, Equatable {
     var compactMenuBarMetric = MenuBarCompactMetric.fiveHour
     var menuWindowDesign = MenuWindowDesign.terminal
     var appLanguage = AppLanguage.system
-    var lowLimitNotificationsEnabled = false
-    var lowLimitNotificationThresholds: [Int?] = [10, 15]
+    var lowLimitFiveHourAlertsEnabled = false
+    var lowLimitFiveHourThresholds: [Int?] = [10, 15]
+    var lowLimitWeeklyAlertsEnabled = false
+    var lowLimitWeeklyThresholds: [Int?] = [10, 15]
     var restorationNotificationsEnabled = true
     var quietHoursEnabled = false
     var quietHoursStartMinutes = 22 * 60
     var quietHoursEndMinutes = 8 * 60
     var widgetClickAction = WidgetClickAction.app
     var menuBarLeftClickAction = MenuBarClickAction.popover
+    var menuBarRightClickAction = MenuBarRightClickAction.menu
     var hotkeyEnabled = false
     var hotkeyShortcut: HotkeyShortcut?
+
+    /// A window can hold at most this many low-limit alert thresholds.
+    static let maximumNotificationThresholds = 5
 
     static let `default` = LimitPreferences()
 
@@ -298,6 +312,12 @@ struct LimitPreferences: Codable, Equatable {
         case compactMenuBarMetric
         case menuWindowDesign
         case appLanguage
+        case lowLimitFiveHourAlertsEnabled
+        case lowLimitFiveHourThresholds
+        case lowLimitWeeklyAlertsEnabled
+        case lowLimitWeeklyThresholds
+        // Legacy 1.2.400 keys. They are read as the migration source and are
+        // still written so 1.2.400 keeps working after a downgrade.
         case lowLimitNotificationsEnabled
         case lowLimitNotificationThresholds
         case restorationNotificationsEnabled
@@ -306,6 +326,7 @@ struct LimitPreferences: Codable, Equatable {
         case quietHoursEndMinutes
         case widgetClickAction
         case menuBarLeftClickAction
+        case menuBarRightClickAction
         case hotkeyEnabled
         case hotkeyShortcut
     }
@@ -333,10 +354,30 @@ struct LimitPreferences: Codable, Equatable {
         compactMenuBarMetric = try container.decodeIfPresent(MenuBarCompactMetric.self, forKey: .compactMenuBarMetric) ?? .fiveHour
         menuWindowDesign = (try? container.decodeIfPresent(MenuWindowDesign.self, forKey: .menuWindowDesign)) ?? .terminal
         appLanguage = (try? container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage)) ?? .system
-        lowLimitNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowLimitNotificationsEnabled) ?? false
-        lowLimitNotificationThresholds = Self.normalizedNotificationThresholds(
-            try container.decodeIfPresent([Int?].self, forKey: .lowLimitNotificationThresholds) ?? [10, 15]
+
+        // 1.2.400 stored one enabled flag and one threshold list for both
+        // windows. Read those as the migration source and let each per-window
+        // key override its own window, so upgrading keeps the user's settings.
+        let legacyAlertsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowLimitNotificationsEnabled)
+        let legacyThresholds = try container.decodeIfPresent([Int?].self, forKey: .lowLimitNotificationThresholds)
+
+        lowLimitFiveHourAlertsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowLimitFiveHourAlertsEnabled)
+            ?? legacyAlertsEnabled
+            ?? false
+        lowLimitFiveHourThresholds = Self.normalizedNotificationThresholds(
+            try container.decodeIfPresent([Int?].self, forKey: .lowLimitFiveHourThresholds)
+                ?? legacyThresholds
+                ?? [10, 15]
         )
+        lowLimitWeeklyAlertsEnabled = try container.decodeIfPresent(Bool.self, forKey: .lowLimitWeeklyAlertsEnabled)
+            ?? legacyAlertsEnabled
+            ?? false
+        lowLimitWeeklyThresholds = Self.normalizedNotificationThresholds(
+            try container.decodeIfPresent([Int?].self, forKey: .lowLimitWeeklyThresholds)
+                ?? legacyThresholds
+                ?? [10, 15]
+        )
+
         restorationNotificationsEnabled = try container.decodeIfPresent(Bool.self, forKey: .restorationNotificationsEnabled) ?? true
         quietHoursEnabled = try container.decodeIfPresent(Bool.self, forKey: .quietHoursEnabled) ?? false
         quietHoursStartMinutes = Self.normalizedMinutesOfDay(
@@ -347,14 +388,89 @@ struct LimitPreferences: Codable, Equatable {
         )
         widgetClickAction = (try? container.decodeIfPresent(WidgetClickAction.self, forKey: .widgetClickAction)) ?? .app
         menuBarLeftClickAction = (try? container.decodeIfPresent(MenuBarClickAction.self, forKey: .menuBarLeftClickAction)) ?? .popover
+        menuBarRightClickAction = (try? container.decodeIfPresent(MenuBarRightClickAction.self, forKey: .menuBarRightClickAction)) ?? .menu
         hotkeyEnabled = try container.decodeIfPresent(Bool.self, forKey: .hotkeyEnabled) ?? false
         hotkeyShortcut = try? container.decodeIfPresent(HotkeyShortcut.self, forKey: .hotkeyShortcut)
     }
 
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(widgetShowsFiveHour, forKey: .widgetShowsFiveHour)
+        try container.encode(widgetShowsWeekly, forKey: .widgetShowsWeekly)
+        try container.encode(widgetShowsResetTimes, forKey: .widgetShowsResetTimes)
+        try container.encode(widgetShowsLastUpdated, forKey: .widgetShowsLastUpdated)
+        try container.encode(widgetShowsStaleWarning, forKey: .widgetShowsStaleWarning)
+        try container.encode(showsMenuBarItem, forKey: .showsMenuBarItem)
+        try container.encode(menuBarMode, forKey: .menuBarMode)
+        try container.encode(compactMenuBarMetric, forKey: .compactMenuBarMetric)
+        try container.encode(menuWindowDesign, forKey: .menuWindowDesign)
+        try container.encode(appLanguage, forKey: .appLanguage)
+        try container.encode(lowLimitFiveHourAlertsEnabled, forKey: .lowLimitFiveHourAlertsEnabled)
+        try container.encode(lowLimitFiveHourThresholds, forKey: .lowLimitFiveHourThresholds)
+        try container.encode(lowLimitWeeklyAlertsEnabled, forKey: .lowLimitWeeklyAlertsEnabled)
+        try container.encode(lowLimitWeeklyThresholds, forKey: .lowLimitWeeklyThresholds)
+        // Downgrade mirror: 1.2.400 has a single switch and a single list. Keep
+        // alerts on if either window wants them and hand it the merged list.
+        try container.encode(
+            lowLimitFiveHourAlertsEnabled || lowLimitWeeklyAlertsEnabled,
+            forKey: .lowLimitNotificationsEnabled
+        )
+        try container.encode(
+            Self.mergedNotificationThresholds([lowLimitFiveHourThresholds, lowLimitWeeklyThresholds]),
+            forKey: .lowLimitNotificationThresholds
+        )
+        try container.encode(restorationNotificationsEnabled, forKey: .restorationNotificationsEnabled)
+        try container.encode(quietHoursEnabled, forKey: .quietHoursEnabled)
+        try container.encode(quietHoursStartMinutes, forKey: .quietHoursStartMinutes)
+        try container.encode(quietHoursEndMinutes, forKey: .quietHoursEndMinutes)
+        try container.encode(widgetClickAction, forKey: .widgetClickAction)
+        try container.encode(menuBarLeftClickAction, forKey: .menuBarLeftClickAction)
+        try container.encode(menuBarRightClickAction, forKey: .menuBarRightClickAction)
+        try container.encode(hotkeyEnabled, forKey: .hotkeyEnabled)
+        try container.encodeIfPresent(hotkeyShortcut, forKey: .hotkeyShortcut)
+    }
+
+    /// Per-window accessors. The UI and the notification manager both go
+    /// through these so a window's setting is never read from the other one.
+    func lowLimitAlertsEnabled(for window: LowLimitAlertWindow) -> Bool {
+        switch window {
+        case .fiveHour: return lowLimitFiveHourAlertsEnabled
+        case .weekly: return lowLimitWeeklyAlertsEnabled
+        }
+    }
+
+    mutating func setLowLimitAlertsEnabled(_ isEnabled: Bool, for window: LowLimitAlertWindow) {
+        switch window {
+        case .fiveHour: lowLimitFiveHourAlertsEnabled = isEnabled
+        case .weekly: lowLimitWeeklyAlertsEnabled = isEnabled
+        }
+    }
+
+    func lowLimitThresholds(for window: LowLimitAlertWindow) -> [Int?] {
+        switch window {
+        case .fiveHour: return lowLimitFiveHourThresholds
+        case .weekly: return lowLimitWeeklyThresholds
+        }
+    }
+
+    mutating func setLowLimitThresholds(_ thresholds: [Int?], for window: LowLimitAlertWindow) {
+        let normalized = Self.normalizedNotificationThresholds(thresholds)
+        switch window {
+        case .fiveHour: lowLimitFiveHourThresholds = normalized
+        case .weekly: lowLimitWeeklyThresholds = normalized
+        }
+    }
+
     static func normalizedNotificationThresholds(_ thresholds: [Int?]) -> [Int?] {
-        Array(thresholds.prefix(5)).map { threshold in
+        Array(thresholds.prefix(maximumNotificationThresholds)).map { threshold in
             threshold.map { min(100, max(1, $0)) }
         }
+    }
+
+    /// One ascending, de-duplicated list for the single-list 1.2.400 encoding.
+    static func mergedNotificationThresholds(_ lists: [[Int?]]) -> [Int?] {
+        let values = Set(lists.flatMap { $0 }.compactMap { $0 })
+        return Array(values.sorted().prefix(maximumNotificationThresholds)).map { Optional($0) }
     }
 
     static func normalizedMinutesOfDay(_ minutes: Int) -> Int {
@@ -424,6 +540,47 @@ enum MenuBarClickAction: String, Codable, CaseIterable, Identifiable {
             return "Settings"
         case .codex:
             return "Codex"
+        }
+    }
+}
+
+/// Right-click action for the menu-bar icon. This is a separate type on
+/// purpose: the context menu itself is not a meaningful left-click action, so
+/// `MenuBarClickAction.allCases` (which feeds the left-click picker) stays
+/// untouched.
+enum MenuBarRightClickAction: String, Codable, CaseIterable, Identifiable {
+    case menu
+    case popover
+    case settings
+    case codex
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .menu:
+            return "Context menu"
+        case .popover:
+            return "Popover"
+        case .settings:
+            return "Settings"
+        case .codex:
+            return "Codex"
+        }
+    }
+
+    /// The equivalent left-click action, or nil when the right click should
+    /// keep opening the built-in context menu.
+    var clickAction: MenuBarClickAction? {
+        switch self {
+        case .menu:
+            return nil
+        case .popover:
+            return .popover
+        case .settings:
+            return .settings
+        case .codex:
+            return .codex
         }
     }
 }

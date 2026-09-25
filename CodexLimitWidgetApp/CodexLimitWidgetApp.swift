@@ -39,11 +39,23 @@ struct CodexLimitWidgetApp: App {
         appDelegate.showInitialWindow = {
             releaseNotesWindowPresenter.showIfNeeded(viewModel: viewModel, onDismiss: {})
         }
+        appDelegate.retryReleaseNotes = {
+            releaseNotesWindowPresenter.showIfNeeded(viewModel: viewModel, onDismiss: {})
+        }
+        appDelegate.releaseNotesArePending = {
+            releaseNotesWindowPresenter.hasUnacknowledgedNotes
+        }
         appDelegate.showLimitsDetails = {
             limitsWindowPresenter.show(viewModel: viewModel)
         }
         appDelegate.openCodex = {
             CodexAppLauncher.open()
+        }
+        appDelegate.widgetClickAction = {
+            viewModel.preferences.widgetClickAction
+        }
+        statusItemController.retryReleaseNotes = {
+            releaseNotesWindowPresenter.showIfNeeded(viewModel: viewModel, onDismiss: {})
         }
         updateController.start()
     }
@@ -187,6 +199,12 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     private var localEventMonitor: Any?
     private var globalEventMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
+
+    /// Called on every status-item click so update notes that were never
+    /// acknowledged get another chance to appear while the user is actively
+    /// working with the app. Returns true while unacknowledged notes are on
+    /// screen, so that click is not also spent on the popover or Settings.
+    var retryReleaseNotes: (() -> Bool)?
 
     init(
         viewModel: LimitViewModel,
@@ -339,16 +357,38 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     }
 
     @objc private func handleStatusItemClick() {
+        // A click is the user interacting with the app, so it is the natural
+        // moment to re-offer unacknowledged update notes. When they are
+        // presented now the click is consumed, otherwise the popover or the
+        // Settings window would cover them instantly.
+        if retryReleaseNotes?() == true { return }
+
         switch NSApp.currentEvent?.type {
         case .rightMouseUp, .rightMouseDown:
-            showContextMenu()
+            performRightClickAction()
         default:
             performLeftClickAction()
         }
     }
 
     private func performLeftClickAction() {
-        switch viewModel.preferences.menuBarLeftClickAction {
+        perform(menuBarAction: viewModel.preferences.menuBarLeftClickAction)
+    }
+
+    /// The right-click action is independent of the left-click action.
+    /// `MenuBarRightClickAction.menu` keeps the built-in context menu; the
+    /// other cases reuse the left-click routing.
+    private func performRightClickAction() {
+        guard let action = viewModel.preferences.menuBarRightClickAction.clickAction else {
+            showContextMenu()
+            return
+        }
+
+        perform(menuBarAction: action)
+    }
+
+    private func perform(menuBarAction action: MenuBarClickAction) {
+        switch action {
         case .popover:
             togglePopover()
         case .settings:
@@ -545,8 +585,15 @@ enum SettingsFocus: Hashable {
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
     var showSettings: ((SettingsFocus) -> Void)?
     var showInitialWindow: (() -> Void)?
+    var retryReleaseNotes: (() -> Bool)?
+    /// True while release notes for the running build still wait for "Got it".
+    var releaseNotesArePending: (() -> Bool)?
     var showLimitsDetails: (() -> Void)?
     var openCodex: (() -> Void)?
+    /// Supplies the saved "click on a widget" action so the legacy
+    /// `codexlimitwidget://open` link used by older widget builds resolves to
+    /// the same destination as the current extension.
+    var widgetClickAction: (() -> WidgetClickAction)?
     private var isSettingsPresentationPending = false
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -563,8 +610,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     }
 
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        if retryReleaseNotes?() == true { return true }
         if !flag {
-            requestSettingsPresentation(focus: .general)
+            requestSettingsPresentation(focus: .general, deferringToPendingReleaseNotes: true)
         }
         return true
     }
@@ -601,7 +649,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 
     @objc private func handleOpenApplicationEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         DispatchQueue.main.async { [weak self] in
-            self?.requestSettingsPresentation(focus: .general)
+            self?.requestSettingsPresentation(focus: .general, deferringToPendingReleaseNotes: true)
         }
     }
 
@@ -626,7 +674,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         case "codex":
             openCodex?()
         default:
+            performWidgetClickAction()
+        }
+    }
+
+    /// Older widget builds always opened `codexlimitwidget://open` and a
+    /// process that is still running the previous build keeps doing so after
+    /// an update. Routing that host through the saved preference makes the
+    /// already-installed extension behave like the current one.
+    private func performWidgetClickAction() {
+        switch widgetClickAction?() ?? .app {
+        case .app:
             requestSettingsPresentation(focus: .general)
+        case .details:
+            requestLimitsDetailsPresentation()
+        case .codex:
+            openCodex?()
         }
     }
 
@@ -641,7 +704,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
         }
     }
 
-    private func requestSettingsPresentation(focus: SettingsFocus) {
+    private func requestSettingsPresentation(
+        focus: SettingsFocus,
+        deferringToPendingReleaseNotes: Bool = false
+    ) {
+        // Launching or reactivating the app asks for Settings, which would
+        // otherwise appear a moment after the update notes and cover them.
+        if deferringToPendingReleaseNotes, releaseNotesArePending?() == true {
+            _ = retryReleaseNotes?()
+            return
+        }
+
         guard !isSettingsPresentationPending else { return }
         isSettingsPresentationPending = true
 
@@ -678,36 +751,98 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
 enum ReleaseNotesPresentationPolicy {
     static func shouldShow(
         currentVersionIdentifier: String,
-        lastShownVersionIdentifier: String?
+        acknowledgedVersionIdentifier: String?
     ) -> Bool {
-        lastShownVersionIdentifier != currentVersionIdentifier
+        acknowledgedVersionIdentifier != currentVersionIdentifier
+    }
+
+    /// Builds 1.2.400 and earlier wrote their marker while *showing* the
+    /// window, so a marker they left behind does not prove the notes were
+    /// read and can point at a version the user never saw. Stepping one patch
+    /// version below that marker keeps its own notes inside the visible
+    /// range, which is why the falsely marked 1.2.400 notes still appear in
+    /// 1.2.401.
+    static func unacknowledgedBaseline(forLegacyMarker marker: String) -> String? {
+        guard let version = ReleaseNotesVersion(marker), !version.components.isEmpty else {
+            return nil
+        }
+
+        var components = version.components
+        let lastIndex = components.count - 1
+        components[lastIndex] = components[lastIndex] > 0 ? components[lastIndex] - 1 : 0
+        return components.map(String.init).joined(separator: ".")
     }
 }
 
 @MainActor
 final class ReleaseNotesWindowPresenter: ObservableObject {
-    private let lastShownVersionKey = "lastReleaseNotesVersion"
+    private let acknowledgedVersionKey = "acknowledgedReleaseNotesVersion"
+    /// Marker written by builds that recorded the version before the user
+    /// confirmed with "Got it". Kept read-only for migration.
+    private let legacyShownVersionKey = "lastReleaseNotesVersion"
     private var windowController: NSWindowController?
 
     @discardableResult
-    func showIfNeeded(viewModel: LimitViewModel, onDismiss: @escaping () -> Void) -> Bool {
+    func showIfNeeded(viewModel: LimitViewModel, onDismiss: @escaping () -> Void = {}) -> Bool {
         let version = currentVersionIdentifier
         let defaults = UserDefaults.standard
-        let lastShownVersion = defaults.string(forKey: lastShownVersionKey)
+        let acknowledgedKey = acknowledgedVersionKey
 
         guard ReleaseNotesPresentationPolicy.shouldShow(
             currentVersionIdentifier: version,
-            lastShownVersionIdentifier: lastShownVersion
-        )
-        else { return false }
+            acknowledgedVersionIdentifier: defaults.string(forKey: acknowledgedKey)
+        ) else { return false }
 
-        show(
-            viewModel: viewModel,
-            previousVersion: lastShownVersion.flatMap { ReleaseNotesVersion($0) },
-            onDismiss: onDismiss
+        // The notes stay pending until "Got it", so an interaction while they
+        // are on screen brings them to the front again instead of burying
+        // them under the popover or the Settings window.
+        if let window = windowController?.window, window.isVisible {
+            bringToFront(window)
+            return true
+        }
+
+        show(viewModel: viewModel, previousVersion: pendingPreviousVersion) { [weak self] in
+            // The version counts as read only once the user confirms with
+            // "Got it", so an unnoticed window is offered again later.
+            defaults.set(version, forKey: acknowledgedKey)
+            self?.windowController = nil
+            onDismiss()
+        }
+
+        // Only claim the interaction when the window really is on screen, so
+        // a presentation that failed cannot swallow every menu-bar click.
+        return windowController?.window?.isVisible == true
+    }
+
+    /// True while this build has notes the user has not confirmed with
+    /// "Got it", whether or not the window is on screen right now.
+    var hasUnacknowledgedNotes: Bool {
+        ReleaseNotesPresentationPolicy.shouldShow(
+            currentVersionIdentifier: currentVersionIdentifier,
+            acknowledgedVersionIdentifier: UserDefaults.standard.string(forKey: acknowledgedVersionKey)
         )
-        defaults.set(version, forKey: lastShownVersionKey)
-        return true
+    }
+
+    /// Version that bounds the visible notes for this launch, or nil to show
+    /// the full catalogue on a first run.
+    private var pendingPreviousVersion: ReleaseNotesVersion? {
+        let defaults = UserDefaults.standard
+
+        if let acknowledged = defaults.string(forKey: acknowledgedVersionKey) {
+            return ReleaseNotesVersion(acknowledged)
+        }
+
+        guard let legacy = defaults.string(forKey: legacyShownVersionKey),
+              let baseline = ReleaseNotesPresentationPolicy.unacknowledgedBaseline(forLegacyMarker: legacy)
+        else { return nil }
+
+        return ReleaseNotesVersion(baseline)
+    }
+
+    private func bringToFront(_ window: NSWindow) {
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+        window.orderFrontRegardless()
     }
 
     private func show(
@@ -728,7 +863,8 @@ final class ReleaseNotesWindowPresenter: ObservableObject {
                 previousVersion: previousVersion,
                 dismiss: { [weak self] in
                     self?.windowController?.close()
-                    DispatchQueue.main.async(execute: onDismiss)
+                    self?.windowController = nil
+                    onDismiss()
                 }
             )
             .environment(\.locale, viewModel.preferences.appLanguage.locale)
@@ -740,6 +876,7 @@ final class ReleaseNotesWindowPresenter: ObservableObject {
         window.hasShadow = true
         window.isMovableByWindowBackground = true
         window.level = .floating
+        window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         // The window is positioned on the following AppKit cycle, when the
         // actual target screen is known. Keep it hidden meanwhile so it never
         // visibly jumps from AppKit's default position.
@@ -928,6 +1065,41 @@ private struct ReleaseNotesView: View {
 
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
+            ReleaseNoteItem(
+                id: "menu-bar-right-click-action",
+                introducedIn: "1.2.401",
+                icon: "menubar.rectangle",
+                title: "Right-click action",
+                detail: "The menu-bar icon has its own right-click action: the context menu, the popover, Settings, or Codex."
+            ),
+            ReleaseNoteItem(
+                id: "codex-opens-without-quitting",
+                introducedIn: "1.2.401",
+                icon: "checkmark.shield",
+                title: "Codex opens without quitting",
+                detail: "Choosing Codex from the menu bar or a widget opens the desktop app instead of ending this one."
+            ),
+            ReleaseNoteItem(
+                id: "readable-update-notes",
+                introducedIn: "1.2.401",
+                icon: "sparkles",
+                title: "Update notes you can actually read",
+                detail: "This window now comes to the front over other windows and Spaces, and it counts as read only after you confirm it."
+            ),
+            ReleaseNoteItem(
+                id: "widget-click-legacy-setting",
+                introducedIn: "1.2.401",
+                icon: "cursorarrow.click",
+                title: "Widget click follows your setting",
+                detail: "Clicking a widget opens the destination you chose, including for widgets installed by an earlier version."
+            ),
+            ReleaseNoteItem(
+                id: "separate-alert-windows",
+                introducedIn: "1.2.401",
+                icon: "bell.badge",
+                title: "Separate 5-hour and weekly alerts",
+                detail: "Low-limit alerts have their own switch and thresholds for the 5-hour and the weekly limit."
+            ),
             ReleaseNoteItem(
                 id: "limit-color-level",
                 introducedIn: "1.2.400",
@@ -1445,7 +1617,9 @@ final class SettingsWindowPresenter: NSObject, ObservableObject, NSWindowDelegat
     }
 
     func windowWillClose(_ notification: Notification) {
-        viewModel?.removeEmptyNotificationThresholds()
+        for window in LowLimitAlertWindow.allCases {
+            viewModel?.removeEmptyLowLimitThresholds(for: window)
+        }
     }
 }
 
@@ -1539,6 +1713,16 @@ struct AppSettingsView: View {
                             SettingsSegmentedControl(
                                 selection: binding(\.menuBarLeftClickAction),
                                 items: MenuBarClickAction.allCases.map { SettingsSegmentedItem(value: $0, title: $0.title) },
+                                palette: palette
+                            )
+                            .disabled(!viewModel.preferences.showsMenuBarItem)
+                            .opacity(viewModel.preferences.showsMenuBarItem ? 1 : 0.45)
+                        }
+
+                        SettingsRow("Right click", palette: palette) {
+                            SettingsSegmentedControl(
+                                selection: binding(\.menuBarRightClickAction),
+                                items: MenuBarRightClickAction.allCases.map { SettingsSegmentedItem(value: $0, title: $0.title) },
                                 palette: palette
                             )
                             .disabled(!viewModel.preferences.showsMenuBarItem)
@@ -1661,19 +1845,27 @@ struct AppSettingsView: View {
                     VStack(alignment: .leading, spacing: 12) {
                         SettingsSectionTitle("Low limit alerts", palette: palette)
 
-                        SettingsRow("System notifications", palette: palette) {
-                            SettingsSwitch(
-                                isOn: Binding(
-                                    get: { viewModel.preferences.lowLimitNotificationsEnabled },
-                                    set: { viewModel.setLowLimitNotificationsEnabled($0) }
-                                ),
-                                palette: palette
-                            )
+                        ForEach(LowLimitAlertWindow.allCases) { window in
+                            VStack(alignment: .leading, spacing: 12) {
+                                SettingsRow(window.alertSwitchTitle, palette: palette) {
+                                    SettingsSwitch(
+                                        isOn: Binding(
+                                            get: { viewModel.lowLimitAlertsEnabled(for: window) },
+                                            set: { viewModel.setLowLimitAlertsEnabled($0, for: window) }
+                                        ),
+                                        palette: palette
+                                    )
+                                }
+
+                                NotificationThresholdEditor(
+                                    viewModel: viewModel,
+                                    window: window,
+                                    palette: palette
+                                )
+                            }
                         }
 
-                        NotificationThresholdEditor(viewModel: viewModel, palette: palette)
-
-                        Text("Alerts are sent once for the nearest reached threshold in each available limit window; lower thresholds alert later if the limit continues to fall.")
+                        Text("The 5-hour and weekly limits each have their own switch and thresholds. An alert is sent once for the nearest reached threshold; lower thresholds alert later if the limit continues to fall.")
                             .font(palette.noteFont)
                             .foregroundStyle(palette.mutedText)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1901,16 +2093,38 @@ struct AppSettingsView: View {
     }
 }
 
+/// Row label and note copy for one low-limit alert window.
+private extension LowLimitAlertWindow {
+    var alertSwitchTitle: String {
+        switch self {
+        case .fiveHour:
+            "5-hour alerts"
+        case .weekly:
+            "Weekly alerts"
+        }
+    }
+
+    var thresholdTitle: String {
+        switch self {
+        case .fiveHour:
+            "5-hour thresholds"
+        case .weekly:
+            "Weekly thresholds"
+        }
+    }
+}
+
 private struct NotificationThresholdEditor: View {
     @ObservedObject var viewModel: LimitViewModel
+    let window: LowLimitAlertWindow
     let palette: SettingsWindowPalette
 
     var body: some View {
-        SettingsRow("Alert thresholds", palette: palette) {
+        SettingsRow(window.thresholdTitle, palette: palette) {
             HStack(spacing: 6) {
-                if canRemoveThreshold {
+                if viewModel.canRemoveLowLimitThreshold(for: window) {
                     Button {
-                        viewModel.removeLastNotificationThreshold()
+                        viewModel.removeLastLowLimitThreshold(for: window)
                     } label: {
                         Image(systemName: "minus")
                             .font(.system(size: 12, weight: .bold))
@@ -1929,16 +2143,16 @@ private struct NotificationThresholdEditor: View {
                     .accessibilityLabel("Remove last alert threshold")
                 }
 
-                ForEach(Array(viewModel.preferences.lowLimitNotificationThresholds.indices), id: \.self) { index in
+                ForEach(Array(viewModel.lowLimitThresholds(for: window).indices), id: \.self) { index in
                     SettingsThresholdField(
                         text: thresholdBinding(at: index),
                         palette: palette
                     )
                 }
 
-                if canAddThreshold {
+                if viewModel.canAddLowLimitThreshold(for: window) {
                     Button {
-                        viewModel.addNotificationThreshold()
+                        viewModel.addLowLimitThreshold(for: window)
                     } label: {
                         Image(systemName: "plus")
                             .font(.system(size: 12, weight: .bold))
@@ -1960,30 +2174,18 @@ private struct NotificationThresholdEditor: View {
         }
     }
 
-    private var canAddThreshold: Bool {
-        viewModel.preferences.lowLimitNotificationThresholds.count < 5
-    }
-
-    private var canRemoveThreshold: Bool {
-        !viewModel.preferences.lowLimitNotificationThresholds.isEmpty
-    }
-
     private func thresholdBinding(at index: Int) -> Binding<String> {
         Binding(
             get: {
-                let thresholds = viewModel.preferences.lowLimitNotificationThresholds
+                let thresholds = viewModel.lowLimitThresholds(for: window)
                 return index < thresholds.count ? thresholds[index].map(String.init) ?? "" : ""
             },
             set: { value in
-                var thresholds = viewModel.preferences.lowLimitNotificationThresholds.map { $0.map(String.init) ?? "" }
-                while thresholds.count <= index { thresholds.append("") }
-                thresholds[index] = value
-                let values = thresholds.map { text in
-                    text.isEmpty ? nil : Int(text)
-                }
-                viewModel.updatePreferences {
-                    $0.lowLimitNotificationThresholds = LimitPreferences.normalizedNotificationThresholds(values)
-                }
+                viewModel.setLowLimitNotificationThreshold(
+                    value.isEmpty ? nil : Int(value),
+                    at: index,
+                    for: window
+                )
             }
         )
     }
@@ -2543,7 +2745,10 @@ private enum CodexAppLauncher {
 
             let configuration = NSWorkspace.OpenConfiguration()
             configuration.activates = true
-            workspace.openApplication(at: applicationURL, configuration: configuration) { _, _ in }
+            // AppKit calls this handler on its own LaunchServices queue. The
+            // `@Sendable` annotation keeps the closure from inheriting the
+            // main actor, which made the release build trap on that queue.
+            workspace.openApplication(at: applicationURL, configuration: configuration) { @Sendable _, _ in }
             return
         }
 

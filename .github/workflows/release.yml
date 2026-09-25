@@ -28,13 +28,73 @@ jobs:
       - name: Prepare release description
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ] || [ "$GITHUB_REF_NAME" = "v1.2.303" ] || [ "$GITHUB_REF_NAME" = "v1.2.304" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.251" ] || [ "$GITHUB_REF_NAME" = "v1.2.302" ] || [ "$GITHUB_REF_NAME" = "v1.2.303" ] || [ "$GITHUB_REF_NAME" = "v1.2.304" ] || [ "$GITHUB_REF_NAME" = "v1.2.401" ]; then
             echo "RELEASE_NAME=Codex Limit Widget $VERSION (Bugfix)" >> "$GITHUB_ENV"
           else
             echo "RELEASE_NAME=Codex Limit Widget $VERSION" >> "$GITHUB_ENV"
           fi
 
-          if [ "$GITHUB_REF_NAME" = "v1.2.400" ]; then
+          if [ "$GITHUB_REF_NAME" = "v1.2.401" ]; then
+            cat > release-description.md <<'RELEASE_NOTES_EN'
+          ## What's new in 1.2.401
+
+          Codex Limit Widget 1.2.401 fixes the crash that closed the app when Codex opened from the menu bar or a widget. It also separates the notification controls of the two limit windows, makes the right-click action configurable, and delivers update notes reliably.
+
+          ### Stability
+
+          - Opening Codex from the menu bar or a widget no longer closes the app, and the menu bar percentage stays in place.
+
+          ### Menu bar and widgets
+
+          - Left-click and right-click actions are configured separately. The right-click action can be the context menu, the popover, Settings, or Codex.
+          - Widgets that still run an older build now follow the selected widget click action instead of always opening Settings.
+          - The updater restarts the previous widget extension so a stale process does not keep serving the old click action.
+
+          ### Notifications
+
+          - The 5-hour and weekly limits have separate switches and separate thresholds, so each window alerts at the level you choose for it.
+          - Quiet hours keep low-limit alerts silent during the hours you set and do not mute the restored-limit message.
+
+          ### Updates
+
+          - What's New opens reliably after an in-app update and includes the 1.2.400 notes when an update skipped them.
+
+          ## Installation
+
+          Download `CodexLimitWidget-1.2.401-macOS.dmg`, open it, and drag `Codex Limit Widget.app` to `Applications`. Existing users can install this version from inside the app.
+          RELEASE_NOTES_EN
+            cat >> release-description.md <<'RELEASE_NOTES_RU'
+
+          ---
+
+          ## Что нового в 1.2.401
+
+          Версия 1.2.401 исправляет падение при открытии Codex. Здесь же раздельные переключатели и пороги уведомлений для двух лимитов, отдельное действие по правому щелчку и заметки «Что нового» после обновления из приложения.
+
+          ### Стабильность
+
+          - Исправлено падение при открытии Codex из строки меню или по клику на виджет: процент остаётся в строке меню.
+
+          ### Строка меню и виджеты
+
+          - Действия по левому и правому щелчку настраиваются отдельно. Правый щелчок может открывать контекстное меню, поповер, настройки или Codex.
+          - Виджеты со старой сборкой теперь следуют выбранному действию, а не всегда открывают настройки.
+          - При обновлении старое расширение виджета перезапускается, чтобы оно не сохраняло прежнее действие по клику.
+
+          ### Уведомления
+
+          - У 5-часового и недельного лимитов свои переключатели и свои пороги: каждый лимит предупреждает на выбранном для него уровне.
+          - В тихие часы предупреждения о низком остатке не приходят; сообщение о восстановлении лимита они не отключают.
+
+          ### Обновления
+
+          - Окно «Что нового» надёжно открывается после обновления из приложения и включает заметки 1.2.400, если прошлое обновление их пропустило.
+
+          ## Установка
+
+          Скачайте `CodexLimitWidget-1.2.401-macOS.dmg`, откройте его и перетащите `Codex Limit Widget.app` в `Applications`. Обновиться можно и из самого приложения.
+          RELEASE_NOTES_RU
+          elif [ "$GITHUB_REF_NAME" = "v1.2.400" ]; then
             cat > release-description.md <<'RELEASE_NOTES_EN'
           ## What's new in 1.2.400
 

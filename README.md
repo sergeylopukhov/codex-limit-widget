@@ -59,7 +59,7 @@ The widget design is controlled in the app settings. Choose `Dark` or `Beige`; a
 
 ## Menu Bar
 
-The menu bar item can show detailed limits or a compact percent indicator. The left-click action is configurable in Settings: the popover, Settings, or Codex. Right-clicking the item opens a menu with refresh, copy status, and quit; a refresh shows that data is loading while it runs.
+The menu bar item can show detailed limits or a compact percent indicator. Left-click and right-click actions are configured separately in Settings: the context menu, the popover, Settings, or Codex. The context menu refreshes limits, copies the current status, and quits; a refresh shows that data is loading while it runs.
 
 The popover lists the available limit windows, reset times, data freshness, and settings, and its `Copy status` button copies the plan, percentage, and reset time of each window as text. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
 
@@ -116,7 +116,7 @@ The popover lists the available limit windows, reset times, data freshness, and 
 
 Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. The Updates section shows the installed version, the latest check result, and the update action.
 
-Further settings cover the menu bar left-click action, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that brings the detailed limits window to the front from any app, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
+Further settings cover the menu bar left-click and right-click actions, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that brings the detailed limits window to the front from any app, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
 
 <table>
   <tr>
@@ -133,7 +133,7 @@ Further settings cover the menu bar left-click action, what a click on the widge
 
 ## Notifications
 
-Low-limit alerts follow the thresholds you set in Settings. Quiet hours suppress low-limit alerts during the hours you choose; they do not affect the restored-limit message.
+The 5-hour and weekly limits have separate switches and separate thresholds in Settings, so each window alerts at the level you choose for it. Quiet hours suppress low-limit alerts during the hours you choose; they do not affect the restored-limit message.
 
 The restored-limit notification covers only an exhaustion the app has seen: the app has to record the window at 100% and be running when the quota comes back. It also needs notification permission in macOS, which the app asks for once and reuses for this message.
 
@@ -141,7 +141,7 @@ The restored-limit notification covers only an exhaustion the app has seen: the 
 
 A check against the latest public GitHub Release runs at startup and every four hours after that. You can also run a check from Settings at any time.
 
-If a newer version is available, the menu bar, popover, and Settings all show it. Press `Update now` to download the official macOS ZIP. Before installation, verification covers the SHA-256 digest published by GitHub, bundle identifier, version, and code signature. After verification, the copy in `Applications` is replaced and the new version opens.
+If a newer version is available, the menu bar, popover, and Settings all show it. Press `Update now` to download the official macOS ZIP. Before installation, verification covers the SHA-256 digest published by GitHub, bundle identifier, version, and code signature. After verification, the copy in `Applications` is replaced and the new version opens. The updater restarts the previous widget extension so a stale process does not keep serving the old click action, and `What's New` opens after the update with the notes for the new version, including 1.2.400 notes that an earlier update skipped.
 
 If the `Applications` folder cannot be changed, use `Open release page` and install the DMG manually.
 

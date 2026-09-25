@@ -329,18 +329,63 @@ final class AppUpdateController: ObservableObject {
         let helperScript = #"""
         /usr/bin/ditto "$2" "$4" || exit 20
         while /bin/kill -0 "$1" 2>/dev/null; do /bin/sleep 0.2; done
+        # Reversible cleanup: nothing is deleted with rm. The replaced app
+        # bundle is moved to the user's Trash and temporary build files are
+        # parked in a scratch folder inside the same temporary directory.
+        retire_into() {
+          local target="$1" item destination
+          shift
+          /bin/mkdir -p "$target" 2>/dev/null || return 1
+          for item in "$@"; do
+            [ -e "$item" ] || continue
+            destination="$target/$(/bin/date +%Y%m%d-%H%M%S)-$$-$(/usr/bin/basename "$item")"
+            /bin/mv "$item" "$destination" 2>/dev/null || return 1
+          done
+          return 0
+        }
         if [ -d "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" ]; then
           /usr/bin/pluginkit -r "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" 2>/dev/null || true
         fi
-        /bin/rm -rf "$3"
+        retire_into "${HOME:-/tmp}/.Trash" "$3"
+        if [ -e "$3" ]; then
+          # The old bundle could not be retired, so the replacement is skipped
+          # and the previous extension registration is put back.
+          if [ -d "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" ]; then
+            /usr/bin/pluginkit -a "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" 2>/dev/null || true
+          fi
+          exit 22
+        fi
         /bin/mv "$4" "$3" || exit 21
         /usr/bin/xattr -dr com.apple.quarantine "$3" 2>/dev/null || true
         /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f -R "$3" 2>/dev/null || true
         if [ -d "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" ]; then
           /usr/bin/pluginkit -a "$3/Contents/PlugIns/CodexLimitWidgetExtension.appex" 2>/dev/null || true
         fi
+        # WidgetKit keeps the previous widget extension process alive across an
+        # in-place app replacement, so stop it here and let the next widget
+        # reload start the appex that was just registered. Only a process whose
+        # executable is this app's extension in the installed location is
+        # signalled, so no other app or copy is touched.
+        extension_executable="$3/Contents/PlugIns/CodexLimitWidgetExtension.appex/Contents/MacOS/CodexLimitWidgetExtension"
+        stop_old_extension() {
+          local pid exe signalled
+          for pid in $(/usr/bin/pgrep -f "/Contents/PlugIns/CodexLimitWidgetExtension.appex" 2>/dev/null || true) \
+                     $(/usr/bin/pgrep -x CodexLimitWidgetExtension 2>/dev/null || true); do
+            if [ "$pid" = "$$" ]; then continue; fi
+            case " $signalled " in *" $pid "*) continue;; esac
+            exe=$(/bin/ps -o comm= -p "$pid" 2>/dev/null || true)
+            if [ "$exe" != "$extension_executable" ]; then continue; fi
+            signalled="$signalled $pid"
+            /bin/kill "$1" "$pid" 2>/dev/null || true
+          done
+        }
+        stop_old_extension -TERM
+        /bin/sleep 0.5
+        # Only an extension that ignored the termination request, and would
+        # therefore keep serving the previous build, is force-stopped.
+        stop_old_extension -KILL
         /usr/bin/open "$3"
-        /bin/rm -rf "$5"
+        retire_into "$(/usr/bin/dirname "$5")/.CodexLimitWidgetRetired" "$5"
         """#
 
         let process = Process()

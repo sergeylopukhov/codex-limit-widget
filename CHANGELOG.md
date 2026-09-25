@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.2.401 - 2026-09-25 (Bugfix)
+
+- Fixed the crash that closed the app and dropped the menu bar percentage when the menu bar icon or a widget opened Codex.
+- Widget clicks from an older widget build now follow the selected widget click action instead of always opening Settings.
+- The right-click action on the menu bar icon is configurable and independent from the left-click action: context menu, popover, Settings, or Codex.
+- What's New opens reliably after an in-app update and includes the 1.2.400 notes when that update skipped them.
+- Low-limit notifications have separate switches and separate thresholds for the 5-hour and weekly windows.
+- The updater restarts the previous widget extension after the new build is registered, so a stale extension process does not keep serving the old click action.
+- Bumped the internal build to 155.
+
 ## 1.2.400 - 2026-09-25
 
 - Added a configurable left-click action for the menu-bar icon (popover, Settings, or Codex) and a right-click menu with refresh, copy, and quit.
