@@ -299,29 +299,17 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
                 hasUpdate: updateController.isUpdateAvailable
             )
             button.imageScaling = .scaleNone
+            button.title = ""
+            button.attributedTitle = NSAttributedString(string: "")
+            button.imagePosition = .imageOnly
+            // Without the refresh glyph the item keeps a single width, and the
+            // length is written on every pass so a refresh starting or ending
+            // cannot leave the click target stale.
             let percentWidth = MenuBarPercentImageRenderer.size(
                 for: viewModel.compactMenuBarValue,
                 hasUpdate: updateController.isUpdateAvailable
             ).width
-
-            if viewModel.isRefreshing {
-                let loadingGlyph = NSMutableAttributedString(
-                    string: "  \u{27F3}",
-                    attributes: [
-                        .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
-                        .foregroundColor: NSColor.secondaryLabelColor
-                    ]
-                )
-                button.title = ""
-                button.attributedTitle = loadingGlyph
-                button.imagePosition = .imageLeading
-                statusItem?.length = percentWidth + loadingGlyph.size().width + 4
-            } else {
-                button.title = ""
-                button.attributedTitle = NSAttributedString(string: "")
-                button.imagePosition = .imageOnly
-                statusItem?.length = percentWidth
-            }
+            statusItem?.length = percentWidth
         case .detailed:
             button.image = nil
             button.imageScaling = .scaleProportionallyDown
@@ -339,15 +327,6 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
                     attributes: [
                         .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .bold),
                         .foregroundColor: NSColor.systemGreen
-                    ]
-                ))
-            }
-            if viewModel.isRefreshing {
-                title.append(NSAttributedString(
-                    string: "  \u{27F3}",
-                    attributes: [
-                        .font: NSFont.monospacedDigitSystemFont(ofSize: 12, weight: .semibold),
-                        .foregroundColor: NSColor.secondaryLabelColor
                     ]
                 ))
             }
@@ -1065,6 +1044,13 @@ private struct ReleaseNotesView: View {
 
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
+            ReleaseNoteItem(
+                id: "menu-bar-refresh-glyph-removed",
+                introducedIn: "1.2.401",
+                icon: "menubar.rectangle",
+                title: "Menu bar without the refresh glyph",
+                detail: "The circular refresh arrow no longer appears next to the menu bar percentage. You can still refresh limits from the menu-bar menu, the popover, and Settings."
+            ),
             ReleaseNoteItem(
                 id: "menu-bar-right-click-action",
                 introducedIn: "1.2.401",

@@ -279,3 +279,5 @@
 "5-hour thresholds" = "Пороги для 5-часового лимита";
 "Weekly thresholds" = "Пороги для недельного лимита";
 "The 5-hour and weekly limits each have their own switch and thresholds. An alert is sent once for the nearest reached threshold; lower thresholds alert later if the limit continues to fall." = "У 5-часового и недельного лимитов свои переключатели и пороги. Предупреждение приходит один раз для ближайшего достигнутого порога; более низкие пороги сработают позже, если лимит продолжит падать.";
+"Menu bar without the refresh glyph" = "Строка меню без круговой стрелки";
+"The circular refresh arrow no longer appears next to the menu bar percentage. You can still refresh limits from the menu-bar menu, the popover, and Settings." = "Круговая стрелка обновления больше не появляется рядом с процентом в строке меню. Обновить лимиты по-прежнему можно из контекстного меню, поповера и настроек.";
