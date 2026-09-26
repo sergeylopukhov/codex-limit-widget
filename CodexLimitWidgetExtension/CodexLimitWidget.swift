@@ -691,22 +691,6 @@ private struct TerminalLimitWidgetView: View {
         }
         return "\(value)"
     }
-
-    private func formatPlainCount(_ value: Int64?) -> String {
-        guard let value else { return "--" }
-        return "\(value)"
-    }
-
-    private func formatDuration(_ seconds: Int64?) -> String {
-        guard let seconds else { return "--" }
-
-        let hours = seconds / 3_600
-        let minutes = (seconds % 3_600) / 60
-        if hours > 0 {
-            return "\(hours)h \(minutes)m"
-        }
-        return "\(minutes)m"
-    }
 }
 
 private struct TerminalMetric {
@@ -1430,11 +1414,6 @@ private struct EditorialLimitWidgetView: View {
             return String(format: "%.1fK", number / 1_000)
         }
         return "\(value)"
-    }
-
-    private func formatPlainCount(_ value: Int64?) -> String {
-        guard let value else { return "--" }
-        return value.formatted()
     }
 }
 

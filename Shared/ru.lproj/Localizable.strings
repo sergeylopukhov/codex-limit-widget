@@ -88,7 +88,6 @@
 "Weekly reset: %@" = "Недельный сброс: %@";
 "Plan: %@" = "Тариф: %@";
 "Data is older than 5 minutes" = "Данные старше 5 минут";
-"> no limit data" = "> нет данных о лимите";
 "> refresh to load Codex limits" = "> обновите, чтобы получить лимиты Codex";
 "Remaining" = "Осталось";
 "No limit data" = "Нет данных о лимите";
