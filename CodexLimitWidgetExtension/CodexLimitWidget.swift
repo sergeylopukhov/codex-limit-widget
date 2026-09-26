@@ -249,9 +249,9 @@ private struct TerminalLimitWidgetView: View {
                 if let metric, preferences.widgetShowsResetTimes {
                     Group {
                         if compact {
-                            Text(LocalizedStringKey(metric.id)) + Text(verbatim: " \(metric.window.resetClockText)")
+                            Text(LocalizedStringKey(metric.id)) + Text(verbatim: " \(LimitResetClockText.make(for: metric.window.resetsAt))")
                         } else {
-                            Text("resets at") + Text(verbatim: " \(metric.window.resetClockText)")
+                            Text("resets at") + Text(verbatim: " \(LimitResetClockText.make(for: metric.window.resetsAt))")
                         }
                     }
                         .font(.system(size: clockSize, weight: .semibold, design: .monospaced))
@@ -472,7 +472,7 @@ private struct TerminalLimitWidgetView: View {
                     terminalStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15)
                 }
                 TerminalVerticalDivider(color: mutedAccent)
-                terminalStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
+                terminalStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
                 TerminalVerticalDivider(color: mutedAccent)
                 terminalStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15)
             }
@@ -484,13 +484,13 @@ private struct TerminalLimitWidgetView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     terminalStat(
                         "PEAK DAY",
-                        formatTokenCount(snapshot.usage?.peakDailyTokens),
+                        TokenCountText.make(snapshot.usage?.peakDailyTokens),
                         labelSize: 9.5,
                         valueSize: 15
                     )
                     terminalStat(
                         snapshot.usage?.latestDayLabel ?? "LAST DAY",
-                        formatTokenCount(snapshot.usage?.lastDailyTokens),
+                        TokenCountText.make(snapshot.usage?.lastDailyTokens),
                         labelSize: 9.5,
                         valueSize: 15
                     )
@@ -682,21 +682,6 @@ private struct TerminalLimitWidgetView: View {
             .foregroundStyle(color)
     }
 
-    private func formatTokenCount(_ value: Int64?) -> String {
-        guard let value else { return "--" }
-
-        let number = Double(value)
-        if number >= 1_000_000_000 {
-            return String(format: "%.2fB", number / 1_000_000_000)
-        }
-        if number >= 1_000_000 {
-            return String(format: "%.1fM", number / 1_000_000)
-        }
-        if number >= 1_000 {
-            return String(format: "%.1fK", number / 1_000)
-        }
-        return "\(value)"
-    }
 }
 
 private struct TerminalMetric {
@@ -896,7 +881,7 @@ private struct EditorialLimitWidgetView: View {
 
                 Spacer(minLength: 8)
 
-                (Text(LocalizedStringKey(metricPrefix)) + Text(verbatim: " \(metric.resetClockText)"))
+                (Text(LocalizedStringKey(metricPrefix)) + Text(verbatim: " \(LimitResetClockText.make(for: metric.resetsAt))"))
                     .font(.system(size: 10.5, weight: .semibold))
                     .foregroundStyle(colors.mutedInk)
                     .lineLimit(1)
@@ -984,7 +969,7 @@ private struct EditorialLimitWidgetView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 5) {
                         Text(LocalizedStringKey(resetLabel))
                             .font(.system(size: 7.5, weight: .semibold))
-                        Text(metric.resetClockText)
+                        Text(LimitResetClockText.make(for: metric.resetsAt))
                             .font(.system(size: 13, weight: .regular, design: .serif))
                     }
                     .foregroundStyle(colors.ink)
@@ -1071,7 +1056,7 @@ private struct EditorialLimitWidgetView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text(LocalizedStringKey(resetLabel))
                             .font(.system(size: 9.5, weight: .semibold))
-                        Text(metric.resetClockText)
+                        Text(LimitResetClockText.make(for: metric.resetsAt))
                             .font(.system(size: 16, weight: .regular, design: .serif))
                     }
 
@@ -1136,7 +1121,7 @@ private struct EditorialLimitWidgetView: View {
                     editorialStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 }
                 EditorialVerticalRule(color: colors.rule)
-                editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
+                editorialStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 EditorialVerticalRule(color: colors.rule)
                 editorialStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, spacing: 3.5)
             }
@@ -1146,8 +1131,8 @@ private struct EditorialLimitWidgetView: View {
 
             HStack(alignment: .bottom, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    editorialStat("PEAK DAY", formatTokenCount(snapshot.usage?.peakDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
-                    editorialStat(snapshot.usage?.latestDayLabel ?? "LAST DAY", formatTokenCount(snapshot.usage?.lastDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                    editorialStat("PEAK DAY", TokenCountText.make(snapshot.usage?.peakDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                    editorialStat(snapshot.usage?.latestDayLabel ?? "LAST DAY", TokenCountText.make(snapshot.usage?.lastDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
                 }
                 .frame(width: 112, alignment: .leading)
 
@@ -1407,21 +1392,6 @@ private struct EditorialLimitWidgetView: View {
         }
     }
 
-    private func formatTokenCount(_ value: Int64?) -> String {
-        guard let value else { return "--" }
-
-        let number = Double(value)
-        if number >= 1_000_000_000 {
-            return String(format: "%.2fB", number / 1_000_000_000)
-        }
-        if number >= 1_000_000 {
-            return String(format: "%.1fM", number / 1_000_000)
-        }
-        if number >= 1_000 {
-            return String(format: "%.1fK", number / 1_000)
-        }
-        return "\(value)"
-    }
 }
 
 private struct EditorialMeter: View {
@@ -1489,17 +1459,6 @@ private struct EditorialWidgetBackground: View {
             )
         }
     }
-}
-
-private extension LimitWindowSnapshot {
-    var resetClockText: String {
-        guard let resetsAt else { return "--" }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "HH:mm"
-        return formatter.string(from: resetsAt)
-    }
-
 }
 
 struct CodexLimitWidget: Widget {

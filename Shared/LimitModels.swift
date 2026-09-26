@@ -2,6 +2,38 @@ import Foundation
 
 let widgetKindIdentifier = "Codex Limit Widget"
 
+enum TokenCountText {
+    static func make(_ value: Int64?) -> String {
+        guard let value else { return "--" }
+
+        let number = Double(value)
+        if number >= 1_000_000_000 {
+            return String(format: "%.2fB", number / 1_000_000_000)
+        }
+        if number >= 1_000_000 {
+            return String(format: "%.1fM", number / 1_000_000)
+        }
+        if number >= 1_000 {
+            return String(format: "%.1fK", number / 1_000)
+        }
+        return "\(value)"
+    }
+}
+
+enum LimitResetClockText {
+    private static let formatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "HH:mm"
+        return formatter
+    }()
+
+    static func make(for date: Date?) -> String {
+        guard let date else { return "--" }
+        return formatter.string(from: date)
+    }
+}
+
 enum CodexConnectionState: Equatable {
     case checking
     case ready
