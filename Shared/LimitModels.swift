@@ -1,6 +1,18 @@
 import Foundation
+import os
 
 let widgetKindIdentifier = "Codex Limit Widget"
+
+/// Shared loggers for the app and the widget extension. Write failures used to
+/// be swallowed by `try?`; these make them visible in Console.
+enum LimitLog {
+    private static let subsystem = Bundle.main.bundleIdentifier ?? "com.sergeylopukhov.CodexLimitWidget"
+
+    static let store = Logger(subsystem: subsystem, category: "store")
+    static let cli = Logger(subsystem: subsystem, category: "cli")
+    static let update = Logger(subsystem: subsystem, category: "update")
+    static let widget = Logger(subsystem: subsystem, category: "widget")
+}
 
 enum TokenCountText {
     static func make(_ value: Int64?) -> String {

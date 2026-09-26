@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import os
 import ServiceManagement
 @preconcurrency import UserNotifications
 import WidgetKit
@@ -101,7 +102,11 @@ final class LimitViewModel: ObservableObject {
             normalizeCompactMenuBarMetric(for: fresh)
             let contentChanged = Self.contentChanged(from: snapshot, to: fresh)
             snapshot = fresh
-            try? LimitStore.write(fresh)
+            do {
+                try LimitStore.write(fresh)
+            } catch {
+                LimitLog.store.error("LimitStore.write failed: \(error.localizedDescription)")
+            }
             lastSuccessfulSyncAt = fresh.updatedAt
             lastCLIErrorMessage = nil
             lastCLIErrorAt = nil
@@ -276,7 +281,11 @@ final class LimitViewModel: ObservableObject {
         if var current = snapshot {
             current.errorMessage = knownState == nil ? message : nil
             snapshot = current
-            try? LimitStore.write(current)
+            do {
+                try LimitStore.write(current)
+            } catch {
+                LimitLog.store.error("LimitStore.write failed: \(error.localizedDescription)")
+            }
             reloadWidgets()
         }
     }
@@ -285,7 +294,11 @@ final class LimitViewModel: ObservableObject {
         var next = preferences
         update(&next)
         preferences = next
-        try? LimitPreferencesStore.write(next)
+        do {
+            try LimitPreferencesStore.write(next)
+        } catch {
+            LimitLog.store.error("LimitPreferencesStore.write failed: \(error.localizedDescription)")
+        }
         reloadWidgets()
     }
 
@@ -513,7 +526,11 @@ final class LimitViewModel: ObservableObject {
         else { return }
 
         preferences.compactMenuBarMetric = fallbackMetric
-        try? LimitPreferencesStore.write(preferences)
+        do {
+            try LimitPreferencesStore.write(preferences)
+        } catch {
+            LimitLog.store.error("LimitPreferencesStore.write failed: \(error.localizedDescription)")
+        }
     }
 
     private var hidesCurrentMenuBarMetric: Bool {
@@ -557,7 +574,11 @@ final class LimitViewModel: ObservableObject {
                 return
             }
 
-            try? service.register()
+            do {
+                try service.register()
+            } catch {
+                LimitLog.update.error("SMAppService.register failed: \(error.localizedDescription)")
+            }
             defaults.set(true, forKey: loginItemSetupKey)
         }
     }
@@ -870,17 +891,34 @@ private actor LowLimitNotificationManager {
     }
 
     private func readLedger() -> DeliveryLedger {
-        guard let data = try? Data(contentsOf: ledgerURL()),
-              let ledger = try? JSONDecoder.codexLimitDecoder.decode(DeliveryLedger.self, from: data)
-        else { return DeliveryLedger() }
-        return ledger
+        let url = ledgerURL()
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return DeliveryLedger()
+        }
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder.codexLimitDecoder.decode(DeliveryLedger.self, from: data)
+        } catch {
+            LimitLog.store.error("Notification ledger read failed: \(error.localizedDescription)")
+            return DeliveryLedger()
+        }
     }
 
     private func writeLedger(_ ledger: DeliveryLedger) {
-        guard let data = try? JSONEncoder.codexLimitEncoder.encode(ledger) else { return }
+        let data: Data
+        do {
+            data = try JSONEncoder.codexLimitEncoder.encode(ledger)
+        } catch {
+            LimitLog.store.error("Notification ledger encode failed: \(error.localizedDescription)")
+            return
+        }
         let url = ledgerURL()
-        try? FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-        try? data.write(to: url, options: [.atomic])
+        do {
+            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try data.write(to: url, options: [.atomic])
+        } catch {
+            LimitLog.store.error("Notification ledger write failed: \(error.localizedDescription)")
+        }
     }
 
     private func ledgerURL() -> URL {
