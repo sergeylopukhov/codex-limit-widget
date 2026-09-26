@@ -173,6 +173,14 @@ private struct TerminalLimitWidgetView: View {
         systemStyled ? nil : LimitRemainingLevel.terminalColor(for: percent)
     }
 
+    /// Stale marker tint: the warning tint of the colored design, and the primary
+    /// label color of the system design, which marks levels with the icon.
+    private var staleMarkerStyle: AnyShapeStyle {
+        systemStyled
+            ? AnyShapeStyle(HierarchicalShapeStyle.primary)
+            : AnyShapeStyle(LimitRemainingLevel.terminalColor(for: warningLevelPercent))
+    }
+
     /// Hero percentage with the level icon that the system design adds.
     private func heroPercent(_ percent: Int, size: CGFloat, minScale: CGFloat, glowOpacity: Double, glowRadius: CGFloat) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: size * 0.12) {
@@ -207,7 +215,15 @@ private struct TerminalLimitWidgetView: View {
                     switch family {
                     case .systemSmall:
                         fixedGap(5)
-                        if preferences.widgetShowsLastUpdated {
+                        // The stale marker replaces the sync time, so the row does
+                        // not change the layout of the small widget.
+                        if shouldShowStaleWarning(snapshot, preferences: preferences) {
+                            Text("STALE")
+                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(staleMarkerStyle)
+                                .lineLimit(1)
+                                .frame(width: contentWidth, alignment: .leading)
+                        } else if preferences.widgetShowsLastUpdated {
                             Text("SYNCED \(LimitSyncTimeText.make(for: snapshot.updatedAt))")
                                 .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
                                 .foregroundStyle(dimText)
@@ -346,7 +362,7 @@ private struct TerminalLimitWidgetView: View {
             TerminalDivider(color: mutedAccent)
             fixedGap(2)
 
-            if shouldShowStaleWarning(snapshot), secondaryMetric(excluding: metric.id) != nil {
+            if shouldShowStaleWarning(snapshot, preferences: preferences) {
                 HStack {
                     terminalLine("STALE DATA", color: dimText, size: 11)
                     Spacer()
@@ -444,7 +460,7 @@ private struct TerminalLimitWidgetView: View {
                     .frame(height: 86)
 
                 VStack(alignment: .leading, spacing: 3) {
-                    if shouldShowStaleWarning(snapshot) {
+                    if shouldShowStaleWarning(snapshot, preferences: preferences) {
                         terminalInfoStat("STATUS", value: Text(LocalizedStringKey("STALE")), valueColor: dimText)
                     }
                     terminalInfoStat("STREAK", value: streakValue(snapshot.usage))
@@ -651,10 +667,6 @@ private struct TerminalLimitWidgetView: View {
         return nil
     }
 
-    private func shouldShowStaleWarning(_ snapshot: LimitSnapshot) -> Bool {
-        preferences.widgetShowsStaleWarning && snapshot.isStale
-    }
-
     /// Compact fact for the terminal large widget's side column: label above value.
     private func terminalInfoStat(_ label: String, value: Text, valueColor: AnyShapeStyle? = nil) -> some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -709,6 +721,17 @@ private func limitLevelIconName(for percent: Int) -> String? {
     case .critical: return "exclamationmark.2"
     }
 }
+
+/// Single rule for the stale marker: the preference is on and the snapshot is
+/// older than its freshness window. Every widget size and design follows it.
+private func shouldShowStaleWarning(_ snapshot: LimitSnapshot, preferences: LimitPreferences) -> Bool {
+    preferences.widgetShowsStaleWarning && snapshot.isStale
+}
+
+/// Remaining percentage that `LimitRemainingLevel` resolves as warning. The
+/// markers have no percentage of their own, so they ask for this one to pick the
+/// warning tint of the terminal palette.
+private let warningLevelPercent = 20
 
 private struct TerminalMetric {
     let id: String
@@ -1328,10 +1351,17 @@ private struct EditorialLimitWidgetView: View {
         limitMeter(title: "WEEKLY LIMIT", percent: percent, height: height, labelSize: labelSize)
     }
 
-    /// Last successful sync time; renders nothing while the preference is off.
+    /// Last successful sync time, or the stale marker while the data is outdated.
+    /// The marker takes the row of the sync time, so the layout does not change.
     @ViewBuilder
     private func editorialSyncLine(_ snapshot: LimitSnapshot, size: CGFloat) -> some View {
-        if preferences.widgetShowsLastUpdated {
+        if shouldShowStaleWarning(snapshot, preferences: preferences) {
+            Text("STALE")
+                .font(.system(size: size, weight: .semibold))
+                .foregroundStyle(colors.warningInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        } else if preferences.widgetShowsLastUpdated {
             Text("SYNCED \(LimitSyncTimeText.make(for: snapshot.updatedAt))")
                 .font(.system(size: size, weight: .semibold))
                 .foregroundStyle(colors.mutedInk)

@@ -158,6 +158,7 @@
 "Shortcut" = "Shortcut";
 "Source" = "Source";
 "Status" = "Status";
+"STALE" = "STALE";
 "The widget opens the app, the detailed limits window, or Codex when you click it." = "The widget opens the app, the detailed limits window, or Codex when you click it.";
 "This account returned no limit windows." = "This account returned no limit windows.";
 "Threads" = "Threads";
