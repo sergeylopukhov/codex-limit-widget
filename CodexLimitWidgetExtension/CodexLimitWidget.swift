@@ -460,7 +460,7 @@ private struct TerminalLimitWidgetView: View {
             Spacer(minLength: 10)
 
             HStack(spacing: 14) {
-                terminalStat("USED", "\(metric.window.usedPercent)%", labelSize: 9.5, valueSize: 15)
+                terminalStat("USED SHORT", "\(metric.window.usedPercent)%", labelSize: 9.5, valueSize: 15)
                 if preferences.widgetShowsWeekly, let weekly = snapshot.weekly {
                     TerminalVerticalDivider(color: mutedAccent)
                     terminalStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15)
@@ -1123,7 +1123,7 @@ private struct EditorialLimitWidgetView: View {
             Spacer(minLength: 10)
 
             HStack(spacing: 14) {
-                editorialStat("USED", "\(metric.usedPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
+                editorialStat("USED SHORT", "\(metric.usedPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
                     EditorialVerticalRule(color: colors.rule)
                     editorialStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
