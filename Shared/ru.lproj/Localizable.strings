@@ -171,6 +171,7 @@
 "PLAN" = "ТАРИФ";
 "LIMIT" = "ЛИМИТ";
 "USED" = "ИСПОЛЬЗОВАНО";
+"USED SHORT" = "РАСХОД";
 "WEEKLY" = "НЕДЕЛЯ";
 "WEEKLY LIMIT" = "НЕДЕЛЬНЫЙ ЛИМИТ";
 "WEEKLY REMAINING" = "ОСТАЛОСЬ НА НЕДЕЛЮ";
@@ -247,6 +248,9 @@
 "Reset %@" = "Сброс %@";
 "Used %lld%%" = "Использовано %lld%%";
 "%lldd" = "%lld дн.";
+"THREADS" = "ПОТОКИ";
+"SKILLS" = "НАВЫКИ";
+"%lldh %lldm" = "%lld ч %lld мин";
 "Never" = "Никогда";
 "None" = "Нет";
 "Not set" = "Не задано";
@@ -281,3 +285,7 @@
 "The 5-hour and weekly limits each have their own switch and thresholds. An alert is sent once for the nearest reached threshold; lower thresholds alert later if the limit continues to fall." = "У 5-часового и недельного лимитов свои переключатели и пороги. Предупреждение приходит один раз для ближайшего достигнутого порога; более низкие пороги сработают позже, если лимит продолжит падать.";
 "Menu bar without the refresh glyph" = "Строка меню без круговой стрелки";
 "The circular refresh arrow no longer appears next to the menu bar percentage. You can still refresh limits from the menu-bar menu, the popover, and Settings." = "Круговая стрелка обновления больше не появляется рядом с процентом в строке меню. Обновить лимиты по-прежнему можно из контекстного меню, поповера и настроек.";
+"TODAY" = "СЕГОДНЯ";
+"Shows Codex limits using the selected design, including automatic system appearance." = "Показывает лимиты Codex в выбранном оформлении и с учётом системного вида.";
+"%@: unavailable" = "%@: нет данных";
+"%@: %lld tokens" = "%@: %lld токенов";

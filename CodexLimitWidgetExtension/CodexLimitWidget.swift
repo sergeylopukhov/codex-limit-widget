@@ -54,6 +54,15 @@ struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetRenderingMode) private var renderingMode
+    @Environment(\.showsWidgetContainerBackground) private var showsContainerBackground
+
+    /// macOS draws its own background for the Clear/Tinted widget looks (and on
+    /// the lock screen). Then the painted card must stay out of the way so the
+    /// system glass shows through, and the content uses system label colors.
+    private var usesSystemBackground: Bool {
+        !showsContainerBackground || renderingMode != .fullColor
+    }
 
     @ViewBuilder
     var body: some View {
@@ -61,7 +70,11 @@ struct CodexLimitWidgetEntryView: View {
             widgetContent
         }
         .containerBackground(for: .widget) {
-            widgetBackground
+            if usesSystemBackground {
+                Color.clear
+            } else {
+                widgetBackground
+            }
         }
         .environment(\.locale, entry.preferences.appLanguage.locale)
         .widgetURL(entry.preferences.widgetClickAction.widgetLink)
@@ -74,13 +87,15 @@ struct CodexLimitWidgetEntryView: View {
             TerminalLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                family: family
+                family: family,
+                systemStyled: usesSystemBackground
             )
         case .editorial:
             EditorialLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                variant: EditorialWidgetVariant(family: family)
+                variant: EditorialWidgetVariant(family: family),
+                colors: usesSystemBackground ? .system : .beige
             )
         case .system:
             // Keep a visible widget even if WidgetKit delivers a stale
@@ -88,7 +103,8 @@ struct CodexLimitWidgetEntryView: View {
             TerminalLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                family: family
+                family: family,
+                systemStyled: usesSystemBackground
             )
         }
     }
@@ -121,30 +137,59 @@ private struct TerminalLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let family: WidgetFamily
+    /// macOS supplies the background (Clear/Tinted look): use system label colors
+    /// and leave the glass visible.
+    var systemStyled: Bool = false
     @Environment(\.locale) private var locale
 
-    private var accent: Color { Color(red: 0.52, green: 0.95, blue: 0.43) }
-    private var mutedAccent: Color { Color(red: 0.32, green: 0.56, blue: 0.28) }
-    private var dimText: Color { Color(red: 0.64, green: 0.86, blue: 0.58) }
+    private var accent: Color { systemStyled ? Color.primary : Color(red: 0.52, green: 0.95, blue: 0.43) }
+    private var mutedAccent: Color { systemStyled ? Color.primary.opacity(0.45) : Color(red: 0.32, green: 0.56, blue: 0.28) }
+    private var dimText: Color { systemStyled ? Color.primary.opacity(0.76) : Color(red: 0.64, green: 0.86, blue: 0.58) }
+    private var meterEmpty: Color { systemStyled ? Color.primary.opacity(0.24) : Color(red: 0.17, green: 0.18, blue: 0.14) }
+    private var meterEmptyStroke: Color { systemStyled ? Color.primary.opacity(0.32) : Color(red: 0.39, green: 0.48, blue: 0.33).opacity(0.24) }
+
+    private func heroColor(for percent: Int) -> Color {
+        guard systemStyled else { return LimitRemainingLevel.terminalColor(for: percent) }
+        switch LimitRemainingLevel.resolve(remainingPercent: percent) {
+        case .normal: return .primary
+        case .warning: return .primary.opacity(0.72)
+        case .critical: return .primary.opacity(0.5)
+        }
+    }
 
     var body: some View {
         GeometryReader { proxy in
             let compact = family == .systemSmall
             let metric = activeMetric
             let padding = contentPadding
+            let contentWidth = max(0, proxy.size.width - padding.leading - padding.trailing)
 
-            VStack(alignment: .leading, spacing: verticalSpacing) {
+            VStack(alignment: .leading, spacing: 0) {
                 header(metric: metric, compact: compact)
-                TerminalDivider(color: mutedAccent)
 
                 if let snapshot, let metric {
                     switch family {
                     case .systemSmall:
-                        compactBody(snapshot: snapshot, metric: metric)
+                        fixedGap(5)
+                        if preferences.widgetShowsLastUpdated {
+                            Text("SYNCED \(LimitSyncTimeText.make(for: snapshot.updatedAt))")
+                                .font(.system(size: 8.5, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(dimText)
+                                .lineLimit(1)
+                                .frame(width: contentWidth, alignment: .leading)
+                        }
+                        compactBody(snapshot: snapshot, metric: metric, width: contentWidth)
                     case .systemLarge:
-                        largeBody(snapshot: snapshot, metric: metric, width: proxy.size.width)
+                        // A tight, fixed gap keeps the hero number close to the title,
+                        // matching the colored widget.
+                        Spacer(minLength: 6)
+                            .frame(maxHeight: 6)
+                        largeBody(snapshot: snapshot, metric: metric, width: contentWidth)
                     default:
-                        mediumBody(snapshot: snapshot, metric: metric, width: proxy.size.width)
+                        fixedGap(2)
+                        TerminalDivider(color: mutedAccent)
+                        fixedGap(2)
+                        mediumBody(snapshot: snapshot, metric: metric, width: contentWidth)
                     }
                 } else {
                     Spacer(minLength: 4)
@@ -154,7 +199,7 @@ private struct TerminalLimitWidgetView: View {
                 }
             }
             .frame(
-                width: max(0, proxy.size.width - padding.leading - padding.trailing),
+                width: contentWidth,
                 height: max(0, proxy.size.height - padding.top - padding.bottom),
                 alignment: .topLeading
             )
@@ -162,22 +207,15 @@ private struct TerminalLimitWidgetView: View {
         }
     }
 
-    private var verticalSpacing: CGFloat {
-        switch family {
-        case .systemSmall: return 5
-        case .systemLarge: return 9
-        default: return 5
-        }
-    }
-
+    /// Paddings mirror the colored widget so both designs place their blocks the same way.
     private var contentPadding: EdgeInsets {
         switch family {
         case .systemSmall:
-            return EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
-        case .systemLarge:
             return EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16)
+        case .systemLarge:
+            return EdgeInsets(top: 16, leading: 22, bottom: 16, trailing: 22)
         default:
-            return EdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
+            return EdgeInsets(top: 8, leading: 12, bottom: 5, trailing: 12)
         }
     }
 
@@ -193,9 +231,14 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func header(metric: TerminalMetric?, compact: Bool) -> some View {
-        HStack(alignment: .firstTextBaseline) {
+        // Sizes match the colored header height so the rows below line up.
+        let titleSize: CGFloat = compact ? 13 : (family == .systemMedium ? 13 : 24)
+        let clockSize: CGFloat = compact ? 10 : (family == .systemMedium ? 12 : 15)
+        let syncSize: CGFloat = compact ? 8.5 : (family == .systemMedium ? 10 : 11)
+
+        return HStack(alignment: .firstTextBaseline) {
             Text("CODEX LIMIT")
-                .font(.system(size: compact ? 10 : (family == .systemMedium ? 13 : 14), weight: .bold, design: .monospaced))
+                .font(.system(size: titleSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(accent)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -206,20 +249,20 @@ private struct TerminalLimitWidgetView: View {
                 if let metric, preferences.widgetShowsResetTimes {
                     Group {
                         if compact {
-                            Text(metric.window.resetClockText)
+                            Text(LocalizedStringKey(metric.id)) + Text(verbatim: " \(metric.window.resetClockText)")
                         } else {
                             Text("resets at") + Text(verbatim: " \(metric.window.resetClockText)")
                         }
                     }
-                        .font(.system(size: compact ? 9 : (family == .systemMedium ? 12 : 13), weight: .semibold, design: .monospaced))
+                        .font(.system(size: clockSize, weight: .semibold, design: .monospaced))
                         .foregroundStyle(dimText)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
 
-                if preferences.widgetShowsLastUpdated, let syncedAt = snapshot?.updatedAt {
+                if !compact, preferences.widgetShowsLastUpdated, let syncedAt = snapshot?.updatedAt {
                     Text("SYNCED \(LimitSyncTimeText.make(for: syncedAt))")
-                        .font(.system(size: compact ? 8 : (family == .systemMedium ? 10 : 11), weight: .semibold, design: .monospaced))
+                        .font(.system(size: syncSize, weight: .semibold, design: .monospaced))
                         .foregroundStyle(dimText)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -229,9 +272,10 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func mediumBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let metricColor = LimitRemainingLevel.terminalColor(for: metric.window.leftPercent)
+        let metricColor = heroColor(for: metric.window.leftPercent)
+        let leftWidth = max(116, width * 0.42)
 
-        return VStack(alignment: .leading, spacing: 4) {
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -2) {
                     Text("\(metric.window.leftPercent)%")
@@ -244,8 +288,10 @@ private struct TerminalLimitWidgetView: View {
                     Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                 }
-                .frame(width: max(116, width * 0.42), alignment: .leading)
+                .frame(width: leftWidth, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 4) {
                     statRow("PLAN", snapshot.planDisplayName, size: 12)
@@ -255,7 +301,7 @@ private struct TerminalLimitWidgetView: View {
                             secondary.id,
                             "\(secondary.window.leftPercent)%",
                             size: 12,
-                            valueColor: LimitRemainingLevel.terminalColor(for: secondary.window.leftPercent)
+                            valueColor: heroColor(for: secondary.window.leftPercent)
                         )
                     } else {
                         statRow("USED", "\(metric.window.usedPercent)%", size: 12)
@@ -263,219 +309,302 @@ private struct TerminalLimitWidgetView: View {
                 }
                 .padding(.top, 2)
             }
+            .frame(width: width, alignment: .leading)
 
+            fixedGap(2)
             TerminalDivider(color: mutedAccent)
+            fixedGap(2)
 
             if shouldShowStaleWarning(snapshot), secondaryMetric(excluding: metric.id) != nil {
                 HStack {
                     terminalLine("STALE DATA", color: dimText, size: 11)
                     Spacer()
                 }
+                .frame(width: width, alignment: .leading)
+                fixedGap(2)
             }
 
             if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
-                HStack {
-                    terminalLine("WEEKLY LIMIT", color: dimText, size: 11)
-                    Spacer()
-                    terminalLine("\(weekly.leftPercent)%", color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent), size: 11)
-                }
-
+                terminalMeterHeader("WEEKLY LIMIT", "\(weekly.leftPercent)%", width: width)
+                fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent),
+                    color: heroColor(for: weekly.leftPercent),
+                    emptyColor: meterEmpty,
+                    emptyStroke: meterEmptyStroke,
                     blockCount: 24,
-                    height: 12
+                    height: 10
                 )
+                .frame(width: width)
             } else {
-                HStack {
-                    terminalLine(metric.remainingLabel, color: dimText, size: 11)
-                    Spacer()
-                    terminalLine("\(metric.window.leftPercent)%", color: metricColor, size: 11)
-                }
+                terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width)
+                fixedGap(3)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10)
+                    .frame(width: width)
 
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, blockCount: 24, height: 12)
-
-                if shouldShowStaleWarning(snapshot) {
-                    HStack {
-                        terminalLine("STATUS", color: dimText, size: 11)
-                        Spacer()
-                        terminalLine("STALE DATA", color: accent, size: 11)
-                    }
-                } else if preferences.widgetShowsResetTimes {
-                    HStack {
-                        terminalLine("NEXT RESET", color: dimText, size: 11)
-                        Spacer()
-                        terminalLine(
-                            metric.window.resetDateTimeText(locale: locale).uppercased(with: locale),
-                            color: accent,
-                            size: 11
-                        )
-                    }
+                if preferences.widgetShowsResetTimes {
+                    fixedGap(2)
+                    terminalMeterHeader(
+                        "NEXT RESET",
+                        metric.window.resetDateTimeText(locale: locale).uppercased(with: locale),
+                        width: width
+                    )
                 }
             }
         }
+        .frame(width: width, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+        .clipped()
     }
 
-    private func compactBody(snapshot: LimitSnapshot, metric: TerminalMetric) -> some View {
-        let metricColor = LimitRemainingLevel.terminalColor(for: metric.window.leftPercent)
+    private func compactBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
+        let metricColor = heroColor(for: metric.window.leftPercent)
 
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: 8) {
+            VStack(alignment: .leading, spacing: -6) {
                 Text("\(metric.window.leftPercent)%")
-                    .font(.system(size: 38, weight: .black, design: .monospaced))
+                    .font(.system(size: 52, weight: .black, design: .monospaced))
                     .foregroundStyle(metricColor)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.65)
+                    .minimumScaleFactor(0.55)
                     .shadow(color: metricColor.opacity(0.22), radius: 4)
 
-                Spacer(minLength: 6)
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    compactStat("PLAN", snapshot.planDisplayName)
-                    compactStat("LIMIT", metric.id)
-                }
-                .padding(.top, 8)
+                Text(LocalizedStringKey(metric.remainingLabel))
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundStyle(dimText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-
-            Text(LocalizedStringKey(metric.remainingLabel))
-                .font(.system(size: 9.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(dimText)
 
             Spacer(minLength: 4)
 
             if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
-                HStack {
-                    terminalLine("WEEKLY LIMIT", color: dimText, size: 9.5)
-                    Spacer(minLength: 6)
-                    terminalLine("\(weekly.leftPercent)%", color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent), size: 9.5)
-                }
-
-                Spacer(minLength: 3)
-
+                terminalMeterHeader("WEEK", "\(weekly.leftPercent)%", width: width, size: 9.5)
+                fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent),
+                    color: heroColor(for: weekly.leftPercent),
+                    emptyColor: meterEmpty,
+                    emptyStroke: meterEmptyStroke,
                     blockCount: 12,
-                    height: 10
+                    height: 8
                 )
-            } else {
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, blockCount: 12, height: 10)
-            }
-
-            Spacer(minLength: 4)
-
-            if shouldShowStaleWarning(snapshot) {
-                statRow("STALE", "DATA", size: 10)
-            } else if preferences.widgetShowsResetTimes {
-                statRow("RESET", metric.window.resetClockText, size: 10)
+                .frame(width: width)
             }
         }
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let contentWidth = max(0, width - contentPadding.leading - contentPadding.trailing)
-        let columnGap: CGFloat = 12
-        let statsColumnWidth = min(126, max(108, contentWidth * 0.34))
-        let percentColumnWidth = max(0, contentWidth - statsColumnWidth - columnGap)
-        let metricColor = LimitRemainingLevel.terminalColor(for: metric.window.leftPercent)
+        let messageWidth: CGFloat = 100
+        let leftWidth = max(150, width - messageWidth - 25)
+        let metricColor = heroColor(for: metric.window.leftPercent)
 
         return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: columnGap) {
-                VStack(alignment: .leading, spacing: -2) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: -6) {
                     Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 86, weight: .black, design: .monospaced))
+                        .font(.system(size: 80, weight: .black, design: .monospaced))
                         .foregroundStyle(metricColor)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .allowsTightening(true)
-                        .frame(width: percentColumnWidth, alignment: .leading)
+                        .minimumScaleFactor(0.55)
                         .shadow(color: metricColor.opacity(0.24), radius: 5)
 
                     Text(LocalizedStringKey(metric.remainingLabel))
-                        .font(.system(size: 16, weight: .bold, design: .monospaced))
+                        .font(.system(size: 20, weight: .bold, design: .monospaced))
                         .foregroundStyle(dimText)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .frame(width: percentColumnWidth, alignment: .leading)
+                        .minimumScaleFactor(0.7)
                 }
-                .frame(width: percentColumnWidth, alignment: .leading)
-                .clipped()
-                .layoutPriority(1)
-
-                VStack(alignment: .leading, spacing: 7) {
-                    statRow("USED", "\(metric.window.usedPercent)%", size: 15)
-                    statRow("LIMIT", metric.id, size: 15)
-                    if let secondary = secondaryMetric(excluding: metric.id) {
-                        statRow(
-                            secondary.id,
-                            "\(secondary.window.leftPercent)%",
-                            size: 15,
-                            valueColor: LimitRemainingLevel.terminalColor(for: secondary.window.leftPercent)
-                        )
-                    }
-                    statRow("PLAN", snapshot.planDisplayName, size: 15)
-                    if shouldShowStaleWarning(snapshot) {
-                        statRow("STALE", "DATA", size: 15)
-                    }
-                }
-                .frame(width: statsColumnWidth, alignment: .trailing)
+                .frame(width: leftWidth, alignment: .leading)
                 .layoutPriority(2)
-                .padding(.top, 10)
-            }
-            .frame(width: contentWidth, alignment: .leading)
-            .clipped()
 
-            fixedGap(6)
-            TerminalDivider(color: mutedAccent)
-            fixedGap(8)
+                TerminalVerticalDivider(color: mutedAccent)
+                    .frame(height: 86)
+
+                VStack(alignment: .leading, spacing: 3) {
+                    if shouldShowStaleWarning(snapshot) {
+                        terminalInfoStat("STATUS", value: Text(LocalizedStringKey("STALE")), valueColor: dimText)
+                    }
+                    terminalInfoStat("STREAK", value: streakValue(snapshot.usage))
+                    terminalInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
+                    terminalInfoStat("THREADS", value: countValue(snapshot.usage?.totalThreads))
+                    terminalInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
+                }
+                .frame(width: messageWidth, alignment: .leading)
+                .layoutPriority(1)
+            }
+            .frame(width: width, alignment: .leading)
+
+            Spacer(minLength: 10)
 
             if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metric.id != "WEEKLY" {
-                HStack {
-                    terminalLine("WEEKLY LIMIT", color: dimText, size: 12)
-                    Spacer(minLength: 8)
-                    terminalLine("\(weekly.leftPercent)%", color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent), size: 12)
-                }
-                .frame(width: contentWidth, alignment: .leading)
-                fixedGap(5)
+                terminalMeterHeader("WEEKLY LIMIT", "\(weekly.leftPercent)%", width: width, size: 10)
+                fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: LimitRemainingLevel.terminalColor(for: weekly.leftPercent),
-                    blockCount: 24
+                    color: heroColor(for: weekly.leftPercent),
+                    emptyColor: meterEmpty,
+                    emptyStroke: meterEmptyStroke,
+                    blockCount: 24,
+                    height: 8
                 )
-                    .frame(width: contentWidth)
+                .frame(width: width)
             } else {
-                HStack {
-                    terminalLine(metric.remainingLabel, color: dimText, size: 12)
-                    Spacer(minLength: 8)
-                    terminalLine("\(metric.window.leftPercent)%", color: metricColor, size: 12)
-                }
-                .frame(width: contentWidth, alignment: .leading)
-                fixedGap(5)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, blockCount: 24)
-                    .frame(width: contentWidth)
+                terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width, size: 10)
+                fixedGap(3)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 8)
+                    .frame(width: width)
             }
 
-            fixedGap(8)
-            TerminalDivider(color: mutedAccent.opacity(0.65))
-            fixedGap(8)
+            Spacer(minLength: 10)
 
-            if let usage = snapshot.usage {
-                VStack(alignment: .leading, spacing: 5) {
-                    statRow("TOKENS", formatTokenCount(usage.lifetimeTokens), size: 13)
-                    statRow("PEAK DAY", formatTokenCount(usage.peakDailyTokens), size: 13)
-                    statRow("LAST DAY", formatTokenCount(usage.lastDailyTokens), size: 13)
-                    if let currentStreakDays = usage.currentStreakDays {
-                        statRow("STREAK", "\(currentStreakDays)d", size: 13)
-                    }
-                    statRow("MAX TURN", formatDuration(usage.longestRunningTurnSec), size: 13)
+            HStack(spacing: 14) {
+                terminalStat("USED", "\(metric.window.usedPercent)%", labelSize: 9.5, valueSize: 15)
+                if preferences.widgetShowsWeekly, let weekly = snapshot.weekly {
+                    TerminalVerticalDivider(color: mutedAccent)
+                    terminalStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15)
                 }
-                .frame(width: contentWidth, alignment: .leading)
+                TerminalVerticalDivider(color: mutedAccent)
+                terminalStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
+                TerminalVerticalDivider(color: mutedAccent)
+                terminalStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            Spacer(minLength: 10)
+
+            HStack(alignment: .bottom, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    terminalStat(
+                        "PEAK DAY",
+                        formatTokenCount(snapshot.usage?.peakDailyTokens),
+                        labelSize: 9.5,
+                        valueSize: 15
+                    )
+                    terminalStat(
+                        snapshot.usage?.latestDayLabel ?? "LAST DAY",
+                        formatTokenCount(snapshot.usage?.lastDailyTokens),
+                        labelSize: 9.5,
+                        valueSize: 15
+                    )
+                }
+                .frame(width: 112, alignment: .leading)
+
+                TerminalVerticalDivider(color: mutedAccent)
+
+                tokenBarChart(snapshot.usage, barsHeight: 36)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(width: width, alignment: .topLeading)
+    }
+
+    /// Label on the left, value on the right, mirroring the colored meter header.
+    private func terminalMeterHeader(_ label: String, _ value: String, width: CGFloat, size: CGFloat = 11) -> some View {
+        HStack {
+            terminalLine(label, color: dimText, size: size)
+            Spacer(minLength: 8)
+            terminalLine(value, color: accent, size: size)
+        }
+        .frame(width: width, alignment: .leading)
+    }
+
+    /// Label above value, used for the stat rows that sit in the colored grid.
+    private func terminalStat(
+        _ label: String,
+        _ value: String,
+        labelSize: CGFloat,
+        valueSize: CGFloat,
+        valueColor: Color? = nil
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(LocalizedStringKey(label))
+                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                .foregroundStyle(dimText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            Text(value)
+                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                .foregroundStyle(valueColor ?? accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Seven-day token bars in the terminal palette, placed where the colored
+    /// widget draws its chart.
+    private func tokenBarChart(_ usage: AccountUsageSnapshot?, barsHeight: CGFloat) -> some View {
+        let days = usage?.sevenDayTokens ?? []
+        let maximum = max(1, days.compactMap(\.tokens).max() ?? 1)
+        let gap: CGFloat = 5
+
+        return Group {
+            if days.isEmpty {
+                Color.clear.frame(height: 1)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("7D TOKENS")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(dimText)
+                        .lineLimit(1)
+
+                    GeometryReader { geometry in
+                        let count = max(1, days.count)
+                        let barWidth = max(2, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack(alignment: .bottom, spacing: gap) {
+                                ForEach(days.indices, id: \.self) { index in
+                                    let day = days[index]
+                                    let tokens = max(0, day.tokens ?? 0)
+                                    let height = tokens > 0 ? max(3, barsHeight * CGFloat(tokens) / CGFloat(maximum)) : 2
+
+                                    RoundedRectangle(cornerRadius: 1)
+                                        .fill(tokens > 0
+                                              ? accent.opacity(index == days.count - 1 ? 0.95 : 0.55)
+                                              : mutedAccent.opacity(0.9))
+                                        .frame(width: barWidth, height: height)
+                                        .frame(width: barWidth, height: barsHeight, alignment: .bottom)
+                                        .accessibilityLabel(day.tokens == nil
+                                                            ? "\(day.date): unavailable"
+                                                            : "\(day.date): \(tokens) tokens")
+                                }
+                            }
+                            .frame(height: barsHeight, alignment: .bottom)
+
+                            Rectangle()
+                                .fill(mutedAccent.opacity(0.7))
+                                .frame(height: 1)
+
+                            HStack(spacing: gap) {
+                                ForEach(days.indices, id: \.self) { index in
+                                    Text(terminalAxisLabel(for: days, at: index))
+                                        .font(.system(size: 7.5, weight: .bold, design: .monospaced))
+                                        .foregroundStyle(dimText)
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.7)
+                                        .frame(width: barWidth,
+                                               alignment: index == 0 ? .leading : (index == days.count - 1 ? .trailing : .center))
+                                }
+                            }
+                            .frame(height: 9)
+                        }
+                        .frame(width: geometry.size.width, alignment: .leading)
+                    }
+                    .frame(height: barsHeight + 16)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .frame(width: contentWidth, alignment: .topLeading)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func terminalAxisLabel(for days: [DailyTokenUsage], at index: Int) -> String {
+        guard index == 0 || index == days.count - 1, days.indices.contains(index) else { return "" }
+        return String(days[index].date.suffix(5)).replacingOccurrences(of: "-", with: "/")
     }
 
     private func fixedGap(_ height: CGFloat) -> some View {
@@ -504,6 +633,24 @@ private struct TerminalLimitWidgetView: View {
         preferences.widgetShowsStaleWarning && snapshot.isStale
     }
 
+    /// Compact fact for the terminal large widget's side column: label above value.
+    private func terminalInfoStat(_ label: String, value: Text, valueColor: Color? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(LocalizedStringKey(label))
+                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
+                .foregroundStyle(dimText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            value
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundStyle(valueColor ?? accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     private func statRow(_ label: String, _ value: String, size: CGFloat = 13, valueColor: Color? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label))
@@ -521,19 +668,6 @@ private struct TerminalLimitWidgetView: View {
                 .layoutPriority(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func compactStat(_ label: String, _ value: String) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(LocalizedStringKey(label))
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(dimText)
-            Text(value)
-                .font(.system(size: 8.5, weight: .bold, design: .monospaced))
-                .foregroundStyle(accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
     }
 
     private func terminalLine(_ text: String, color: Color, size: CGFloat) -> Text {
@@ -589,6 +723,8 @@ private struct TerminalMetric {
 private struct TerminalMeter: View {
     let percent: Int
     let color: Color
+    let emptyColor: Color
+    let emptyStroke: Color
     var blockCount = 20
     var height: CGFloat = 13
 
@@ -601,10 +737,10 @@ private struct TerminalMeter: View {
             HStack(spacing: spacing) {
                 ForEach(0..<safeCount, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 1.5)
-                        .fill(index < filledCount ? color : Color(red: 0.17, green: 0.18, blue: 0.14))
+                        .fill(index < filledCount ? color : emptyColor)
                         .overlay(
                             RoundedRectangle(cornerRadius: 1.5)
-                                .stroke(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(index < filledCount ? 0.4 : 0.24), lineWidth: 0.6)
+                                .stroke(index < filledCount ? color.opacity(0.4) : emptyStroke, lineWidth: 0.6)
                         )
                         .shadow(color: index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
                         .frame(width: blockWidth, height: height)
@@ -629,6 +765,16 @@ private struct TerminalDivider: View {
         Rectangle()
             .fill(color.opacity(0.72))
             .frame(height: 1)
+    }
+}
+
+private struct TerminalVerticalDivider: View {
+    let color: Color
+
+    var body: some View {
+        Rectangle()
+            .fill(color.opacity(0.72))
+            .frame(width: 1)
     }
 }
 
@@ -672,6 +818,47 @@ private enum EditorialWidgetVariant {
     }
 }
 
+/// Colors of one widget card. `beige` paints the app's own card; `system` is
+/// used when macOS supplies the glass background instead.
+private struct EditorialColors {
+    var ink: Color
+    var mutedInk: Color
+    var rule: Color
+    var fill: Color
+    var empty: Color
+    var warningInk: Color
+    var criticalInk: Color
+
+    func heroColor(for percent: Int) -> Color {
+        switch LimitRemainingLevel.resolve(remainingPercent: percent) {
+        case .normal: return ink
+        case .warning: return warningInk
+        case .critical: return criticalInk
+        }
+    }
+
+    static let beige = EditorialColors(
+        ink: EditorialPalette.ink,
+        mutedInk: EditorialPalette.mutedInk,
+        rule: EditorialPalette.rule,
+        fill: EditorialPalette.fill,
+        empty: EditorialPalette.empty,
+        warningInk: Color(red: 0.60, green: 0.38, blue: 0.06),
+        criticalInk: Color(red: 0.62, green: 0.16, blue: 0.12)
+    )
+
+    /// System rendering: standard label colors, the remaining-limit level fades the number.
+    static let system = EditorialColors(
+        ink: .primary,
+        mutedInk: .primary.opacity(0.74),
+        rule: .primary.opacity(0.45),
+        fill: .primary.opacity(0.92),
+        empty: .primary.opacity(0.24),
+        warningInk: .primary.opacity(0.78),
+        criticalInk: .primary.opacity(0.58)
+    )
+}
+
 private enum EditorialPalette {
     static let paper = Color(red: 0.93, green: 0.90, blue: 0.82)
     static let paperLight = Color(red: 0.98, green: 0.96, blue: 0.90)
@@ -686,6 +873,7 @@ private struct EditorialLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let variant: EditorialWidgetVariant
+    var colors: EditorialColors = .beige
     @Environment(\.locale) private var locale
 
     var body: some View {
@@ -710,54 +898,75 @@ private struct EditorialLimitWidgetView: View {
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
         let metricPrefix = snapshot.fiveHour == nil ? "WEEK" : "5H"
 
-        return VStack(alignment: .leading, spacing: 7) {
+        return VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Codex Limit")
-                    .font(.system(size: 14, weight: .regular, design: .serif))
-                    .foregroundStyle(EditorialPalette.ink)
+                    .font(.system(size: 13.5, weight: .regular, design: .serif))
+                    .foregroundStyle(colors.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Spacer(minLength: 8)
 
-                VStack(alignment: .trailing, spacing: 2) {
-                    (Text(LocalizedStringKey(metricPrefix)) + Text(verbatim: " \(metric.resetClockText)"))
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(EditorialPalette.mutedInk)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    editorialSyncLine(snapshot, size: 9)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: -2) {
-                Text("\(metric.leftPercent)%")
-                    .font(.system(size: 48, weight: .regular, design: .serif))
-                    .foregroundStyle(LimitRemainingLevel.editorialColor(for: metric.leftPercent))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.58)
-
-                Text("Remaining")
-                    .font(.system(size: 20, weight: .regular, design: .serif))
-                    .foregroundStyle(EditorialPalette.ink)
+                (Text(LocalizedStringKey(metricPrefix)) + Text(verbatim: " \(metric.resetClockText)"))
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(colors.mutedInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
 
+            // The sync line gets its own row: next to the title it was always clipped.
+            editorialSyncLine(snapshot, size: 8)
+
+            VStack(alignment: .leading, spacing: -7) {
+                Text("\(metric.leftPercent)%")
+                    .font(.system(size: 54, weight: .regular, design: .serif))
+                    .foregroundStyle(colors.heroColor(for: metric.leftPercent))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+
+                Text("Remaining")
+                    .font(.system(size: 12, weight: .regular, design: .serif))
+                    .foregroundStyle(colors.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            Spacer(minLength: 3)
+
             if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
-                weeklyMeter(weekly.leftPercent, height: 8, labelSize: 9)
+                compactMeter(title: "WEEK", percent: weekly.leftPercent, height: 7, labelSize: 9)
             }
-
-            HStack(spacing: 10) {
-                editorialStat("USED", "\(metric.usedPercent)%")
-                EditorialVerticalRule()
-                editorialStat("PLAN", snapshot.planDisplayName)
-            }
-
         }
         .padding(padding)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    /// Compact meter row for the small widget: a short label, the value and the bar.
+    private func compactMeter(title: String, percent: Int, height: CGFloat, labelSize: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(LocalizedStringKey(title))
+                    .font(.system(size: labelSize, weight: .semibold))
+                    .foregroundStyle(colors.mutedInk)
+                    .lineLimit(1)
+
+                Spacer(minLength: 6)
+
+                Text(verbatim: "\(percent)%")
+                    .font(.system(size: labelSize, weight: .semibold))
+                    .foregroundStyle(colors.mutedInk)
+                    .lineLimit(1)
+            }
+
+            EditorialMeter(
+                percent: percent,
+                height: height,
+                color: colors.heroColor(for: percent),
+                empty: colors.empty,
+                rule: colors.rule
+            )
+        }
     }
 
     private func medium(snapshot: LimitSnapshot, size: CGSize) -> some View {
@@ -776,7 +985,7 @@ private struct EditorialLimitWidgetView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text("Codex Limit")
                     .font(.system(size: 14, weight: .regular, design: .serif))
-                    .foregroundStyle(EditorialPalette.ink)
+                    .foregroundStyle(colors.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
@@ -789,7 +998,7 @@ private struct EditorialLimitWidgetView: View {
                         Text(metric.resetClockText)
                             .font(.system(size: 13, weight: .regular, design: .serif))
                     }
-                    .foregroundStyle(EditorialPalette.ink)
+                    .foregroundStyle(colors.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
 
@@ -797,19 +1006,19 @@ private struct EditorialLimitWidgetView: View {
                 }
             }
 
-            EditorialHorizontalRule()
+            EditorialHorizontalRule(color: colors.rule)
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -5) {
                     Text("\(metric.leftPercent)%")
                         .font(.system(size: 50, weight: .regular, design: .serif))
-                        .foregroundStyle(LimitRemainingLevel.editorialColor(for: metric.leftPercent))
+                        .foregroundStyle(colors.heroColor(for: metric.leftPercent))
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
                     Text("Remaining")
                         .font(.system(size: 15, weight: .regular, design: .serif))
-                        .foregroundStyle(EditorialPalette.ink)
+                        .foregroundStyle(colors.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
@@ -827,14 +1036,14 @@ private struct EditorialLimitWidgetView: View {
                 .padding(.top, 1)
             }
 
-            EditorialHorizontalRule()
+            EditorialHorizontalRule(color: colors.rule)
 
             if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metricID != "WEEKLY" {
                 editorialMeterHeader("WEEKLY LIMIT", "\(weekly.leftPercent)%")
-                EditorialMeter(percent: weekly.leftPercent, height: 10)
+                EditorialMeter(percent: weekly.leftPercent, height: 10, color: colors.heroColor(for: weekly.leftPercent), empty: colors.empty, rule: colors.rule)
             } else {
                 editorialMeterHeader(remainingLabel, "\(metric.leftPercent)%")
-                EditorialMeter(percent: metric.leftPercent, height: 10)
+                EditorialMeter(percent: metric.leftPercent, height: 10, color: colors.heroColor(for: metric.leftPercent), empty: colors.empty, rule: colors.rule)
 
                 if preferences.widgetShowsResetTimes {
                     editorialMeterHeader(
@@ -851,160 +1060,209 @@ private struct EditorialLimitWidgetView: View {
     }
 
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
-        let padding = EdgeInsets(top: 22, leading: 24, bottom: 22, trailing: 24)
+        let padding = EdgeInsets(top: 16, leading: 22, bottom: 16, trailing: 22)
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
         let resetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
         let contentWidth = max(0, size.width - padding.leading - padding.trailing)
-        let leftWidth = min(176, max(146, contentWidth * 0.50))
+        let messageWidth: CGFloat = 100
+        let leftWidth = max(150, contentWidth - messageWidth - 25)
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
                 Text("Codex Limit")
-                    .font(.system(size: 31, weight: .regular, design: .serif))
-                    .foregroundStyle(EditorialPalette.ink)
+                    .font(.system(size: 25, weight: .regular, design: .serif))
+                    .foregroundStyle(colors.ink)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
 
                 Spacer(minLength: 16)
 
-                VStack(alignment: .trailing, spacing: 3) {
-                    Text(LocalizedStringKey(resetLabel))
-                        .font(.system(size: 13, weight: .semibold))
-                    Text(metric.resetClockText)
-                        .font(.system(size: 22, weight: .regular, design: .serif))
+                VStack(alignment: .trailing, spacing: 2) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(LocalizedStringKey(resetLabel))
+                            .font(.system(size: 9.5, weight: .semibold))
+                        Text(metric.resetClockText)
+                            .font(.system(size: 16, weight: .regular, design: .serif))
+                    }
 
-                    editorialSyncLine(snapshot, size: 10)
+                    editorialSyncLine(snapshot, size: 8.5)
                 }
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             }
 
-            HStack(alignment: .top, spacing: 12) {
-                VStack(alignment: .leading, spacing: -8) {
+            // A tight, fixed gap keeps the hero number close to the title.
+            Spacer(minLength: 6)
+                .frame(maxHeight: 6)
+
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: -6) {
                     Text("\(metric.leftPercent)%")
-                        .font(.system(size: 104, weight: .regular, design: .serif))
-                        .foregroundStyle(LimitRemainingLevel.editorialColor(for: metric.leftPercent))
+                        .font(.system(size: 80, weight: .regular, design: .serif))
+                        .foregroundStyle(colors.heroColor(for: metric.leftPercent))
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
                     Text("Remaining")
-                        .font(.system(size: 38, weight: .regular, design: .serif))
-                        .foregroundStyle(EditorialPalette.ink)
+                        .font(.system(size: 20, weight: .regular, design: .serif))
+                        .foregroundStyle(colors.ink)
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                 }
                 .frame(width: leftWidth, alignment: .leading)
-                .layoutPriority(1)
-
-                EditorialVerticalRule()
-                    .frame(height: 106)
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(editorialMessage(for: metric.leftPercent))
-                        .font(.system(size: 15, weight: .regular, design: .serif))
-                        .italic()
-                        .lineLimit(4)
-                        .minimumScaleFactor(0.82)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                }
-                .foregroundStyle(EditorialPalette.mutedInk)
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .layoutPriority(2)
+
+                EditorialVerticalRule(color: colors.rule)
+                    .frame(width: 1, height: 86)
+
+                // Side column: several short facts, centred on the vertical rule.
+                VStack(alignment: .leading, spacing: 3) {
+                    heroInfoStat("STREAK", value: streakValue(snapshot.usage))
+                    heroInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
+                    heroInfoStat("THREADS", value: countValue(snapshot.usage?.totalThreads))
+                    heroInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
+                }
+                .frame(width: messageWidth, alignment: .leading)
+                .layoutPriority(1)
             }
             .frame(width: contentWidth, alignment: .leading)
 
+            // Flexible gaps keep every remaining row at its natural height and
+            // share the leftover height evenly, so nothing gets stretched or clipped.
+            Spacer(minLength: 10)
+
             if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
-                weeklyMeter(weekly.leftPercent, height: 12, labelSize: 12)
+                weeklyMeter(weekly.leftPercent, height: 8, labelSize: 9.5)
             }
 
-            HStack(spacing: 18) {
-                editorialStat("USED", "\(metric.usedPercent)%")
+            Spacer(minLength: 10)
+
+            HStack(spacing: 14) {
+                editorialStat("USED", "\(metric.usedPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
-                    EditorialVerticalRule()
-                    editorialStat("WEEKLY", "\(weekly.leftPercent)%")
+                    EditorialVerticalRule(color: colors.rule)
+                    editorialStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 }
-                EditorialVerticalRule()
-                editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens))
-                EditorialVerticalRule()
-                editorialStat("PLAN", snapshot.planDisplayName)
+                EditorialVerticalRule(color: colors.rule)
+                editorialStat("TOKENS", formatTokenCount(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
+                EditorialVerticalRule(color: colors.rule)
+                editorialStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, spacing: 3.5)
             }
+            .fixedSize(horizontal: false, vertical: true)
 
-            HStack(spacing: 18) {
-                editorialStat("PEAK DAY", formatTokenCount(snapshot.usage?.peakDailyTokens))
-                EditorialVerticalRule()
-                editorialStat(snapshot.usage?.latestDayLabel ?? "LAST DAY", formatTokenCount(snapshot.usage?.lastDailyTokens))
+            Spacer(minLength: 10)
+
+            HStack(alignment: .bottom, spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    editorialStat("PEAK DAY", formatTokenCount(snapshot.usage?.peakDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                    editorialStat(snapshot.usage?.latestDayLabel ?? "LAST DAY", formatTokenCount(snapshot.usage?.lastDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                }
+                .frame(width: 112, alignment: .leading)
+
+                EditorialVerticalRule(color: colors.rule)
+
                 sevenDayChart(snapshot.usage)
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
         .padding(padding)
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
+    @ViewBuilder
     private func sevenDayChart(_ usage: AccountUsageSnapshot?) -> some View {
         let days = usage?.sevenDayTokens ?? []
         let maximum = max(1, days.compactMap(\.tokens).max() ?? 1)
+        let barsHeight: CGFloat = 36
+        let gap: CGFloat = 5
 
-        return VStack(alignment: .leading, spacing: 4) {
-            Text("7D TOKENS")
-                .font(.system(size: 9, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
-            GeometryReader { geometry in
-                HStack(alignment: .bottom, spacing: 2) {
-                    ForEach(days.indices, id: \.self) { index in
-                        let day = days[index]
-                        if let tokens = day.tokens {
-                            RoundedRectangle(cornerRadius: 1)
-                                .fill(EditorialPalette.ink.opacity(index == days.count - 1 ? 0.85 : 0.45))
-                                .frame(height: tokens > 0 ? max(2, geometry.size.height * CGFloat(tokens) / CGFloat(maximum)) : 1)
-                                .frame(maxWidth: .infinity)
-                                .accessibilityLabel("\(day.date): \(tokens) tokens")
-                        } else {
-                            Text("–")
-                                .font(.system(size: 8))
-                                .frame(maxWidth: .infinity)
-                                .accessibilityLabel("\(day.date): unavailable")
+        if days.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("7D TOKENS")
+                    .font(.system(size: 9, weight: .semibold))
+                    .foregroundStyle(colors.mutedInk)
+                    .lineLimit(1)
+
+                GeometryReader { geometry in
+                    let count = max(1, days.count)
+                    let barWidth = max(2, (geometry.size.width - gap * CGFloat(count - 1)) / CGFloat(count))
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .bottom, spacing: gap) {
+                            ForEach(days.indices, id: \.self) { index in
+                                let day = days[index]
+                                let tokens = max(0, day.tokens ?? 0)
+                                let height = tokens > 0 ? max(3, barsHeight * CGFloat(tokens) / CGFloat(maximum)) : 2
+
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(tokens > 0
+                                          ? colors.ink.opacity(index == days.count - 1 ? 0.85 : 0.45)
+                                          : colors.rule.opacity(0.9))
+                                    .frame(width: barWidth, height: height)
+                                    .frame(width: barWidth, height: barsHeight, alignment: .bottom)
+                                    .accessibilityLabel(day.tokens == nil
+                                                        ? "\(day.date): unavailable"
+                                                        : "\(day.date): \(tokens) tokens")
+                            }
                         }
-                    }
-                }
-            }
-            .frame(height: 42)
+                        .frame(height: barsHeight, alignment: .bottom)
 
-            HStack(spacing: 0) {
-                Text(days.first.map { String($0.date.suffix(5)).replacingOccurrences(of: "-", with: "/") } ?? "--")
-                Spacer(minLength: 0)
-                Text(days.last.map { String($0.date.suffix(5)).replacingOccurrences(of: "-", with: "/") } ?? "--")
+                        Rectangle()
+                            .fill(colors.rule.opacity(0.7))
+                            .frame(height: 1)
+
+                        HStack(spacing: gap) {
+                            ForEach(days.indices, id: \.self) { index in
+                                Text(axisLabel(for: days, at: index))
+                                    .font(.system(size: 7.5))
+                                    .foregroundStyle(colors.mutedInk)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.7)
+                                    .frame(width: barWidth,
+                                           alignment: index == 0 ? .leading : (index == days.count - 1 ? .trailing : .center))
+                            }
+                        }
+                        .frame(height: 9)
+                    }
+                    .frame(width: geometry.size.width, alignment: .leading)
+                }
+                .frame(height: barsHeight + 16)
             }
-            .font(.system(size: 7))
-            .foregroundStyle(EditorialPalette.mutedInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Only the first and the last day carry a date, aligned under their bars.
+    private func axisLabel(for days: [DailyTokenUsage], at index: Int) -> String {
+        guard index == 0 || index == days.count - 1, days.indices.contains(index) else { return "" }
+        return String(days[index].date.suffix(5)).replacingOccurrences(of: "-", with: "/")
     }
 
     private func emptyState(size: CGSize) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Codex Limit")
                 .font(.system(size: variant == .large ? 31 : 25, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
 
             Rectangle()
-                .fill(EditorialPalette.rule.opacity(0.65))
+                .fill(colors.rule.opacity(0.65))
                 .frame(height: 1)
 
             Spacer(minLength: 8)
 
             Text("No limit data")
                 .font(.system(size: variant == .small ? 24 : 32, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.65)
 
             Text("Waiting for sync")
                 .font(.system(size: variant == .small ? 14 : 18, weight: .regular, design: .serif))
                 .italic()
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .foregroundStyle(colors.mutedInk)
 
             Spacer(minLength: 8)
         }
@@ -1012,33 +1270,39 @@ private struct EditorialLimitWidgetView: View {
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
-    private func editorialStat(_ label: String, _ value: String) -> some View {
-        let labelSize: CGFloat = {
+    private func editorialStat(
+        _ label: String,
+        _ value: String,
+        labelSize: CGFloat? = nil,
+        valueSize: CGFloat? = nil,
+        spacing: CGFloat? = nil
+    ) -> some View {
+        let resolvedLabelSize: CGFloat = labelSize ?? {
             switch variant {
             case .small: return 9
             case .medium: return 7.5
             case .large: return 12
             }
         }()
-        let valueSize: CGFloat = {
+        let resolvedValueSize: CGFloat = valueSize ?? {
             switch variant {
             case .small: return 15
             case .medium: return 12
             case .large: return 20
             }
         }()
-        let spacing: CGFloat = variant == .medium ? 1 : 5
+        let resolvedSpacing: CGFloat = spacing ?? (variant == .medium ? 1 : 5)
 
-        return VStack(alignment: .leading, spacing: spacing) {
+        return VStack(alignment: .leading, spacing: resolvedSpacing) {
             Text(LocalizedStringKey(label))
-                .font(.system(size: labelSize, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .font(.system(size: resolvedLabelSize, weight: .semibold))
+                .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
 
             Text(value)
-                .font(.system(size: valueSize, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .font(.system(size: resolvedValueSize, weight: .regular, design: .serif))
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.62)
         }
@@ -1055,7 +1319,7 @@ private struct EditorialLimitWidgetView: View {
         if preferences.widgetShowsLastUpdated {
             Text("SYNCED \(LimitSyncTimeText.make(for: snapshot.updatedAt))")
                 .font(.system(size: size, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
         }
@@ -1066,7 +1330,7 @@ private struct EditorialLimitWidgetView: View {
             HStack(alignment: .firstTextBaseline) {
                 Text(LocalizedStringKey(title))
                     .font(.system(size: labelSize, weight: .semibold))
-                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .foregroundStyle(colors.mutedInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
 
@@ -1074,7 +1338,7 @@ private struct EditorialLimitWidgetView: View {
 
                 (Text(verbatim: "\(percent)% ") + Text("REMAINING"))
                     .font(.system(size: labelSize, weight: .semibold))
-                    .foregroundStyle(EditorialPalette.mutedInk)
+                    .foregroundStyle(colors.mutedInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
             }
@@ -1082,7 +1346,9 @@ private struct EditorialLimitWidgetView: View {
             EditorialMeter(
                 percent: percent,
                 height: height,
-                color: LimitRemainingLevel.editorialColor(for: percent)
+                color: colors.heroColor(for: percent),
+                empty: colors.empty,
+                rule: colors.rule
             )
         }
     }
@@ -1091,27 +1357,45 @@ private struct EditorialLimitWidgetView: View {
         VStack(alignment: .leading, spacing: 1) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: 8, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
 
             Text(value)
                 .font(.system(size: 15, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
+    }
+
+    /// Compact fact for the large widget's side column: label above value.
+    private func heroInfoStat(_ label: String, value: Text) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            Text(LocalizedStringKey(label))
+                .font(.system(size: 8.5, weight: .semibold))
+                .foregroundStyle(colors.mutedInk)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+
+            value
+                .font(.system(size: 12, weight: .regular, design: .serif))
+                .foregroundStyle(colors.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func editorialMediumStatRow(_ label: String, _ value: String) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
             Spacer(minLength: 8)
             Text(value)
                 .font(.system(size: 12, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
@@ -1121,30 +1405,15 @@ private struct EditorialLimitWidgetView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(EditorialPalette.mutedInk)
+                .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
             Spacer(minLength: 8)
             Text(value)
                 .font(.system(size: 11, weight: .regular, design: .serif))
-                .foregroundStyle(EditorialPalette.ink)
+                .foregroundStyle(colors.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.72)
         }
-    }
-
-    private func editorialMessage(for percent: Int) -> String {
-        if percent >= 60 {
-            return "Plenty of limit remains."
-        }
-        if percent >= 30 {
-            return "Keep an eye on pace. You still have room to work."
-        }
-        return "Slow the pace. Your limit is getting close."
-    }
-
-    private func streakText(_ usage: AccountUsageSnapshot?) -> String {
-        guard let days = usage?.currentStreakDays else { return "--" }
-        return "\(days)d"
     }
 
     private func formatTokenCount(_ value: Int64?) -> String {
@@ -1172,16 +1441,18 @@ private struct EditorialLimitWidgetView: View {
 private struct EditorialMeter: View {
     let percent: Int
     let height: CGFloat
-    var color: Color = EditorialPalette.fill
+    let color: Color
+    let empty: Color
+    let rule: Color
 
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
-                    .fill(EditorialPalette.empty.opacity(0.75))
+                    .fill(empty.opacity(0.75))
                     .overlay(
                         RoundedRectangle(cornerRadius: 2, style: .continuous)
-                            .stroke(EditorialPalette.rule.opacity(0.75), lineWidth: 1)
+                            .stroke(rule.opacity(0.75), lineWidth: 1)
                     )
 
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
@@ -1195,17 +1466,21 @@ private struct EditorialMeter: View {
 }
 
 private struct EditorialVerticalRule: View {
+    let color: Color
+
     var body: some View {
         Rectangle()
-            .fill(EditorialPalette.rule.opacity(0.75))
+            .fill(color.opacity(0.75))
             .frame(width: 1)
     }
 }
 
 private struct EditorialHorizontalRule: View {
+    let color: Color
+
     var body: some View {
         Rectangle()
-            .fill(EditorialPalette.rule.opacity(0.78))
+            .fill(color.opacity(0.78))
             .frame(height: 1)
     }
 }
@@ -1256,4 +1531,21 @@ struct CodexLimitWidget: Widget {
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }
+}
+
+/// Streak length, localized through the shared "%lldd" format ("25d" / "25 дн.").
+private func streakValue(_ usage: AccountUsageSnapshot?) -> Text {
+    guard let days = usage?.currentStreakDays else { return Text(verbatim: "--") }
+    return Text("\(days)d")
+}
+
+/// Longest turn, localized through the shared "%lldh %lldm" format.
+private func durationValue(_ seconds: Int64?) -> Text {
+    guard let seconds else { return Text(verbatim: "--") }
+    return Text("\(seconds / 3_600)h \((seconds % 3_600) / 60)m")
+}
+
+private func countValue(_ value: Int64?) -> Text {
+    guard let value else { return Text(verbatim: "--") }
+    return Text("\(value)")
 }

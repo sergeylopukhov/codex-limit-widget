@@ -204,3 +204,4 @@
 "The 5-hour and weekly limits each have their own switch and thresholds. An alert is sent once for the nearest reached threshold; lower thresholds alert later if the limit continues to fall." = "The 5-hour and weekly limits each have their own switch and thresholds. An alert is sent once for the nearest reached threshold; lower thresholds alert later if the limit continues to fall.";
 "Menu bar without the refresh glyph" = "Menu bar without the refresh glyph";
 "The circular refresh arrow no longer appears next to the menu bar percentage. You can still refresh limits from the menu-bar menu, the popover, and Settings." = "The circular refresh arrow no longer appears next to the menu bar percentage. You can still refresh limits from the menu-bar menu, the popover, and Settings.";
+"USED SHORT" = "USED";
