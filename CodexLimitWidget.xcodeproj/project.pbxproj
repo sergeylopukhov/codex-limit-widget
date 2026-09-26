@@ -71,6 +71,7 @@
 		A10200000000000000000019 /* AppUpdateController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppUpdateController.swift; sourceTree = "<group>"; };
 		A10200000000000000000021 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		A10200000000000000000022 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A10200000000000000000023 /* Version.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Version.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -97,8 +98,17 @@
 				A10600000000000000000002 /* CodexLimitWidgetApp */,
 				A10600000000000000000003 /* CodexLimitWidgetExtension */,
 				A10600000000000000000004 /* Shared */,
+				A10600000000000000000006 /* Config */,
 				A10600000000000000000005 /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		A10600000000000000000006 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A10200000000000000000023 /* Version.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 		A10600000000000000000002 /* CodexLimitWidgetApp */ = {
@@ -413,13 +423,13 @@
 		};
 		A10D00000000000000000003 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10200000000000000000023 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 156;
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -428,7 +438,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.401;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
 				PRODUCT_NAME = "Codex Limit Widget";
 				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
@@ -439,13 +448,13 @@
 		};
 		A10D00000000000000000004 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10200000000000000000023 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetApp/CodexLimitWidgetApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 156;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetApp/Info.plist;
@@ -453,7 +462,6 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.401;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget;
 				PRODUCT_NAME = "Codex Limit Widget";
 				REMOVE_STATIC_EXECUTABLES_FROM_EMBEDDED_BUNDLES = NO;
@@ -464,12 +472,12 @@
 		};
 		A10D00000000000000000005 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10200000000000000000023 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 156;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -477,7 +485,6 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.401;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
 				PRODUCT_NAME = CodexLimitWidgetExtension;
 				SKIP_INSTALL = YES;
@@ -488,12 +495,12 @@
 		};
 		A10D00000000000000000006 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A10200000000000000000023 /* Version.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_STANDALONE_ICON_BEHAVIOR = all;
 				CODE_SIGN_ENTITLEMENTS = CodexLimitWidgetExtension/CodexLimitWidgetExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 156;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CodexLimitWidgetExtension/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -501,7 +508,6 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 1.2.401;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sergeylopukhov.CodexLimitWidget.WidgetExtension;
 				PRODUCT_NAME = CodexLimitWidgetExtension;
 				SKIP_INSTALL = YES;
