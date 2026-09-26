@@ -1,0 +1,18 @@
+{
+  "result": {
+    "summary": {
+      "lifetimeTokens": 5400,
+      "peakDailyTokens": 3200,
+      "longestRunningTurnSec": 240,
+      "currentStreakDays": 3,
+      "longestStreakDays": 8,
+      "learnedSkills": 4,
+      "totalSkillUseCount": 12,
+      "threadCount": 6
+    },
+    "dailyUsageBuckets": [
+      { "startDate": "2026-09-25", "tokens": 2200 },
+      { "startDate": "2026-09-26", "tokens": 3200 }
+    ]
+  }
+}

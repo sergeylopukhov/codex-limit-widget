@@ -1,0 +1,14 @@
+{
+  "fiveHour": null,
+  "weekly": null,
+  "credits": null,
+  "planType": "pro",
+  "usage": {
+    "dailyTokens": [{ "date": "2026-09-25", "tokens": 1000 }],
+    "lifetimeTokens": 1000,
+    "peakDailyTokens": 1000,
+    "currentStreakDays": 1
+  },
+  "updatedAt": 1800000000,
+  "errorMessage": null
+}

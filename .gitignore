@@ -24,7 +24,6 @@ work/
 
 # Non-source project files
 build-install-run.command
-CodexLimitWidgetTests/
 
 # Local agent documentation
 AGENTS.md

@@ -604,11 +604,11 @@ private struct InitializeParams: Encodable {
     }
 }
 
-private struct RateLimitsEnvelope: Decodable {
+struct RateLimitsEnvelope: Decodable {
     var result: RateLimitsResult
 }
 
-private struct RateLimitsResult: Decodable {
+struct RateLimitsResult: Decodable {
     var rateLimits: RateLimitSnapshotDTO
     var rateLimitsByLimitId: [String: RateLimitSnapshotDTO]?
 
@@ -656,7 +656,7 @@ private struct RateLimitsResult: Decodable {
     }
 }
 
-private struct RateLimitSnapshotDTO: Decodable {
+struct RateLimitSnapshotDTO: Decodable {
     var limitId: String?
     var primary: RateLimitWindowDTO?
     var secondary: RateLimitWindowDTO?
@@ -681,17 +681,17 @@ private struct RateLimitSnapshotDTO: Decodable {
     }
 }
 
-private struct RateLimitWindowDTO: Decodable {
+struct RateLimitWindowDTO: Decodable {
     var usedPercent: Int
     var windowDurationMins: Int?
     var resetsAt: Int?
 }
 
-private struct AccountUsageEnvelope: Decodable {
+struct AccountUsageEnvelope: Decodable {
     var result: AccountUsageResult
 }
 
-private struct AccountUsageResult: Decodable {
+struct AccountUsageResult: Decodable {
     var summary: AccountUsageSummaryDTO
     var dailyUsageBuckets: [AccountUsageDailyBucketDTO]?
 
@@ -715,7 +715,7 @@ private struct AccountUsageResult: Decodable {
     }
 }
 
-private struct AccountUsageSummaryDTO: Decodable {
+struct AccountUsageSummaryDTO: Decodable {
     var lifetimeTokens: Int64?
     var peakDailyTokens: Int64?
     var longestRunningTurnSec: Int64?
@@ -764,7 +764,7 @@ private struct AccountUsageSummaryDTO: Decodable {
     }
 }
 
-private struct AccountUsageDailyBucketDTO: Decodable {
+struct AccountUsageDailyBucketDTO: Decodable {
     var startDate: String
     var tokens: Int64
 }
