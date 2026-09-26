@@ -283,7 +283,7 @@ private struct TerminalLimitWidgetView: View {
                         .foregroundStyle(metricColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
-                        .shadow(color: metricColor.opacity(0.24), radius: 5)
+                        .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
 
                     Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
@@ -333,13 +333,14 @@ private struct TerminalLimitWidgetView: View {
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 24,
-                    height: 10
+                    height: 10,
+                    glow: !systemStyled
                 )
                 .frame(width: width)
             } else {
                 terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width)
                 fixedGap(3)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10, glow: !systemStyled)
                     .frame(width: width)
 
                 if preferences.widgetShowsResetTimes {
@@ -367,7 +368,7 @@ private struct TerminalLimitWidgetView: View {
                     .foregroundStyle(metricColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
-                    .shadow(color: metricColor.opacity(0.22), radius: 4)
+                    .shadow(color: systemStyled ? .clear : metricColor.opacity(0.22), radius: 4)
 
                 Text(LocalizedStringKey(metric.remainingLabel))
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
@@ -387,7 +388,8 @@ private struct TerminalLimitWidgetView: View {
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 12,
-                    height: 8
+                    height: 8,
+                    glow: !systemStyled
                 )
                 .frame(width: width)
             }
@@ -408,7 +410,7 @@ private struct TerminalLimitWidgetView: View {
                         .foregroundStyle(metricColor)
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
-                        .shadow(color: metricColor.opacity(0.24), radius: 5)
+                        .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
 
                     Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 20, weight: .bold, design: .monospaced))
@@ -447,13 +449,14 @@ private struct TerminalLimitWidgetView: View {
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 24,
-                    height: 8
+                    height: 8,
+                    glow: !systemStyled
                 )
                 .frame(width: width)
             } else {
                 terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width, size: 10)
                 fixedGap(3)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 8)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 8, glow: !systemStyled)
                     .frame(width: width)
             }
 
@@ -711,6 +714,7 @@ private struct TerminalMeter: View {
     let emptyStroke: Color
     var blockCount = 20
     var height: CGFloat = 13
+    var glow: Bool = true
 
     var body: some View {
         GeometryReader { proxy in
@@ -726,7 +730,7 @@ private struct TerminalMeter: View {
                             RoundedRectangle(cornerRadius: 1.5)
                                 .stroke(index < filledCount ? color.opacity(0.4) : emptyStroke, lineWidth: 0.6)
                         )
-                        .shadow(color: index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
+                        .shadow(color: glow && index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
                         .frame(width: blockWidth, height: height)
                 }
             }
