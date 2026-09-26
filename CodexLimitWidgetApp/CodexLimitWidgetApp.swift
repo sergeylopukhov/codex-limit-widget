@@ -93,7 +93,7 @@ struct MenuBarContentView: View {
                 showsCopyStatus: true,
                 onCopyStatus: { StatusClipboard.copy(from: viewModel) },
                 showsLastUpdated: viewModel.preferences.widgetShowsLastUpdated,
-                refresh: { Task { await viewModel.refresh() } }
+                refresh: { Task { await viewModel.refresh(userInitiated: true) } }
             )
 
             Rectangle()
@@ -430,7 +430,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
     }
 
     @objc private func refreshFromMenu() {
-        Task { await viewModel.refresh() }
+        Task { await viewModel.refresh(userInitiated: true) }
     }
 
     @objc private func copyStatusFromMenu() {
@@ -1893,7 +1893,7 @@ struct AppSettingsView: View {
                                 isDisabled: viewModel.isRefreshing,
                                 palette: palette
                             ) {
-                                Task { await viewModel.refresh() }
+                                Task { await viewModel.refresh(userInitiated: true) }
                             }
 
                             Spacer(minLength: 0)
@@ -1968,7 +1968,7 @@ struct AppSettingsView: View {
                             isDisabled: viewModel.isRefreshing,
                             palette: palette
                         ) {
-                            Task { await viewModel.refresh() }
+                            Task { await viewModel.refresh(userInitiated: true) }
                         }
                     }
 
@@ -2906,7 +2906,7 @@ private struct LimitsDetailWindowView: View {
                 isDisabled: viewModel.isRefreshing,
                 palette: palette
             ) {
-                Task { await viewModel.refresh() }
+                Task { await viewModel.refresh(userInitiated: true) }
             }
 
             SettingsActionButton(

@@ -32,12 +32,18 @@ struct CodexLimitProvider: TimelineProvider {
         let completionBox = TimelineCompletionBox(completion)
         Task {
             let payload = await loadPayload() ?? WidgetPayloadStore.read()
-            let entry = CodexLimitEntry(date: Date(), snapshot: payload?.snapshot, preferences: payload?.preferences ?? .default)
-            // The menu bar is refreshed every minute. Keep the widget timeline on
-            // the same cadence so it does not knowingly display a 15-minute-old
-            // limit when WidgetKit has not yet processed an explicit reload.
-            let next = Calendar.current.date(byAdding: .minute, value: 1, to: Date()) ?? Date().addingTimeInterval(60)
-            completionBox.completion(Timeline(entries: [entry], policy: .after(next)))
+            let snapshot = payload?.snapshot
+            let preferences = payload?.preferences ?? .default
+            let now = Date()
+            // Hold the same reading across four entries so the widget keeps a
+            // stable value between the app's conditional reloads.
+            let entries = (0..<4).map { step in
+                let offset = TimeInterval(step * 5 * 60)
+                let date = Calendar.current.date(byAdding: .minute, value: step * 5, to: now) ?? now.addingTimeInterval(offset)
+                return CodexLimitEntry(date: date, snapshot: snapshot, preferences: preferences)
+            }
+            let next = Calendar.current.date(byAdding: .minute, value: 15, to: now) ?? now.addingTimeInterval(15 * 60)
+            completionBox.completion(Timeline(entries: entries, policy: .after(next)))
         }
     }
 

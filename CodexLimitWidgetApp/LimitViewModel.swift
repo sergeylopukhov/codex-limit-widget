@@ -44,6 +44,10 @@ final class LimitViewModel: ObservableObject {
     private let loginItemSetupKey = "loginItemRegistrationCompleted"
     private var timer: Timer?
     private var started = false
+    /// Timestamp of the last explicit widget timeline reload. Background polls
+    /// reuse it to skip a reload while the widget still shows a fresh reading.
+    private var lastWidgetReloadAt: Date?
+    private static let widgetReloadInterval: TimeInterval = 15 * 60
     /// Bumped by `resetLocalAppData()` so an in-flight refresh cannot write
     /// freshly fetched data back over a just-cleared local state.
     private var dataGeneration = 0
@@ -73,10 +77,14 @@ final class LimitViewModel: ObservableObject {
         }
     }
 
-    func refresh() async {
+    func refresh(userInitiated: Bool = false) async {
         guard !isRefreshing, !isAuthenticating, !isInstallingCLI else { return }
         isRefreshing = true
-        connectionState = .checking
+        // A background poll keeps the last reading on screen. Only a manual
+        // refresh, or the very first poll without data, shows the checking state.
+        if userInitiated || snapshot == nil {
+            connectionState = .checking
+        }
         connectionMessage = nil
         defer { isRefreshing = false }
         let generation = dataGeneration
@@ -88,12 +96,16 @@ final class LimitViewModel: ObservableObject {
                 fresh.usage = snapshot?.usage
             }
             normalizeCompactMenuBarMetric(for: fresh)
+            let contentChanged = Self.contentChanged(from: snapshot, to: fresh)
             snapshot = fresh
             try? LimitStore.write(fresh)
             lastSuccessfulSyncAt = fresh.updatedAt
             lastCLIErrorMessage = nil
             lastCLIErrorAt = nil
-            reloadWidgets()
+            publishSnapshot()
+            if contentChanged || widgetReloadIsDue() {
+                reloadWidgetTimelines()
+            }
             await lowLimitNotificationManager.deliverIfNeeded(for: fresh, preferences: preferences)
             connectionState = .ready
         } catch {
@@ -562,9 +574,31 @@ final class LimitViewModel: ObservableObject {
         }
     }
 
-    private func reloadWidgets() {
+    /// Compares two snapshots without the `updatedAt` stamp so an unchanged
+    /// reading does not trigger a widget reload on every poll.
+    private static func contentChanged(from old: LimitSnapshot?, to new: LimitSnapshot) -> Bool {
+        guard var previous = old else { return true }
+        previous.updatedAt = new.updatedAt
+        return previous != new
+    }
+
+    private func widgetReloadIsDue() -> Bool {
+        guard let lastWidgetReloadAt else { return true }
+        return Date().timeIntervalSince(lastWidgetReloadAt) >= Self.widgetReloadInterval
+    }
+
+    private func publishSnapshot() {
         widgetBridge.publish(WidgetPayload(snapshot: snapshot, preferences: preferences))
+    }
+
+    private func reloadWidgetTimelines() {
+        lastWidgetReloadAt = Date()
         WidgetCenter.shared.reloadTimelines(ofKind: widgetKindIdentifier)
+    }
+
+    private func reloadWidgets() {
+        publishSnapshot()
+        reloadWidgetTimelines()
     }
 }
 
