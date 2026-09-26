@@ -248,6 +248,18 @@ struct LimitWindowSnapshot: Codable, Equatable {
         }
         return formatter.string(from: resetsAt)
     }
+
+    /// Short reset stamp of the widget stat columns: the weekday and the time,
+    /// lower cased for Russian ("Fri 18:00" / "пт 18:00").
+    func resetWeekdayText(locale: Locale) -> String {
+        guard let resetsAt else { return "--" }
+
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.dateFormat = "EEE HH:mm"
+        let text = formatter.string(from: resetsAt)
+        return locale.identifier.lowercased().hasPrefix("ru") ? text.lowercased() : text
+    }
 }
 
 struct AccountUsageSnapshot: Codable, Equatable {
@@ -276,6 +288,14 @@ struct AccountUsageSnapshot: Codable, Equatable {
             let key = formatter.string(from: date)
             return DailyTokenUsage(date: key, tokens: dailyTokens?.last(where: { $0.date == key })?.tokens)
         }
+    }
+
+    /// Mean tokens a day across the seven-day window. Days without data are
+    /// skipped, days with zero tokens count.
+    var sevenDayAverageTokens: Int64? {
+        let values = sevenDayTokens.compactMap(\.tokens)
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Int64(values.count)
     }
 
     var lifetimeTokens: Int64?

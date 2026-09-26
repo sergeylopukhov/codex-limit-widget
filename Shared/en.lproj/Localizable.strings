@@ -125,11 +125,13 @@
 "Compact menu-bar credits keep the T suffix and enough width for values such as 200.95T." = "Compact menu-bar credits keep the T suffix and enough width for values such as 200.95T.";
 "7D TOKENS" = "7D TOKENS";
 "App data" = "App data";
+"BEST STREAK" = "BEST STREAK";
 "CLI error" = "CLI error";
 "Clear global shortcut" = "Clear global shortcut";
 "Codex Limits" = "Codex Limits";
 "Credits" = "Credits";
 "Current streak" = "Current streak";
+"DAILY AVG" = "DAILY AVG";
 "Data is older than 5 minutes." = "Data is older than 5 minutes.";
 "Data source" = "Data source";
 "Detailed limits window" = "Detailed limits window";
@@ -165,6 +167,7 @@
 "Time of day" = "Time of day";
 "To" = "To";
 "Usage" = "Usage";
+"WEEK RESET" = "WEEK RESET";
 "Widget" = "Widget";
 "Widget click" = "Widget click";
 "Plan: %@" = "Plan: %@";

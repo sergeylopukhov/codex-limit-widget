@@ -185,9 +185,11 @@
 "DATA" = "ДАННЫЕ";
 "STALE DATA" = "ДАННЫЕ УСТАРЕЛИ";
 "TOKENS" = "ТОКЕНЫ";
+"DAILY AVG" = "СРЕДНЕЕ/ДЕНЬ";
 "PEAK DAY" = "ПИКОВЫЙ ДЕНЬ";
 "LAST DAY" = "ПОСЛЕДНИЙ ДЕНЬ";
 "STREAK" = "СЕРИЯ";
+"BEST STREAK" = "ЛУЧШАЯ СЕРИЯ";
 "MAX TURN" = "МАКС. ЗАПУСК";
 "5-hour quota" = "Лимит 5 часов";
 "weekly quota" = "Недельный лимит";
@@ -248,8 +250,6 @@
 "Reset %@" = "Сброс %@";
 "Used %lld%%" = "Использовано %lld%%";
 "%lldd" = "%lld дн.";
-"THREADS" = "ПОТОКИ";
-"SKILLS" = "НАВЫКИ";
 "%lldh %lldm" = "%lld ч %lld мин";
 "Never" = "Никогда";
 "None" = "Нет";

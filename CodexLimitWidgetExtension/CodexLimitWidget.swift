@@ -463,6 +463,9 @@ private struct TerminalLimitWidgetView: View {
         let messageWidth = max(104, width * 0.32)
         let leftWidth = max(112, width - messageWidth - 25)
         let metricColor = heroStyle(for: metric.window.leftPercent)
+        // The weekly reset stamp belongs to the stat column unless the hero
+        // percentage already is the weekly limit and the header carries it.
+        let showsWeeklyResetStamp = metric.id != "WEEKLY"
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
@@ -485,10 +488,15 @@ private struct TerminalLimitWidgetView: View {
                     if shouldShowStaleWarning(snapshot, preferences: preferences) {
                         terminalInfoStat("STATUS", value: Text(LocalizedStringKey("STALE")), valueColor: dimText)
                     }
-                    terminalInfoStat("STREAK", value: streakValue(snapshot.usage))
+                    terminalInfoStat("STREAK", value: streakValue(snapshot.usage?.currentStreakDays))
                     terminalInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
-                    terminalInfoStat("THREADS", value: countValue(snapshot.usage?.totalThreads))
-                    terminalInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
+                    terminalInfoStat(
+                        showsWeeklyResetStamp ? "WEEK RESET" : "BEST STREAK",
+                        value: showsWeeklyResetStamp
+                            ? weeklyResetValue(snapshot, locale: locale)
+                            : streakValue(snapshot.usage?.longestStreakDays)
+                    )
+                    terminalInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(snapshot.usage?.sevenDayAverageTokens)))
                 }
                 .frame(width: messageWidth, alignment: .leading)
                 .layoutPriority(2)
@@ -1111,8 +1119,13 @@ private struct EditorialLimitWidgetView: View {
 
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 16, leading: 22, bottom: 16, trailing: 22)
-        let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
-        let resetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
+        // The five-hour window leads the card only while the preference keeps it.
+        let fiveHour = preferences.widgetShowsFiveHour ? snapshot.fiveHour : nil
+        let metric = fiveHour ?? snapshot.weekly ?? .unavailable
+        let resetLabel = fiveHour == nil ? "WEEK RESET" : "5H RESET"
+        // The weekly reset stamp is already in the header while the card shows the
+        // weekly limit, so the stat column falls back to the best streak.
+        let showsWeeklyResetStamp = fiveHour != nil
         let contentWidth = max(0, size.width - padding.leading - padding.trailing)
         // The stat column carries the widest localized values, so it takes its
         // width from the card and the hero column yields instead.
@@ -1166,10 +1179,15 @@ private struct EditorialLimitWidgetView: View {
 
                 // Side column: several short facts, centred on the vertical rule.
                 VStack(alignment: .leading, spacing: 3) {
-                    heroInfoStat("STREAK", value: streakValue(snapshot.usage))
+                    heroInfoStat("STREAK", value: streakValue(snapshot.usage?.currentStreakDays))
                     heroInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
-                    heroInfoStat("THREADS", value: countValue(snapshot.usage?.totalThreads))
-                    heroInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
+                    heroInfoStat(
+                        showsWeeklyResetStamp ? "WEEK RESET" : "BEST STREAK",
+                        value: showsWeeklyResetStamp
+                            ? weeklyResetValue(snapshot, locale: locale)
+                            : streakValue(snapshot.usage?.longestStreakDays)
+                    )
+                    heroInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(snapshot.usage?.sevenDayAverageTokens)))
                 }
                 .frame(width: messageWidth, alignment: .leading)
                 .layoutPriority(2)
@@ -1180,7 +1198,7 @@ private struct EditorialLimitWidgetView: View {
             // share the leftover height evenly, so nothing gets stretched or clipped.
             Spacer(minLength: 10)
 
-            if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+            if fiveHour != nil, let weekly = snapshot.weekly {
                 weeklyMeter(weekly.leftPercent, height: 8, labelSize: 9.5)
             }
 
@@ -1188,7 +1206,7 @@ private struct EditorialLimitWidgetView: View {
 
             HStack(spacing: 14) {
                 editorialStat("USED SHORT", "\(metric.usedPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
-                if snapshot.fiveHour != nil, let weekly = snapshot.weekly {
+                if fiveHour != nil, let weekly = snapshot.weekly {
                     EditorialVerticalRule(color: colors.rule)
                     editorialStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 }
@@ -1576,10 +1594,18 @@ struct CodexLimitWidget: Widget {
     }
 }
 
-/// Streak length, localized through the shared "%lldd" format ("25d" / "25 дн.").
-private func streakValue(_ usage: AccountUsageSnapshot?) -> Text {
-    guard let days = usage?.currentStreakDays else { return Text(verbatim: "--") }
+/// Streak length in days, localized through the shared "%lldd" format
+/// ("25d" / "25 дн.").
+private func streakValue(_ days: Int64?) -> Text {
+    guard let days else { return Text(verbatim: "--") }
     return Text("\(days)d")
+}
+
+/// Weekly reset stamp of the large widget's stat column, or `--` while the weekly
+/// window or its reset time is unknown.
+private func weeklyResetValue(_ snapshot: LimitSnapshot, locale: Locale) -> Text {
+    guard let weekly = snapshot.weekly else { return Text(verbatim: "--") }
+    return Text(verbatim: weekly.resetWeekdayText(locale: locale))
 }
 
 /// Longest turn, localized through the shared "%lldh %lldm" format.
@@ -1588,23 +1614,24 @@ private func durationValue(_ seconds: Int64?) -> Text {
     return Text("\(seconds / 3_600)h \((seconds % 3_600) / 60)m")
 }
 
-private func countValue(_ value: Int64?) -> Text {
-    guard let value else { return Text(verbatim: "--") }
-    return Text("\(value)")
-}
-
 #if DEBUG
 /// Extreme widget data for the previews: every option is on, the snapshot is
 /// stale, the plan name is long and the values reach the widest layouts.
 private enum WidgetPreviewData {
-    static var snapshot: LimitSnapshot {
-        LimitSnapshot(
-            fiveHour: LimitWindowSnapshot(
+    /// Preview snapshot. The weekly-only variant drops the five-hour window, so
+    /// the large widgets show the best streak row instead of the reset stamp.
+    static func snapshot(includingFiveHour: Bool = true) -> LimitSnapshot {
+        let fiveHour: LimitWindowSnapshot? = includingFiveHour
+            ? LimitWindowSnapshot(
                 label: "5h",
                 usedPercent: 1,
                 windowDurationMins: 300,
                 resetsAt: Date().addingTimeInterval(2_400)
-            ),
+            )
+            : nil
+
+        return LimitSnapshot(
+            fiveHour: fiveHour,
             weekly: LimitWindowSnapshot(
                 label: "Week",
                 usedPercent: 1,
@@ -1631,9 +1658,9 @@ private enum WidgetPreviewData {
         )
     }
 
-    static func preferences(design: MenuWindowDesign, language: AppLanguage) -> LimitPreferences {
+    static func preferences(design: MenuWindowDesign, language: AppLanguage, showsFiveHour: Bool = true) -> LimitPreferences {
         var preferences = LimitPreferences()
-        preferences.widgetShowsFiveHour = true
+        preferences.widgetShowsFiveHour = showsFiveHour
         preferences.widgetShowsWeekly = true
         preferences.widgetShowsResetTimes = true
         preferences.widgetShowsLastUpdated = true
@@ -1656,11 +1683,16 @@ private enum WidgetPreviewData {
     ]
 }
 
-private func widgetPreviewEntry(design: MenuWindowDesign, language: AppLanguage) -> CodexLimitEntry {
+private func widgetPreviewEntry(
+    design: MenuWindowDesign,
+    language: AppLanguage,
+    includingFiveHour: Bool = true,
+    showsFiveHour: Bool = true
+) -> CodexLimitEntry {
     CodexLimitEntry(
         date: .now,
-        snapshot: WidgetPreviewData.snapshot,
-        preferences: WidgetPreviewData.preferences(design: design, language: language)
+        snapshot: WidgetPreviewData.snapshot(includingFiveHour: includingFiveHour),
+        preferences: WidgetPreviewData.preferences(design: design, language: language, showsFiveHour: showsFiveHour)
     )
 }
 
@@ -1734,5 +1766,39 @@ private func widgetPreviewEntry(design: MenuWindowDesign, language: AppLanguage)
     CodexLimitWidget()
 } timeline: {
     widgetPreviewEntry(design: .editorial, language: .russian)
+}
+
+// Weekly-only snapshots: the stat column carries the best streak row instead of
+// the weekly reset stamp.
+#Preview("Terminal large week only - EN", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .english, includingFiveHour: false)
+}
+
+#Preview("Terminal large week only - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .russian, includingFiveHour: false)
+}
+
+#Preview("Editorial large week only - EN", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .english, includingFiveHour: false)
+}
+
+#Preview("Editorial large week only - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian, includingFiveHour: false)
+}
+
+// The snapshot keeps the five-hour window while the preference turns it off: the
+// large Beige card shows the weekly percentage and the best streak row.
+#Preview("Editorial large 5H off - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian, showsFiveHour: false)
 }
 #endif
