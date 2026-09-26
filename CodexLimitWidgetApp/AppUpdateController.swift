@@ -422,12 +422,14 @@ final class AppUpdateController: ObservableObject {
             let archiveURL = temporaryDirectory.appendingPathComponent(release.assetName)
             try fileManager.copyItem(at: downloadURL, to: archiveURL)
 
-            if let expectedSHA256 = release.sha256 {
-                let data = try Data(contentsOf: archiveURL, options: .mappedIfSafe)
-                let actualSHA256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-                guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
-                    throw AppUpdateError.checksumMismatch
-                }
+            guard let expectedSHA256 = release.sha256 else {
+                throw AppUpdateError.checksumMissing
+            }
+
+            let data = try Data(contentsOf: archiveURL, options: .mappedIfSafe)
+            let actualSHA256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+            guard actualSHA256.caseInsensitiveCompare(expectedSHA256) == .orderedSame else {
+                throw AppUpdateError.checksumMismatch
             }
 
             let extractionDirectory = temporaryDirectory.appendingPathComponent("extracted", isDirectory: true)
@@ -552,6 +554,7 @@ private enum AppUpdateError: LocalizedError, Equatable {
     case updateCheckTimedOut
     case missingReleaseAsset
     case invalidServerResponse
+    case checksumMissing
     case checksumMismatch
     case missingAppBundle
     case invalidAppBundle
@@ -566,6 +569,8 @@ private enum AppUpdateError: LocalizedError, Equatable {
             return NSLocalizedString("The release does not contain a macOS ZIP archive.", comment: "Missing update asset")
         case .invalidServerResponse:
             return NSLocalizedString("GitHub returned an invalid response.", comment: "Invalid update response")
+        case .checksumMissing:
+            return NSLocalizedString("Update checksum is missing.", comment: "Missing update checksum")
         case .checksumMismatch:
             return NSLocalizedString("The downloaded update failed its SHA-256 check. Try again.", comment: "Update checksum error")
         case .missingAppBundle:

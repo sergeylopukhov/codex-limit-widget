@@ -38,6 +38,7 @@
 "Update check timed out. Please try again." = "Проверка обновлений превысила время ожидания. Повторите попытку.";
 "The release does not contain a macOS ZIP archive." = "В релизе нет ZIP-архива для macOS.";
 "GitHub returned an invalid response." = "GitHub вернул некорректный ответ.";
+"Update checksum is missing." = "В релизе отсутствует контрольная сумма обновления.";
 "The downloaded update failed its SHA-256 check. Try again." = "Проверка SHA-256 загруженного обновления не пройдена. Повторите попытку.";
 "The downloaded archive does not contain the application." = "В загруженном архиве нет приложения.";
 "The downloaded application identity or version is invalid." = "Идентификатор или версия загруженного приложения некорректны.";

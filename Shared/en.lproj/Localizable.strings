@@ -97,6 +97,7 @@
 "Update check timed out. Please try again." = "Update check timed out. Please try again.";
 "The release does not contain a macOS ZIP archive." = "The release does not contain a macOS ZIP archive.";
 "GitHub returned an invalid response." = "GitHub returned an invalid response.";
+"Update checksum is missing." = "Update checksum is missing.";
 "The downloaded update failed its SHA-256 check. Try again." = "The downloaded update failed its SHA-256 check. Try again.";
 "The downloaded archive does not contain the application." = "The downloaded archive does not contain the application.";
 "The downloaded application identity or version is invalid." = "The downloaded application identity or version is invalid.";
