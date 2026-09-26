@@ -142,18 +142,54 @@ private struct TerminalLimitWidgetView: View {
     var systemStyled: Bool = false
     @Environment(\.locale) private var locale
 
-    private var accent: Color { systemStyled ? Color.primary : Color(red: 0.52, green: 0.95, blue: 0.43) }
-    private var mutedAccent: Color { systemStyled ? Color.primary.opacity(0.45) : Color(red: 0.32, green: 0.56, blue: 0.28) }
-    private var dimText: Color { systemStyled ? Color.primary.opacity(0.76) : Color(red: 0.64, green: 0.86, blue: 0.58) }
-    private var meterEmpty: Color { systemStyled ? Color.primary.opacity(0.24) : Color(red: 0.17, green: 0.18, blue: 0.14) }
-    private var meterEmptyStroke: Color { systemStyled ? Color.primary.opacity(0.32) : Color(red: 0.39, green: 0.48, blue: 0.33).opacity(0.24) }
+    /// The system mixture renders on the widget glass, where translucent copies
+    /// of the label color do not follow vibrancy, so it uses hierarchical styles.
+    private var accent: AnyShapeStyle {
+        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(Color(red: 0.52, green: 0.95, blue: 0.43))
+    }
+    private var mutedAccent: AnyShapeStyle {
+        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.tertiary) : AnyShapeStyle(Color(red: 0.32, green: 0.56, blue: 0.28))
+    }
+    private var dimText: AnyShapeStyle {
+        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.secondary) : AnyShapeStyle(Color(red: 0.64, green: 0.86, blue: 0.58))
+    }
+    private var meterEmpty: AnyShapeStyle {
+        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.quaternary) : AnyShapeStyle(Color(red: 0.17, green: 0.18, blue: 0.14))
+    }
+    private var meterEmptyStroke: AnyShapeStyle {
+        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.tertiary) : AnyShapeStyle(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(0.24))
+    }
 
-    private func heroColor(for percent: Int) -> Color {
-        guard systemStyled else { return LimitRemainingLevel.terminalColor(for: percent) }
-        switch LimitRemainingLevel.resolve(remainingPercent: percent) {
-        case .normal: return .primary
-        case .warning: return .primary.opacity(0.72)
-        case .critical: return .primary.opacity(0.5)
+    /// The system mixture keeps the percentage at full emphasis for every level
+    /// and marks warning and critical with the level icon instead of a fade.
+    private func heroStyle(for percent: Int) -> AnyShapeStyle {
+        guard systemStyled else { return AnyShapeStyle(LimitRemainingLevel.terminalColor(for: percent)) }
+        return AnyShapeStyle(HierarchicalShapeStyle.primary)
+    }
+
+    /// Filled meter blocks only glow in the colored design, where the shadow can
+    /// be derived from the concrete terminal color.
+    private func meterGlowColor(for percent: Int) -> Color? {
+        systemStyled ? nil : LimitRemainingLevel.terminalColor(for: percent)
+    }
+
+    /// Hero percentage with the level icon that the system design adds.
+    private func heroPercent(_ percent: Int, size: CGFloat, minScale: CGFloat, glowOpacity: Double, glowRadius: CGFloat) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: size * 0.12) {
+            Text("\(percent)%")
+                .font(.system(size: size, weight: .black, design: .monospaced))
+                .foregroundStyle(heroStyle(for: percent))
+                .widgetAccentable()
+                .lineLimit(1)
+                .minimumScaleFactor(minScale)
+                .shadow(color: systemStyled ? .clear : LimitRemainingLevel.terminalColor(for: percent).opacity(glowOpacity), radius: glowRadius)
+
+            if systemStyled, let symbol = limitLevelIconName(for: percent) {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.32, weight: .black))
+                    .foregroundStyle(heroStyle(for: percent))
+                    .lineLimit(1)
+            }
         }
     }
 
@@ -272,19 +308,13 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func mediumBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let metricColor = heroColor(for: metric.window.leftPercent)
+        let metricColor = heroStyle(for: metric.window.leftPercent)
         let leftWidth = max(116, width * 0.42)
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -2) {
-                    Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 54, weight: .black, design: .monospaced))
-                        .foregroundStyle(metricColor)
-                        .widgetAccentable()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
+                    heroPercent(metric.window.leftPercent, size: 54, minScale: 0.6, glowOpacity: 0.24, glowRadius: 5)
 
                     Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
@@ -302,7 +332,7 @@ private struct TerminalLimitWidgetView: View {
                             secondary.id,
                             "\(secondary.window.leftPercent)%",
                             size: 12,
-                            valueColor: heroColor(for: secondary.window.leftPercent)
+                            valueColor: heroStyle(for: secondary.window.leftPercent)
                         )
                     } else {
                         statRow("USED", "\(metric.window.usedPercent)%", size: 12)
@@ -330,18 +360,18 @@ private struct TerminalLimitWidgetView: View {
                 fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: heroColor(for: weekly.leftPercent),
+                    color: heroStyle(for: weekly.leftPercent),
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 24,
                     height: 10,
-                    glow: !systemStyled
+                    glow: meterGlowColor(for: weekly.leftPercent)
                 )
                 .frame(width: width)
             } else {
                 terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width)
                 fixedGap(3)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10, glow: !systemStyled)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10, glow: meterGlowColor(for: metric.window.leftPercent))
                     .frame(width: width)
 
                 if preferences.widgetShowsResetTimes {
@@ -360,17 +390,9 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func compactBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let metricColor = heroColor(for: metric.window.leftPercent)
-
         return VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: -6) {
-                Text("\(metric.window.leftPercent)%")
-                    .font(.system(size: 52, weight: .black, design: .monospaced))
-                    .foregroundStyle(metricColor)
-                    .widgetAccentable()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .shadow(color: systemStyled ? .clear : metricColor.opacity(0.22), radius: 4)
+                heroPercent(metric.window.leftPercent, size: 52, minScale: 0.55, glowOpacity: 0.22, glowRadius: 4)
 
                 Text(LocalizedStringKey(metric.remainingLabel))
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
@@ -386,12 +408,12 @@ private struct TerminalLimitWidgetView: View {
                 fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: heroColor(for: weekly.leftPercent),
+                    color: heroStyle(for: weekly.leftPercent),
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 12,
                     height: 8,
-                    glow: !systemStyled
+                    glow: meterGlowColor(for: weekly.leftPercent)
                 )
                 .frame(width: width)
             }
@@ -402,18 +424,12 @@ private struct TerminalLimitWidgetView: View {
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
         let messageWidth: CGFloat = 100
         let leftWidth = max(150, width - messageWidth - 25)
-        let metricColor = heroColor(for: metric.window.leftPercent)
+        let metricColor = heroStyle(for: metric.window.leftPercent)
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: -6) {
-                    Text("\(metric.window.leftPercent)%")
-                        .font(.system(size: 80, weight: .black, design: .monospaced))
-                        .foregroundStyle(metricColor)
-                        .widgetAccentable()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
-                        .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
+                    heroPercent(metric.window.leftPercent, size: 80, minScale: 0.55, glowOpacity: 0.24, glowRadius: 5)
 
                     Text(LocalizedStringKey(metric.remainingLabel))
                         .font(.system(size: 20, weight: .bold, design: .monospaced))
@@ -448,18 +464,18 @@ private struct TerminalLimitWidgetView: View {
                 fixedGap(3)
                 TerminalMeter(
                     percent: weekly.leftPercent,
-                    color: heroColor(for: weekly.leftPercent),
+                    color: heroStyle(for: weekly.leftPercent),
                     emptyColor: meterEmpty,
                     emptyStroke: meterEmptyStroke,
                     blockCount: 24,
                     height: 8,
-                    glow: !systemStyled
+                    glow: meterGlowColor(for: weekly.leftPercent)
                 )
                 .frame(width: width)
             } else {
                 terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width, size: 10)
                 fixedGap(3)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 8, glow: !systemStyled)
+                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 8, glow: meterGlowColor(for: metric.window.leftPercent))
                     .frame(width: width)
             }
 
@@ -522,7 +538,7 @@ private struct TerminalLimitWidgetView: View {
         _ value: String,
         labelSize: CGFloat,
         valueSize: CGFloat,
-        valueColor: Color? = nil
+        valueColor: AnyShapeStyle? = nil
     ) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(LocalizedStringKey(label))
@@ -640,7 +656,7 @@ private struct TerminalLimitWidgetView: View {
     }
 
     /// Compact fact for the terminal large widget's side column: label above value.
-    private func terminalInfoStat(_ label: String, value: Text, valueColor: Color? = nil) -> some View {
+    private func terminalInfoStat(_ label: String, value: Text, valueColor: AnyShapeStyle? = nil) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
@@ -657,7 +673,7 @@ private struct TerminalLimitWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func statRow(_ label: String, _ value: String, size: CGFloat = 13, valueColor: Color? = nil) -> some View {
+    private func statRow(_ label: String, _ value: String, size: CGFloat = 13, valueColor: AnyShapeStyle? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: size, weight: .bold, design: .monospaced))
@@ -676,12 +692,22 @@ private struct TerminalLimitWidgetView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func terminalLine(_ text: String, color: Color, size: CGFloat) -> Text {
+    private func terminalLine(_ text: String, color: AnyShapeStyle, size: CGFloat) -> Text {
         Text(LocalizedStringKey(text))
             .font(.system(size: size, weight: .bold, design: .monospaced))
             .foregroundStyle(color)
     }
 
+}
+
+/// Symbol that marks the remaining-limit level of the system styled widgets.
+/// The colored widgets keep the plain percentage and their level colors.
+private func limitLevelIconName(for percent: Int) -> String? {
+    switch LimitRemainingLevel.resolve(remainingPercent: percent) {
+    case .normal: return nil
+    case .warning: return "exclamationmark"
+    case .critical: return "exclamationmark.2"
+    }
 }
 
 private struct TerminalMetric {
@@ -697,12 +723,14 @@ private struct TerminalMetric {
 
 private struct TerminalMeter: View {
     let percent: Int
-    let color: Color
-    let emptyColor: Color
-    let emptyStroke: Color
+    let color: AnyShapeStyle
+    let emptyColor: AnyShapeStyle
+    let emptyStroke: AnyShapeStyle
     var blockCount = 20
     var height: CGFloat = 13
-    var glow: Bool = true
+    /// Shadow color of the filled blocks. Only the colored design glows, so the
+    /// system design passes nothing and the glass stays flat.
+    var glow: Color? = nil
 
     var body: some View {
         GeometryReader { proxy in
@@ -717,9 +745,9 @@ private struct TerminalMeter: View {
                         .widgetAccentable(index < filledCount)
                         .overlay(
                             RoundedRectangle(cornerRadius: 1.5)
-                                .stroke(index < filledCount ? color.opacity(0.4) : emptyStroke, lineWidth: 0.6)
+                                .stroke(index < filledCount ? AnyShapeStyle(color.opacity(0.4)) : emptyStroke, lineWidth: 0.6)
                         )
-                        .shadow(color: glow && index < filledCount ? color.opacity(0.18) : .clear, radius: 2)
+                        .shadow(color: index < filledCount ? glow?.opacity(0.18) ?? .clear : .clear, radius: 2)
                         .frame(width: blockWidth, height: height)
                 }
             }
@@ -736,7 +764,7 @@ private struct TerminalMeter: View {
 }
 
 private struct TerminalDivider: View {
-    let color: Color
+    let color: AnyShapeStyle
 
     var body: some View {
         Rectangle()
@@ -746,7 +774,7 @@ private struct TerminalDivider: View {
 }
 
 private struct TerminalVerticalDivider: View {
-    let color: Color
+    let color: AnyShapeStyle
 
     var body: some View {
         Rectangle()
@@ -794,15 +822,18 @@ private enum EditorialWidgetVariant {
 /// Colors of one widget card. `beige` paints the app's own card; `system` is
 /// used when macOS supplies the glass background instead.
 private struct EditorialColors {
-    var ink: Color
-    var mutedInk: Color
-    var rule: Color
-    var fill: Color
-    var empty: Color
-    var warningInk: Color
-    var criticalInk: Color
+    var ink: AnyShapeStyle
+    var mutedInk: AnyShapeStyle
+    var rule: AnyShapeStyle
+    var fill: AnyShapeStyle
+    var empty: AnyShapeStyle
+    var warningInk: AnyShapeStyle
+    var criticalInk: AnyShapeStyle
+    /// True for the glass card, which marks the remaining-limit level with an
+    /// icon next to the hero percentage as well.
+    var isSystem: Bool = false
 
-    func heroColor(for percent: Int) -> Color {
+    func heroStyle(for percent: Int) -> AnyShapeStyle {
         switch LimitRemainingLevel.resolve(remainingPercent: percent) {
         case .normal: return ink
         case .warning: return warningInk
@@ -811,24 +842,27 @@ private struct EditorialColors {
     }
 
     static let beige = EditorialColors(
-        ink: EditorialPalette.ink,
-        mutedInk: EditorialPalette.mutedInk,
-        rule: EditorialPalette.rule,
-        fill: EditorialPalette.fill,
-        empty: EditorialPalette.empty,
-        warningInk: Color(red: 0.60, green: 0.38, blue: 0.06),
-        criticalInk: Color(red: 0.62, green: 0.16, blue: 0.12)
+        ink: AnyShapeStyle(EditorialPalette.ink),
+        mutedInk: AnyShapeStyle(EditorialPalette.mutedInk),
+        rule: AnyShapeStyle(EditorialPalette.rule),
+        fill: AnyShapeStyle(EditorialPalette.fill),
+        empty: AnyShapeStyle(EditorialPalette.empty),
+        warningInk: AnyShapeStyle(Color(red: 0.60, green: 0.38, blue: 0.06)),
+        criticalInk: AnyShapeStyle(Color(red: 0.62, green: 0.16, blue: 0.12))
     )
 
-    /// System rendering: standard label colors, the remaining-limit level fades the number.
+    /// System rendering: hierarchical styles instead of translucent label colors.
+    /// The level colors stay at full emphasis; the glass card marks the level
+    /// with the icon next to the hero percentage.
     static let system = EditorialColors(
-        ink: .primary,
-        mutedInk: .primary.opacity(0.74),
-        rule: .primary.opacity(0.45),
-        fill: .primary.opacity(0.92),
-        empty: .primary.opacity(0.24),
-        warningInk: .primary.opacity(0.78),
-        criticalInk: .primary.opacity(0.58)
+        ink: AnyShapeStyle(HierarchicalShapeStyle.primary),
+        mutedInk: AnyShapeStyle(HierarchicalShapeStyle.secondary),
+        rule: AnyShapeStyle(HierarchicalShapeStyle.tertiary),
+        fill: AnyShapeStyle(HierarchicalShapeStyle.primary),
+        empty: AnyShapeStyle(HierarchicalShapeStyle.quaternary),
+        warningInk: AnyShapeStyle(HierarchicalShapeStyle.primary),
+        criticalInk: AnyShapeStyle(HierarchicalShapeStyle.primary),
+        isSystem: true
     )
 }
 
@@ -892,12 +926,7 @@ private struct EditorialLimitWidgetView: View {
             editorialSyncLine(snapshot, size: 8)
 
             VStack(alignment: .leading, spacing: -7) {
-                Text("\(metric.leftPercent)%")
-                    .font(.system(size: 54, weight: .regular, design: .serif))
-                    .foregroundStyle(colors.heroColor(for: metric.leftPercent))
-                    .widgetAccentable()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
+                editorialHeroPercent(metric.leftPercent, size: 54)
 
                 Text("Remaining")
                     .font(.system(size: 12, weight: .regular, design: .serif))
@@ -936,7 +965,7 @@ private struct EditorialLimitWidgetView: View {
             EditorialMeter(
                 percent: percent,
                 height: height,
-                color: colors.heroColor(for: percent),
+                color: colors.heroStyle(for: percent),
                 empty: colors.empty,
                 rule: colors.rule
             )
@@ -984,12 +1013,7 @@ private struct EditorialLimitWidgetView: View {
 
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: -5) {
-                    Text("\(metric.leftPercent)%")
-                        .font(.system(size: 50, weight: .regular, design: .serif))
-                        .foregroundStyle(colors.heroColor(for: metric.leftPercent))
-                        .widgetAccentable()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
+                    editorialHeroPercent(metric.leftPercent, size: 50)
 
                     Text("Remaining")
                         .font(.system(size: 15, weight: .regular, design: .serif))
@@ -1015,10 +1039,10 @@ private struct EditorialLimitWidgetView: View {
 
             if preferences.widgetShowsWeekly, let weekly = snapshot.weekly, metricID != "WEEKLY" {
                 editorialMeterHeader("WEEKLY LIMIT", "\(weekly.leftPercent)%")
-                EditorialMeter(percent: weekly.leftPercent, height: 10, color: colors.heroColor(for: weekly.leftPercent), empty: colors.empty, rule: colors.rule)
+                EditorialMeter(percent: weekly.leftPercent, height: 10, color: colors.heroStyle(for: weekly.leftPercent), empty: colors.empty, rule: colors.rule)
             } else {
                 editorialMeterHeader(remainingLabel, "\(metric.leftPercent)%")
-                EditorialMeter(percent: metric.leftPercent, height: 10, color: colors.heroColor(for: metric.leftPercent), empty: colors.empty, rule: colors.rule)
+                EditorialMeter(percent: metric.leftPercent, height: 10, color: colors.heroStyle(for: metric.leftPercent), empty: colors.empty, rule: colors.rule)
 
                 if preferences.widgetShowsResetTimes {
                     editorialMeterHeader(
@@ -1073,12 +1097,7 @@ private struct EditorialLimitWidgetView: View {
 
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: -6) {
-                    Text("\(metric.leftPercent)%")
-                        .font(.system(size: 80, weight: .regular, design: .serif))
-                        .foregroundStyle(colors.heroColor(for: metric.leftPercent))
-                        .widgetAccentable()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
+                    editorialHeroPercent(metric.leftPercent, size: 80)
 
                     Text("Remaining")
                         .font(.system(size: 20, weight: .regular, design: .serif))
@@ -1246,6 +1265,26 @@ private struct EditorialLimitWidgetView: View {
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
+    /// Hero percentage of the card. Only the glass palette draws the level icon
+    /// next to the number.
+    private func editorialHeroPercent(_ percent: Int, size: CGFloat) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: size * 0.12) {
+            Text("\(percent)%")
+                .font(.system(size: size, weight: .regular, design: .serif))
+                .foregroundStyle(colors.heroStyle(for: percent))
+                .widgetAccentable()
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+
+            if colors.isSystem, let symbol = limitLevelIconName(for: percent) {
+                Image(systemName: symbol)
+                    .font(.system(size: size * 0.32, weight: .semibold))
+                    .foregroundStyle(colors.heroStyle(for: percent))
+                    .lineLimit(1)
+            }
+        }
+    }
+
     private func editorialStat(
         _ label: String,
         _ value: String,
@@ -1322,7 +1361,7 @@ private struct EditorialLimitWidgetView: View {
             EditorialMeter(
                 percent: percent,
                 height: height,
-                color: colors.heroColor(for: percent),
+                color: colors.heroStyle(for: percent),
                 empty: colors.empty,
                 rule: colors.rule
             )
@@ -1397,9 +1436,9 @@ private struct EditorialLimitWidgetView: View {
 private struct EditorialMeter: View {
     let percent: Int
     let height: CGFloat
-    let color: Color
-    let empty: Color
-    let rule: Color
+    let color: AnyShapeStyle
+    let empty: AnyShapeStyle
+    let rule: AnyShapeStyle
 
     var body: some View {
         GeometryReader { proxy in
@@ -1423,7 +1462,7 @@ private struct EditorialMeter: View {
 }
 
 private struct EditorialVerticalRule: View {
-    let color: Color
+    let color: AnyShapeStyle
 
     var body: some View {
         Rectangle()
@@ -1433,7 +1472,7 @@ private struct EditorialVerticalRule: View {
 }
 
 private struct EditorialHorizontalRule: View {
-    let color: Color
+    let color: AnyShapeStyle
 
     var body: some View {
         Rectangle()
