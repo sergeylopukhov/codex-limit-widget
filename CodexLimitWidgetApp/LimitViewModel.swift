@@ -820,9 +820,13 @@ private actor LowLimitNotificationManager {
             let legacyKey = legacyDeliveryKey(for: window, threshold: threshold)
             guard !ledger.contains(cycle, threshold: threshold, legacyKey: legacyKey) else { continue }
 
+            let isRussian = preferences.appLanguage.locale.identifier.lowercased().hasPrefix("ru")
+            let windowName = Self.notificationWindowName(for: kind, isRussian: isRussian)
             let content = UNMutableNotificationContent()
-            content.title = "Codex limit is running low"
-            content.body = "\(window.label): \(window.leftPercent)% remaining (alert threshold \(threshold)%)."
+            content.title = isRussian ? "Лимит Codex заканчивается" : "Codex limit is running low"
+            content.body = isRussian
+                ? "\(windowName): осталось \(window.leftPercent)% (порог уведомления \(threshold)%)."
+                : "\(windowName): \(window.leftPercent)% remaining (alert threshold \(threshold)%)."
             content.sound = .default
             let request = UNNotificationRequest(
                 identifier: "codex-limit.\(kind.rawValue).\(cycle.resetAtQuarterHour).\(threshold)",
@@ -840,6 +844,17 @@ private actor LowLimitNotificationManager {
         writeLedger(ledger)
     }
 
+    /// Limit window name for notification text, which is built outside SwiftUI
+    /// and therefore cannot use the app-language string lookup.
+    private static func notificationWindowName(for kind: LowLimitAlertWindow, isRussian: Bool) -> String {
+        switch kind {
+        case .fiveHour:
+            return isRussian ? "5 часов" : "5 hours"
+        case .weekly:
+            return isRussian ? "Неделя" : "Week"
+        }
+    }
+
     /// Sends the once-per-cycle "limit is available again" alert in the app language.
     private func deliverRestorationNotification(
         for window: LimitWindowSnapshot,
@@ -848,13 +863,7 @@ private actor LowLimitNotificationManager {
         preferences: LimitPreferences
     ) async -> Bool {
         let isRussian = preferences.appLanguage.locale.identifier.lowercased().hasPrefix("ru")
-        let windowName: String
-        switch kind {
-        case .fiveHour:
-            windowName = isRussian ? "5 часов" : "5 hours"
-        case .weekly:
-            windowName = isRussian ? "Неделя" : "Week"
-        }
+        let windowName = Self.notificationWindowName(for: kind, isRussian: isRussian)
 
         let content = UNMutableNotificationContent()
         content.title = isRussian ? "Лимит Codex восстановлен" : "Codex limit restored"

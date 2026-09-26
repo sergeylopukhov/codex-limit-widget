@@ -322,6 +322,69 @@ private struct ReleaseNotesView: View {
     private var allReleaseNotes: [ReleaseNoteItem] {
         [
             ReleaseNoteItem(
+                id: "settings-tabs",
+                introducedIn: "1.3.0",
+                icon: "slider.horizontal.3",
+                title: "Settings in tabs",
+                detail: "Settings are split into tabs: General, Menu bar, Widgets, Notifications, Updates, and Diagnostics. The window can be dragged anywhere and no longer stays above other apps."
+            ),
+            ReleaseNoteItem(
+                id: "colored-menu-bar-meter",
+                introducedIn: "1.3.0",
+                icon: "paintpalette",
+                title: "Colored menu bar meter",
+                detail: "In percent mode the meter under the number goes from green at a full limit to dark red near zero. The digits can use the same color. Both switches are in the Menu bar tab; the meter is on by default."
+            ),
+            ReleaseNoteItem(
+                id: "thicker-menu-bar-meter",
+                introducedIn: "1.3.0",
+                icon: "menubar.rectangle",
+                title: "Easier to read at a glance",
+                detail: "The menu bar meter is thicker and the percentage digits are slightly larger."
+            ),
+            ReleaseNoteItem(
+                id: "colored-popover-meters",
+                introducedIn: "1.3.0",
+                icon: "gauge.with.dots.needle.33percent",
+                title: "Popover meters by remaining limit",
+                detail: "Both meters in the popover use the same color scale as the menu bar, so a nearly spent limit is red there too."
+            ),
+            ReleaseNoteItem(
+                id: "hotkey-toggles-details",
+                introducedIn: "1.3.0",
+                icon: "keyboard",
+                title: "Shortcut opens and closes",
+                detail: "A second press of the keyboard shortcut closes the detailed limits window."
+            ),
+            ReleaseNoteItem(
+                id: "russian-everywhere",
+                introducedIn: "1.3.0",
+                icon: "character.bubble",
+                title: "Russian in every window",
+                detail: "With Russian selected, the detailed limits window, the popover, and low-limit notifications no longer mix in English words."
+            ),
+            ReleaseNoteItem(
+                id: "widget-glass-restored",
+                introducedIn: "1.3.0",
+                icon: "square.grid.2x2",
+                title: "Widget glass is back",
+                detail: "Desktop widgets turn into system glass again when a window covers the desktop, in both the beige and the dark design. After an update macOS may need up to a minute to apply it."
+            ),
+            ReleaseNoteItem(
+                id: "widget-layout-fixes",
+                introducedIn: "1.3.0",
+                icon: "rectangle.3.group",
+                title: "Widgets without clipping",
+                detail: "Widget text no longer gets cut off, the out-of-date marker shows in every widget size, and the large widget shows its main values without the unused statistics block."
+            ),
+            ReleaseNoteItem(
+                id: "empty-window-fixed",
+                introducedIn: "1.3.0",
+                icon: "macwindow",
+                title: "No empty window at launch",
+                detail: "The app no longer opens an empty window when it starts."
+            ),
+            ReleaseNoteItem(
                 id: "menu-bar-refresh-glyph-removed",
                 introducedIn: "1.2.401",
                 icon: "menubar.rectangle",

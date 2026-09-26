@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 - 2026-09-26
+
+- Settings are split into tabs: General, Menu bar, Widgets, Notifications, Updates, and Diagnostics. The sidebar was redrawn with tinted icons.
+- The Settings window can be dragged, stays at the normal window level, and keeps its position when reopened.
+- Fixed the empty window that sometimes appeared at launch.
+- Added a colored menu bar meter: in percent mode it goes from green at a full limit to dark red near zero. It is on by default, including after an update. A separate switch applies the same color to the digits.
+- The menu bar meter is thicker and the percentage digits are slightly larger.
+- The popover meters use the same color scale as the menu bar.
+- A second press of the keyboard shortcut closes the detailed limits window.
+- With Russian selected, the detailed limits window, the popover, and low-limit notifications are fully in Russian.
+- Desktop widgets turn into system glass again when a window covers the desktop, in both designs.
+- Widget text no longer gets cut off, the out-of-date marker shows in every widget size, and the unused statistics block was removed from the large widget.
+- App updates now require the SHA-256 checksum published with the release; external processes have timeouts.
+- Bumped the internal build to 157.
+
 ## 1.2.401 - 2026-09-25 (Bugfix)
 
 - Fixed the crash that closed the app and dropped the menu bar percentage when the menu bar icon or a widget opened Codex.

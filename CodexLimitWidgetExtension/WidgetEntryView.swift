@@ -5,27 +5,17 @@ struct CodexLimitWidgetEntryView: View {
     var entry: CodexLimitProvider.Entry
     @Environment(\.widgetFamily) private var family
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.widgetRenderingMode) private var renderingMode
-    @Environment(\.showsWidgetContainerBackground) private var showsContainerBackground
-
-    /// macOS draws its own background for the Clear/Tinted widget looks (and on
-    /// the lock screen). Then the painted card must stay out of the way so the
-    /// system glass shows through, and the content uses system label colors.
-    private var usesSystemBackground: Bool {
-        !showsContainerBackground || renderingMode != .fullColor
-    }
 
     @ViewBuilder
     var body: some View {
         ZStack {
             widgetContent
         }
+        // Keep one unconditional container background: macOS removes it and
+        // shows its own glass when the desktop is dimmed behind a window.
+        // Returning a clear background here disables that glass.
         .containerBackground(for: .widget) {
-            if usesSystemBackground {
-                Color.clear
-            } else {
-                widgetBackground
-            }
+            widgetBackground
         }
         .environment(\.locale, entry.preferences.appLanguage.locale)
         .widgetURL(entry.preferences.widgetClickAction.widgetLink)
@@ -38,15 +28,13 @@ struct CodexLimitWidgetEntryView: View {
             TerminalLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                family: family,
-                systemStyled: usesSystemBackground
+                family: family
             )
         case .editorial:
             EditorialLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                variant: EditorialWidgetVariant(family: family),
-                colors: usesSystemBackground ? .system : .beige
+                variant: EditorialWidgetVariant(family: family)
             )
         case .system:
             // Keep a visible widget even if WidgetKit delivers a stale
@@ -54,8 +42,7 @@ struct CodexLimitWidgetEntryView: View {
             TerminalLimitWidgetView(
                 snapshot: entry.snapshot,
                 preferences: entry.preferences,
-                family: family,
-                systemStyled: usesSystemBackground
+                family: family
             )
         }
     }

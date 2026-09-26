@@ -128,7 +128,7 @@
 "The remaining percentage in the widget and popover turns warning or critical when the balance drops, so a low limit is visible at a glance." = "Процент остатка в виджете и поповере становится предупреждающим или критическим, когда баланс падает, поэтому низкий остаток видно сразу.";
 "Last update time in widgets" = "Время последнего обновления в виджете";
 "The widget shows when limits were last synced successfully, and a toggle hides the line." = "Виджет показывает время последней успешной синхронизации, строку можно скрыть тумблером.";
-"Copy status" = "Копирование статуса";
+"Copy status" = "Копировать";
 "A button in the popover copies the plan, percentage, and reset time of each limit window as text." = "Кнопка в поповере копирует текстом тариф, процент и время сброса по каждому окну лимита.";
 "Refresh from the menu bar" = "Обновление из строки меню";
 "The menu-bar menu refreshes limits on demand and shows that data is loading while the request runs." = "Меню в строке меню обновляет лимиты по запросу и показывает, что данные загружаются.";
@@ -226,7 +226,7 @@
 "Mute low limit alerts" = "Отключить уведомления о низком лимите";
 "No limit data yet. Refresh to load Codex limits." = "Данных о лимитах пока нет. Обновите, чтобы загрузить лимиты Codex.";
 "Peak day" = "Пиковый день";
-"Pick a combination with at least one modifier key. The shortcut brings the detailed limits window to the front from any app." = "Выберите сочетание хотя бы с одной клавишей-модификатором. Горячая клавиша выводит подробное окно лимитов вперёд из любого приложения.";
+"Pick a combination with at least one modifier key. The shortcut opens the detailed limits window from any app and closes it when pressed again." = "Выберите сочетание хотя бы с одной клавишей-модификатором. Горячая клавиша открывает подробное окно лимитов из любого приложения и закрывает его при повторном нажатии.";
 "Plan" = "Тариф";
 "Press keys" = "Нажмите клавиши";
 "Quit" = "Выход";
@@ -289,3 +289,32 @@
 "Shows Codex limits using the selected design, including automatic system appearance." = "Показывает лимиты Codex в выбранном оформлении и с учётом системного вида.";
 "%@: unavailable" = "%@: нет данных";
 "%@: %lld tokens" = "%@: %lld токенов";
+"General" = "Общие";
+"Widgets" = "Виджеты";
+"Notifications" = "Уведомления";
+"Display mode" = "Режим отображения";
+"Week" = "Неделя";
+"%lld%% REMAINING" = "ОСТАЛОСЬ %lld%%";
+"Colored meter" = "Цветная шкала";
+"Colors work in the compact percent mode: the meter, the digits, or both shift from green to dark red as the limit runs out. Widgets keep refreshing while the app is running, even when the menu bar item is hidden." = "Цвет работает в компактном режиме с процентом: шкала, цифры или и то и другое плавно меняют цвет от зелёного до тёмно-красного по мере расхода лимита. Виджеты продолжают обновляться, пока приложение запущено, даже если значок в строке меню скрыт.";
+"Colored digits" = "Цветные цифры";
+
+/* 1.3.0 release notes */
+"Settings in tabs" = "Настройки по вкладкам";
+"Settings are split into tabs: General, Menu bar, Widgets, Notifications, Updates, and Diagnostics. The window can be dragged anywhere and no longer stays above other apps." = "Настройки разбиты на вкладки: «Общие», «Строка меню», «Виджеты», «Уведомления», «Обновления» и «Диагностика». Окно можно перетащить куда угодно, и оно больше не висит поверх других приложений.";
+"Colored menu bar meter" = "Цветная шкала в строке меню";
+"In percent mode the meter under the number goes from green at a full limit to dark red near zero. The digits can use the same color. Both switches are in the Menu bar tab; the meter is on by default." = "В режиме процента шкала под числом меняет цвет от зелёного при полном лимите до тёмно-красного у нуля. Тем же цветом можно окрасить цифры. Оба переключателя во вкладке «Строка меню»; шкала включена по умолчанию.";
+"Easier to read at a glance" = "Проще читать с первого взгляда";
+"The menu bar meter is thicker and the percentage digits are slightly larger." = "Шкала в строке меню стала толще, а цифры процента чуть крупнее.";
+"Popover meters by remaining limit" = "Цвет шкал в поповере";
+"Both meters in the popover use the same color scale as the menu bar, so a nearly spent limit is red there too." = "Обе шкалы в поповере окрашены по той же шкале, что и строка меню: почти израсходованный лимит там тоже красный.";
+"Shortcut opens and closes" = "Сочетание клавиш открывает и закрывает";
+"A second press of the keyboard shortcut closes the detailed limits window." = "Повторное нажатие сочетания клавиш закрывает окно с подробными лимитами.";
+"Russian in every window" = "Русский во всех окнах";
+"With Russian selected, the detailed limits window, the popover, and low-limit notifications no longer mix in English words." = "Если выбран русский язык, в окне с подробными лимитами, в поповере и в уведомлениях о низком остатке больше нет английских слов.";
+"Widget glass is back" = "Стекло виджетов вернулось";
+"Desktop widgets turn into system glass again when a window covers the desktop, in both the beige and the dark design. After an update macOS may need up to a minute to apply it." = "Виджеты на рабочем столе снова становятся системным стеклом, когда рабочий стол закрыт окном, в бежевом и в тёмном оформлении. После обновления macOS может понадобиться до минуты, чтобы это применить.";
+"Widgets without clipping" = "Виджеты без обрезанного текста";
+"Widget text no longer gets cut off, the out-of-date marker shows in every widget size, and the large widget shows its main values without the unused statistics block." = "Текст в виджетах больше не обрезается, отметка об устаревших данных видна в виджетах любого размера, а в большом виджете убран неиспользуемый блок статистики.";
+"No empty window at launch" = "Без пустого окна при запуске";
+"The app no longer opens an empty window when it starts." = "Приложение больше не открывает пустое окно при запуске.";

@@ -86,12 +86,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
     /// the same destination as the current extension.
     var widgetClickAction: (() -> WidgetClickAction)?
     private var isSettingsPresentationPending = false
+    private var launchDate = Date()
+    private var systemSettingsWindowObservers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        launchDate = Date()
         NSApp.setActivationPolicy(.accessory)
         UNUserNotificationCenter.current().delegate = self
         installAppleEventHandlers()
+        observeSystemSettingsWindow()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) { [weak self] in
+            // A window restored before the observers were installed.
+            for window in NSApp.windows {
+                self?.closeIfSystemSettingsWindow(window)
+            }
             self?.showInitialWindow?()
         }
     }
@@ -114,6 +122,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCent
             return
         }
         handleDeepLink(url)
+    }
+
+    /// The SwiftUI `Settings` scene only exists because an `App` needs a
+    /// scene; its window is empty. macOS restores it at launch or opens it on
+    /// ⌘, — close it, and route ⌘, to the real settings window instead.
+    private func observeSystemSettingsWindow() {
+        let center = NotificationCenter.default
+        let names: [Notification.Name] = [
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didChangeOcclusionStateNotification
+        ]
+        systemSettingsWindowObservers = names.map { name in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] notification in
+                guard let window = notification.object as? NSWindow else { return }
+                MainActor.assumeIsolated {
+                    self?.closeIfSystemSettingsWindow(window)
+                }
+            }
+        }
+    }
+
+    private func closeIfSystemSettingsWindow(_ window: NSWindow) {
+        let isSystemSettingsWindow = [window.identifier?.rawValue, window.frameAutosaveName]
+            .contains { $0?.contains("SwiftUI_Settings") == true }
+        guard window.isVisible, !(window is CustomSettingsWindow), isSystemSettingsWindow else { return }
+
+        window.orderOut(nil)
+        window.close()
+
+        // Right after launch this is a restored window nobody asked for.
+        if Date().timeIntervalSince(launchDate) > 3 {
+            requestSettingsPresentation(focus: .general)
+        }
     }
 
     private func installAppleEventHandlers() {

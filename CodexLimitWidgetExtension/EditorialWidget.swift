@@ -18,8 +18,7 @@ enum EditorialWidgetVariant {
     }
 }
 
-/// Colors of one widget card. `beige` paints the app's own card; `system` is
-/// used when macOS supplies the glass background instead.
+/// Colors of the beige widget card.
 struct EditorialColors {
     var ink: AnyShapeStyle
     var mutedInk: AnyShapeStyle
@@ -28,9 +27,6 @@ struct EditorialColors {
     var empty: AnyShapeStyle
     var warningInk: AnyShapeStyle
     var criticalInk: AnyShapeStyle
-    /// True for the glass card, which marks the remaining-limit level with an
-    /// icon next to the hero percentage as well.
-    var isSystem: Bool = false
 
     func heroStyle(for percent: Int) -> AnyShapeStyle {
         switch LimitRemainingLevel.resolve(remainingPercent: percent) {
@@ -49,20 +45,6 @@ struct EditorialColors {
         warningInk: AnyShapeStyle(Color(red: 0.60, green: 0.38, blue: 0.06)),
         criticalInk: AnyShapeStyle(Color(red: 0.62, green: 0.16, blue: 0.12))
     )
-
-    /// System rendering: hierarchical styles instead of translucent label colors.
-    /// The level colors stay at full emphasis; the glass card marks the level
-    /// with the icon next to the hero percentage.
-    static let system = EditorialColors(
-        ink: AnyShapeStyle(HierarchicalShapeStyle.primary),
-        mutedInk: AnyShapeStyle(HierarchicalShapeStyle.secondary),
-        rule: AnyShapeStyle(HierarchicalShapeStyle.tertiary),
-        fill: AnyShapeStyle(HierarchicalShapeStyle.primary),
-        empty: AnyShapeStyle(HierarchicalShapeStyle.quaternary),
-        warningInk: AnyShapeStyle(HierarchicalShapeStyle.primary),
-        criticalInk: AnyShapeStyle(HierarchicalShapeStyle.primary),
-        isSystem: true
-    )
 }
 
 private enum EditorialPalette {
@@ -79,7 +61,7 @@ struct EditorialLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let variant: EditorialWidgetVariant
-    var colors: EditorialColors = .beige
+    private let colors = EditorialColors.beige
     @Environment(\.locale) private var locale
 
     var body: some View {
@@ -478,24 +460,13 @@ struct EditorialLimitWidgetView: View {
         .frame(width: size.width, height: size.height, alignment: .topLeading)
     }
 
-    /// Hero percentage of the card. Only the glass palette draws the level icon
-    /// next to the number.
     private func editorialHeroPercent(_ percent: Int, size: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: size * 0.12) {
-            Text("\(percent)%")
-                .font(.system(size: size, weight: .regular, design: .serif))
-                .foregroundStyle(colors.heroStyle(for: percent))
-                .widgetAccentable()
-                .lineLimit(1)
-                .minimumScaleFactor(0.55)
-
-            if colors.isSystem, let symbol = limitLevelIconName(for: percent) {
-                Image(systemName: symbol)
-                    .font(.system(size: size * 0.32, weight: .semibold))
-                    .foregroundStyle(colors.heroStyle(for: percent))
-                    .lineLimit(1)
-            }
-        }
+        Text("\(percent)%")
+            .font(.system(size: size, weight: .regular, design: .serif))
+            .foregroundStyle(colors.heroStyle(for: percent))
+            .widgetAccentable()
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
     }
 
     private func editorialStat(

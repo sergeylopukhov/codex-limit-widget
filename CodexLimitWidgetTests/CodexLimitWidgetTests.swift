@@ -128,6 +128,19 @@ final class CodexLimitWidgetTests: XCTestCase {
         XCTAssertNil(legacy.freshUsage)
     }
 
+    func testPreferencesFromOlderVersionEnableColoredMeter() throws {
+        let stored = Data(#"{"menuBarMode":"percentOnly","showsMenuBarItem":true}"#.utf8)
+        let preferences = try JSONDecoder().decode(LimitPreferences.self, from: stored)
+        XCTAssertTrue(preferences.menuBarColoredMeter)
+        XCTAssertFalse(preferences.menuBarColoredDigits)
+    }
+
+    func testDisabledColoredMeterStaysDisabled() throws {
+        let stored = Data(#"{"menuBarColoredMeter":false}"#.utf8)
+        let preferences = try JSONDecoder().decode(LimitPreferences.self, from: stored)
+        XCTAssertFalse(preferences.menuBarColoredMeter)
+    }
+
     func testSystemDesignResolvesToDark() {
         XCTAssertEqual(MenuWindowDesign.system.resolved(isDark: true), .terminal)
     }

@@ -5,68 +5,34 @@ struct TerminalLimitWidgetView: View {
     let snapshot: LimitSnapshot?
     let preferences: LimitPreferences
     let family: WidgetFamily
-    /// macOS supplies the background (Clear/Tinted look): use system label colors
-    /// and leave the glass visible.
-    var systemStyled: Bool = false
     @Environment(\.locale) private var locale
 
-    /// The system mixture renders on the widget glass, where translucent copies
-    /// of the label color do not follow vibrancy, so it uses hierarchical styles.
-    private var accent: AnyShapeStyle {
-        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.primary) : AnyShapeStyle(Color(red: 0.52, green: 0.95, blue: 0.43))
-    }
-    private var mutedAccent: AnyShapeStyle {
-        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.tertiary) : AnyShapeStyle(Color(red: 0.32, green: 0.56, blue: 0.28))
-    }
-    private var dimText: AnyShapeStyle {
-        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.secondary) : AnyShapeStyle(Color(red: 0.64, green: 0.86, blue: 0.58))
-    }
-    private var meterEmpty: AnyShapeStyle {
-        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.quaternary) : AnyShapeStyle(Color(red: 0.17, green: 0.18, blue: 0.14))
-    }
-    private var meterEmptyStroke: AnyShapeStyle {
-        systemStyled ? AnyShapeStyle(HierarchicalShapeStyle.tertiary) : AnyShapeStyle(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(0.24))
-    }
+    private let accent = AnyShapeStyle(Color(red: 0.52, green: 0.95, blue: 0.43))
+    private let mutedAccent = AnyShapeStyle(Color(red: 0.32, green: 0.56, blue: 0.28))
+    private let dimText = AnyShapeStyle(Color(red: 0.64, green: 0.86, blue: 0.58))
+    private let meterEmpty = AnyShapeStyle(Color(red: 0.17, green: 0.18, blue: 0.14))
+    private let meterEmptyStroke = AnyShapeStyle(Color(red: 0.39, green: 0.48, blue: 0.33).opacity(0.24))
 
-    /// The system mixture keeps the percentage at full emphasis for every level
-    /// and marks warning and critical with the level icon instead of a fade.
     private func heroStyle(for percent: Int) -> AnyShapeStyle {
-        guard systemStyled else { return AnyShapeStyle(LimitRemainingLevel.terminalColor(for: percent)) }
-        return AnyShapeStyle(HierarchicalShapeStyle.primary)
+        AnyShapeStyle(LimitRemainingLevel.terminalColor(for: percent))
     }
 
-    /// Filled meter blocks only glow in the colored design, where the shadow can
-    /// be derived from the concrete terminal color.
     private func meterGlowColor(for percent: Int) -> Color? {
-        systemStyled ? nil : LimitRemainingLevel.terminalColor(for: percent)
+        LimitRemainingLevel.terminalColor(for: percent)
     }
 
-    /// Stale marker tint: the warning tint of the colored design, and the primary
-    /// label color of the system design, which marks levels with the icon.
     private var staleMarkerStyle: AnyShapeStyle {
-        systemStyled
-            ? AnyShapeStyle(HierarchicalShapeStyle.primary)
-            : AnyShapeStyle(LimitRemainingLevel.terminalColor(for: warningLevelPercent))
+        AnyShapeStyle(LimitRemainingLevel.terminalColor(for: warningLevelPercent))
     }
 
-    /// Hero percentage with the level icon that the system design adds.
     private func heroPercent(_ percent: Int, size: CGFloat, minScale: CGFloat, glowOpacity: Double, glowRadius: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: size * 0.12) {
-            Text("\(percent)%")
-                .font(.system(size: size, weight: .black, design: .monospaced))
-                .foregroundStyle(heroStyle(for: percent))
-                .widgetAccentable()
-                .lineLimit(1)
-                .minimumScaleFactor(minScale)
-                .shadow(color: systemStyled ? .clear : LimitRemainingLevel.terminalColor(for: percent).opacity(glowOpacity), radius: glowRadius)
-
-            if systemStyled, let symbol = limitLevelIconName(for: percent) {
-                Image(systemName: symbol)
-                    .font(.system(size: size * 0.32, weight: .black))
-                    .foregroundStyle(heroStyle(for: percent))
-                    .lineLimit(1)
-            }
-        }
+        Text("\(percent)%")
+            .font(.system(size: size, weight: .black, design: .monospaced))
+            .foregroundStyle(heroStyle(for: percent))
+            .widgetAccentable()
+            .lineLimit(1)
+            .minimumScaleFactor(minScale)
+            .shadow(color: LimitRemainingLevel.terminalColor(for: percent).opacity(glowOpacity), radius: glowRadius)
     }
 
     var body: some View {
@@ -616,16 +582,6 @@ struct TerminalLimitWidgetView: View {
             .foregroundStyle(color)
     }
 
-}
-
-/// Symbol that marks the remaining-limit level of the system styled widgets.
-/// The colored widgets keep the plain percentage and their level colors.
-func limitLevelIconName(for percent: Int) -> String? {
-    switch LimitRemainingLevel.resolve(remainingPercent: percent) {
-    case .normal: return nil
-    case .warning: return "exclamationmark"
-    case .critical: return "exclamationmark.2"
-    }
 }
 
 /// Single rule for the stale marker: the preference is on and the snapshot is

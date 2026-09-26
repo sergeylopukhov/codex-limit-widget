@@ -21,6 +21,36 @@ enum LimitRemainingLevel {
         }
     }
 
+    /// Smooth ramp from green at a full limit through yellow and orange to
+    /// dark red when it is exhausted. The menu-bar meter and the popover
+    /// meters share it.
+    static func gradientRGB(for remainingPercent: Int) -> (red: Double, green: Double, blue: Double) {
+        let stops: [(position: Double, red: Double, green: Double, blue: Double)] = [
+            (0.00, 0.55, 0.05, 0.07),
+            (0.20, 0.86, 0.22, 0.12),
+            (0.45, 0.96, 0.62, 0.10),
+            (0.70, 0.62, 0.80, 0.18),
+            (1.00, 0.20, 0.78, 0.32)
+        ]
+        let position = Double(max(0, min(100, remainingPercent))) / 100
+        guard let upperIndex = stops.firstIndex(where: { $0.position >= position }), upperIndex > 0 else {
+            return (stops[0].red, stops[0].green, stops[0].blue)
+        }
+        let lower = stops[upperIndex - 1]
+        let upper = stops[upperIndex]
+        let t = (position - lower.position) / (upper.position - lower.position)
+        return (
+            lower.red + (upper.red - lower.red) * t,
+            lower.green + (upper.green - lower.green) * t,
+            lower.blue + (upper.blue - lower.blue) * t
+        )
+    }
+
+    static func gradientColor(for remainingPercent: Int) -> Color {
+        let rgb = gradientRGB(for: remainingPercent)
+        return Color(.sRGB, red: rgb.red, green: rgb.green, blue: rgb.blue, opacity: 1)
+    }
+
     static func editorialColor(for remainingPercent: Int) -> Color {
         switch resolve(remainingPercent: remainingPercent) {
         case .normal: return MenuWindowVisuals.editorialInk
@@ -50,7 +80,7 @@ struct LimitGaugeView: View {
 
         VStack(alignment: .leading, spacing: compact ? 4 : 6) {
             HStack(alignment: .firstTextBaseline) {
-                Text(window.label)
+                Text(LocalizedStringKey(window.label))
                     .font(.system(size: compact ? 10 : 12, weight: .bold, design: .monospaced))
                     .foregroundStyle(Self.dimText)
                 Spacer()
@@ -60,7 +90,7 @@ struct LimitGaugeView: View {
                     .lineLimit(1)
             }
 
-            TerminalPopupMeter(percent: window.leftPercent, color: levelColor)
+            TerminalPopupMeter(percent: window.leftPercent, color: LimitRemainingLevel.gradientColor(for: window.leftPercent))
 
             if showsResetTime {
                 Text("Reset: \(window.resetText)")
@@ -335,13 +365,13 @@ private struct EditorialSnapshotDetailView: View {
                     EditorialPopupMeter(
                         title: metricLabel,
                         percent: metric.leftPercent,
-                        color: LimitRemainingLevel.editorialColor(for: metric.leftPercent)
+                        color: LimitRemainingLevel.gradientColor(for: metric.leftPercent)
                     )
                     if let weekly = snapshot.weekly, snapshot.fiveHour != nil {
                         EditorialPopupMeter(
                             title: "WEEK",
                             percent: weekly.leftPercent,
-                            color: LimitRemainingLevel.editorialColor(for: weekly.leftPercent)
+                            color: LimitRemainingLevel.gradientColor(for: weekly.leftPercent)
                         )
                     }
 
@@ -516,7 +546,7 @@ private struct EditorialPopupMeter: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                 Spacer(minLength: 8)
                 Text("\(percent)% REMAINING")
             }

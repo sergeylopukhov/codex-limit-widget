@@ -49,6 +49,16 @@ final class LimitsWindowPresenter: NSObject, ObservableObject, NSWindowDelegate 
         bringToFront(window)
     }
 
+    /// The global shortcut opens the window and closes it again when it is
+    /// already on screen.
+    func toggle(viewModel: LimitViewModel) {
+        if windowController?.window?.isVisible == true {
+            close()
+        } else {
+            show(viewModel: viewModel)
+        }
+    }
+
     func close() {
         windowController?.close()
     }
@@ -178,7 +188,7 @@ private struct LimitsDetailWindowView: View {
 
             if let fiveHour = snapshot.fiveHour {
                 limitsRow(
-                    title: fiveHour.label,
+                    title: "5 hours",
                     window: fiveHour,
                     locale: locality,
                     palette: palette
@@ -187,7 +197,7 @@ private struct LimitsDetailWindowView: View {
 
             if let weekly = snapshot.weekly {
                 limitsRow(
-                    title: weekly.label,
+                    title: "Week",
                     window: weekly,
                     locale: locality,
                     palette: palette
@@ -210,7 +220,7 @@ private struct LimitsDetailWindowView: View {
     ) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(palette.labelFont)
                     .foregroundStyle(palette.primaryText)
                     .lineLimit(1)
@@ -311,12 +321,12 @@ private struct LimitsDetailWindowView: View {
     /// value with "--".
     private func usageStatistic(
         _ title: String,
-        _ value: String,
+        _ value: Text,
         isExpired: Bool,
         palette: SettingsWindowPalette
     ) -> some View {
         SettingsRow(title, palette: palette) {
-            Text(isExpired ? "--" : value)
+            (isExpired ? Text(verbatim: "--") : value)
                 .font(palette.controlFont)
                 .foregroundStyle(palette.primaryText)
         }
@@ -334,7 +344,7 @@ private struct LimitsDetailWindowView: View {
             if let lifetimeTokens = usage.lifetimeTokens {
                 usageStatistic(
                     "Lifetime tokens",
-                    DetailFormatting.tokens(lifetimeTokens, locale: locale),
+                    Text(verbatim: DetailFormatting.tokens(lifetimeTokens, locale: locale)),
                     isExpired: isExpired,
                     palette: palette
                 )
@@ -343,7 +353,7 @@ private struct LimitsDetailWindowView: View {
             if let peakDailyTokens = usage.peakDailyTokens {
                 usageStatistic(
                     "Peak day",
-                    DetailFormatting.tokens(peakDailyTokens, locale: locale),
+                    Text(verbatim: DetailFormatting.tokens(peakDailyTokens, locale: locale)),
                     isExpired: isExpired,
                     palette: palette
                 )
@@ -352,7 +362,7 @@ private struct LimitsDetailWindowView: View {
             if let lastDailyTokens = usage.lastDailyTokens {
                 usageStatistic(
                     "Last day",
-                    DetailFormatting.tokens(lastDailyTokens, locale: locale),
+                    Text(verbatim: DetailFormatting.tokens(lastDailyTokens, locale: locale)),
                     isExpired: isExpired,
                     palette: palette
                 )
@@ -361,7 +371,7 @@ private struct LimitsDetailWindowView: View {
             if let currentStreakDays = usage.currentStreakDays {
                 usageStatistic(
                     "Current streak",
-                    "\(currentStreakDays)d",
+                    Text("\(currentStreakDays)d"),
                     isExpired: isExpired,
                     palette: palette
                 )

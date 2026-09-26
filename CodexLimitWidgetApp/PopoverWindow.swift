@@ -65,6 +65,9 @@ struct MenuBarContentView: View {
         }
         .frame(width: 286, alignment: .top)
         .background(MenuWindowVisuals.popoverBackground(for: design))
+        // The popover is created once and reused, so the language is applied
+        // here, where it follows later changes of the setting.
+        .environment(\.locale, viewModel.preferences.appLanguage.locale)
         .alert("Install Codex CLI", isPresented: $showsCLIInstallConfirmation) {
             Button("Install") {
                 Task { await viewModel.installCLI() }
@@ -233,7 +236,9 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
         case .percentOnly:
             button.image = MenuBarPercentImageRenderer.image(
                 value: viewModel.compactMenuBarValue,
-                hasUpdate: updateController.isUpdateAvailable
+                hasUpdate: updateController.isUpdateAvailable,
+                coloredMeter: viewModel.preferences.menuBarColoredMeter,
+                coloredDigits: viewModel.preferences.menuBarColoredDigits
             )
             button.imageScaling = .scaleNone
             button.title = ""
@@ -387,9 +392,7 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
 
         hotKeyController.update(shortcut: preferences.hotkeyShortcut) { [weak self] in
             guard let self else { return }
-            self.limitsWindowPresenter.show(
-                viewModel: self.viewModel
-            )
+            self.limitsWindowPresenter.toggle(viewModel: self.viewModel)
         }
     }
 
@@ -414,7 +417,6 @@ final class StatusItemController: NSObject, ObservableObject, NSPopoverDelegate 
                     settingsWindowPresenter: settingsWindowPresenter,
                     close: { [weak self] in self?.closePopover() }
                 )
-                .environment(\.locale, viewModel.preferences.appLanguage.locale)
             )
             popover = createdPopover
             activePopover = createdPopover
@@ -527,15 +529,55 @@ private enum MenuBarPercentImageRenderer {
         image(value: "\(max(0, min(100, percent)))%", hasUpdate: hasUpdate)
     }
 
-    static func image(value: String, hasUpdate: Bool) -> NSImage {
+    /// A template image adapts to the menu bar on its own. A colored meter or
+    /// colored digits cannot be a template, so that image is drawn on demand
+    /// in the menu bar's current appearance, with the label color for every
+    /// part that stays uncolored.
+    static func image(
+        value: String,
+        hasUpdate: Bool,
+        coloredMeter: Bool = false,
+        coloredDigits: Bool = false
+    ) -> NSImage {
+        let size = size(for: value, hasUpdate: hasUpdate)
+        guard coloredMeter || coloredDigits, value.hasSuffix("%") else {
+            let image = NSImage(size: size)
+            image.lockFocus()
+            draw(value: value, hasUpdate: hasUpdate, ink: .black, textColor: nil, meterFill: nil)
+            image.unlockFocus()
+            image.isTemplate = true
+            return image
+        }
+
+        let percent = max(0, min(100, Int(value.dropLast()) ?? 0))
+        let levelColor = meterColor(for: percent)
+        let image = NSImage(size: size, flipped: false) { _ in
+            draw(
+                value: value,
+                hasUpdate: hasUpdate,
+                ink: .labelColor,
+                textColor: coloredDigits ? levelColor : nil,
+                meterFill: coloredMeter ? levelColor : nil
+            )
+            return true
+        }
+        image.isTemplate = false
+        return image
+    }
+
+    /// Fill color of the colored meter, shared with the popover meters.
+    static func meterColor(for percent: Int) -> NSColor {
+        let rgb = LimitRemainingLevel.gradientRGB(for: percent)
+        return NSColor(srgbRed: rgb.red, green: rgb.green, blue: rgb.blue, alpha: 1)
+    }
+
+    /// Draws the value, meter and update arrow into the current context.
+    /// A nil `textColor` or `meterFill` draws that part with `ink`.
+    private static func draw(value: String, hasUpdate: Bool, ink: NSColor, textColor: NSColor?, meterFill: NSColor?) {
         let isPercent = value.hasSuffix("%")
         let meterWidth: CGFloat = isPercent ? 30 : creditValueWidth(for: value)
         let clampedPercent = Int(value.dropLast()) ?? 0
         let size = size(for: value, hasUpdate: hasUpdate)
-        let image = NSImage(size: size)
-
-        image.lockFocus()
-        defer { image.unlockFocus() }
 
         NSColor.clear.setFill()
         NSRect(origin: .zero, size: size).fill()
@@ -545,16 +587,16 @@ private enum MenuBarPercentImageRenderer {
 
         let text = value as NSString
         let textRect = isPercent
-            ? NSRect(x: 0, y: 6, width: meterWidth, height: 10)
+            ? NSRect(x: 0, y: 5.5, width: meterWidth, height: 12)
             : NSRect(x: 0, y: 1, width: meterWidth, height: 16)
         text.draw(
             in: textRect,
             withAttributes: [
                 .font: NSFont.monospacedDigitSystemFont(
-                    ofSize: isPercent ? 9.5 : 13,
+                    ofSize: isPercent ? 10.5 : 13,
                     weight: .semibold
                 ),
-                .foregroundColor: NSColor.black,
+                .foregroundColor: textColor ?? ink,
                 .paragraphStyle: paragraph
             ]
         )
@@ -572,23 +614,22 @@ private enum MenuBarPercentImageRenderer {
                     ]
                 )
             }
-            image.isTemplate = true
-            return image
+            return
         }
 
-        let trackRect = NSRect(x: 1, y: 2.5, width: meterWidth - 2, height: 2)
-        let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.25, yRadius: 1.25)
-        NSColor.black.withAlphaComponent(0.28).setFill()
+        let trackRect = NSRect(x: 1, y: 1.5, width: meterWidth - 2, height: 3)
+        let track = NSBezierPath(roundedRect: trackRect, xRadius: 1.5, yRadius: 1.5)
+        ink.withAlphaComponent(0.28).setFill()
         track.fill()
 
         let fillWidth = trackRect.width * CGFloat(clampedPercent) / 100
         if fillWidth > 0 {
             let fill = NSBezierPath(
                 roundedRect: NSRect(x: trackRect.minX, y: trackRect.minY, width: fillWidth, height: trackRect.height),
-                xRadius: 1.25,
-                yRadius: 1.25
+                xRadius: 1.5,
+                yRadius: 1.5
             )
-            NSColor.black.setFill()
+            (meterFill ?? ink).setFill()
             fill.fill()
         }
 
@@ -605,7 +646,5 @@ private enum MenuBarPercentImageRenderer {
             )
         }
 
-        image.isTemplate = true
-        return image
     }
 }

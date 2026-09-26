@@ -324,6 +324,7 @@ struct SettingsTitleBar: View {
                 .foregroundStyle(palette.titleText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
+                .allowsHitTesting(false)
 
             Spacer(minLength: 12)
 
@@ -331,10 +332,12 @@ struct SettingsTitleBar: View {
                 .font(palette.noteFont)
                 .foregroundStyle(palette.mutedText)
                 .lineLimit(1)
+                .allowsHitTesting(false)
         }
         .padding(.horizontal, 18)
         .frame(height: 62)
-        .contentShape(Rectangle())
+        // The window is borderless, so the title bar drags it explicitly.
+        .background(WindowDragArea())
     }
 }
 
@@ -463,6 +466,198 @@ struct SettingsRow<Control: View>: View {
     }
 }
 
+/// Explanatory copy under a group of settings.
+struct SettingsNote: View {
+    let text: String
+    let palette: SettingsWindowPalette
+
+    init(_ text: String, palette: SettingsWindowPalette) {
+        self.text = text
+        self.palette = palette
+    }
+
+    var body: some View {
+        Text(LocalizedStringKey(text))
+            .font(palette.noteFont)
+            .foregroundStyle(palette.mutedText)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+/// Category list on the left side of the settings window: a floating inset
+/// panel with tinted icon tiles, in the manner of the macOS System Settings.
+struct SettingsSidebar: View {
+    @Binding var selection: SettingsTab
+    let palette: SettingsWindowPalette
+    @Namespace private var selectionNamespace
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(SettingsTab.allCases) { tab in
+                SettingsSidebarItem(
+                    tab: tab,
+                    isSelected: selection == tab,
+                    palette: palette,
+                    selectionNamespace: selectionNamespace
+                ) {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.86)) {
+                        selection = tab
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(8)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .background(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .fill(palette.sidebarFill)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                .stroke(palette.rule.opacity(0.45), lineWidth: 0.8)
+        )
+        .background(WindowDragArea())
+        .padding(.leading, 12)
+        .padding(.vertical, 12)
+    }
+}
+
+private struct SettingsSidebarItem: View {
+    let tab: SettingsTab
+    let isSelected: Bool
+    let palette: SettingsWindowPalette
+    let selectionNamespace: Namespace.ID
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(palette.sidebarTileFill(for: tab))
+                    .frame(width: 24, height: 24)
+                    .overlay(
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 11.5, weight: .semibold))
+                            .foregroundStyle(palette.sidebarTileGlyph)
+                    )
+                    .shadow(color: Color.black.opacity(0.10), radius: 1.5, y: 0.5)
+
+                Text(LocalizedStringKey(tab.title))
+                    .font(palette.sidebarFont(isSelected: isSelected))
+                    .foregroundStyle(palette.primaryText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 36)
+            .background {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(palette.sidebarSelection)
+                        .matchedGeometryEffect(id: "selection", in: selectionNamespace)
+                } else if isHovering {
+                    RoundedRectangle(cornerRadius: 11, style: .continuous)
+                        .fill(palette.sidebarSelection.opacity(0.45))
+                }
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) { isHovering = hovering }
+        }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+}
+
+extension SettingsWindowPalette {
+    var sidebarFill: Color {
+        switch design {
+        case .terminal, .system:
+            return Color.white.opacity(0.035)
+        case .editorial:
+            return Color.white.opacity(0.38)
+        }
+    }
+
+    var sidebarSelection: Color {
+        switch design {
+        case .terminal, .system:
+            return MenuWindowVisuals.terminalAccent.opacity(0.16)
+        case .editorial:
+            return MenuWindowVisuals.editorialFill.opacity(0.20)
+        }
+    }
+
+    var sidebarTileGlyph: Color {
+        switch design {
+        case .terminal, .system:
+            return Color(red: 0.025, green: 0.035, blue: 0.025)
+        case .editorial:
+            return .white
+        }
+    }
+
+    func sidebarFont(isSelected: Bool) -> Font {
+        switch design {
+        case .terminal, .system:
+            return .system(size: 12, weight: isSelected ? .heavy : .bold, design: .monospaced)
+        case .editorial:
+            return .system(size: 13.5, weight: isSelected ? .semibold : .medium)
+        }
+    }
+
+    /// Each category keeps its own tile color. The beige design uses muted
+    /// earthy tones; the terminal design stays within its green range.
+    func sidebarTileFill(for tab: SettingsTab) -> Color {
+        switch design {
+        case .terminal, .system:
+            let accent = MenuWindowVisuals.terminalAccent
+            switch tab {
+            case .general: return accent
+            case .menuBar: return accent.opacity(0.88)
+            case .widgets: return accent.opacity(0.78)
+            case .notifications: return accent.opacity(0.9)
+            case .updates: return accent.opacity(0.82)
+            case .diagnostics: return accent.opacity(0.72)
+            }
+        case .editorial:
+            switch tab {
+            case .general: return Color(red: 0.49, green: 0.47, blue: 0.43)
+            case .menuBar: return Color(red: 0.33, green: 0.44, blue: 0.56)
+            case .widgets: return Color(red: 0.45, green: 0.52, blue: 0.33)
+            case .notifications: return Color(red: 0.74, green: 0.38, blue: 0.27)
+            case .updates: return Color(red: 0.27, green: 0.52, blue: 0.52)
+            case .diagnostics: return Color(red: 0.71, green: 0.55, blue: 0.24)
+            }
+        }
+    }
+}
+
+/// Lets a borderless window be dragged from the view it backs. SwiftUI content
+/// does not forward mouse-down to the window, so `isMovableByWindowBackground`
+/// alone leaves the window stuck in place.
+struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        WindowDragView()
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+
+    private final class WindowDragView: NSView {
+        override var mouseDownCanMoveWindow: Bool { true }
+
+        override func mouseDown(with event: NSEvent) {
+            window?.performDrag(with: event)
+        }
+    }
+}
+
 struct SettingsRule: View {
     let palette: SettingsWindowPalette
 
@@ -573,6 +768,8 @@ struct SettingsSegmentedControl<Value: Hashable>: View {
             Capsule(style: .continuous)
                 .stroke(palette.rule.opacity(0.65), lineWidth: 1)
         )
+        // Option titles never truncate; the row label shrinks instead.
+        .fixedSize()
     }
 }
 

@@ -365,6 +365,11 @@ struct LimitPreferences: Codable, Equatable {
     var widgetShowsStaleWarning = true
     var showsMenuBarItem = true
     var menuBarMode = MenuBarMode.detailed
+    /// Paints the compact menu-bar meter from green to dark red by the
+    /// remaining limit instead of the monochrome system template.
+    var menuBarColoredMeter = true
+    /// Paints the compact menu-bar percentage with the same color as the meter.
+    var menuBarColoredDigits = false
     var compactMenuBarMetric = MenuBarCompactMetric.fiveHour
     var menuWindowDesign = MenuWindowDesign.terminal
     var appLanguage = AppLanguage.system
@@ -395,6 +400,8 @@ struct LimitPreferences: Codable, Equatable {
         case widgetShowsStaleWarning
         case showsMenuBarItem
         case menuBarMode
+        case menuBarColoredMeter
+        case menuBarColoredDigits
         case compactMenuBarMetric
         case menuWindowDesign
         case appLanguage
@@ -437,6 +444,8 @@ struct LimitPreferences: Codable, Equatable {
         widgetShowsStaleWarning = try container.decodeIfPresent(Bool.self, forKey: .widgetShowsStaleWarning) ?? true
         showsMenuBarItem = try container.decodeIfPresent(Bool.self, forKey: .showsMenuBarItem) ?? true
         menuBarMode = (try? container.decodeIfPresent(MenuBarMode.self, forKey: .menuBarMode)) ?? .detailed
+        menuBarColoredMeter = try container.decodeIfPresent(Bool.self, forKey: .menuBarColoredMeter) ?? true
+        menuBarColoredDigits = try container.decodeIfPresent(Bool.self, forKey: .menuBarColoredDigits) ?? false
         compactMenuBarMetric = try container.decodeIfPresent(MenuBarCompactMetric.self, forKey: .compactMenuBarMetric) ?? .fiveHour
         menuWindowDesign = (try? container.decodeIfPresent(MenuWindowDesign.self, forKey: .menuWindowDesign)) ?? .terminal
         appLanguage = (try? container.decodeIfPresent(AppLanguage.self, forKey: .appLanguage)) ?? .system
@@ -488,6 +497,8 @@ struct LimitPreferences: Codable, Equatable {
         try container.encode(widgetShowsStaleWarning, forKey: .widgetShowsStaleWarning)
         try container.encode(showsMenuBarItem, forKey: .showsMenuBarItem)
         try container.encode(menuBarMode, forKey: .menuBarMode)
+        try container.encode(menuBarColoredMeter, forKey: .menuBarColoredMeter)
+        try container.encode(menuBarColoredDigits, forKey: .menuBarColoredDigits)
         try container.encode(compactMenuBarMetric, forKey: .compactMenuBarMetric)
         try container.encode(menuWindowDesign, forKey: .menuWindowDesign)
         try container.encode(appLanguage, forKey: .appLanguage)

@@ -114,9 +114,9 @@ The popover lists the available limit windows, reset times, data freshness, and 
 
 ## Settings
 
-Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. The Updates section shows the installed version, the latest check result, and the update action.
+Settings are split into tabs: General, Menu bar, Widgets, Notifications, Updates, and Diagnostics. The window can be moved and stays at the normal window level, so other apps can cover it. Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. In percent mode the meter under the number and the number itself can each be colored by the remaining limit, from green at a full limit to dark red near zero. The colored meter is on by default, the colored digits are off. The Updates section shows the installed version, the latest check result, and the update action.
 
-Further settings cover the menu bar left-click and right-click actions, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that brings the detailed limits window to the front from any app, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
+Further settings cover the menu bar left-click and right-click actions, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that opens the detailed limits window from any app and closes it on a second press, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
 
 <table>
   <tr>
