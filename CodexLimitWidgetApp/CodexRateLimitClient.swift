@@ -54,11 +54,15 @@ struct CodexCLI: Sendable, Equatable {
             commandEnvironment[key] = value
         }
 
-        return try await CodexCLIProcessRunner.run(
-            executableURL: executableURL,
-            arguments: arguments,
-            environment: commandEnvironment
-        )
+        do {
+            return try await CodexCLIProcessRunner.run(
+                executableURL: executableURL,
+                arguments: arguments,
+                environment: commandEnvironment
+            )
+        } catch TimedProcessError.timedOut {
+            throw CodexRateLimitError.timeout
+        }
     }
 
     func authenticationStatus() async throws -> CodexCLIAuthenticationStatus {
@@ -99,7 +103,8 @@ private enum CodexCLIProcessRunner {
     static func run(
         executableURL: URL,
         arguments: [String],
-        environment: [String: String]
+        environment: [String: String],
+        timeout: TimeInterval = 30
     ) async throws -> CodexCLICommandResult {
         try await Task.detached(priority: .userInitiated) {
             let fileManager = FileManager.default
@@ -131,8 +136,7 @@ private enum CodexCLIProcessRunner {
             process.standardOutput = standardOutputHandle
             process.standardError = standardErrorHandle
 
-            try process.run()
-            process.waitUntilExit()
+            let terminationStatus = try await TimedProcess.run(process, timeout: timeout)
             try? standardOutputHandle.close()
             try? standardErrorHandle.close()
 
@@ -146,11 +150,91 @@ private enum CodexCLIProcessRunner {
             )?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
 
             return CodexCLICommandResult(
-                terminationStatus: process.terminationStatus,
+                terminationStatus: terminationStatus,
                 standardOutput: standardOutput,
                 standardError: standardError
             )
         }.value
+    }
+}
+
+enum TimedProcessError: Error {
+    case timedOut
+}
+
+enum TimedProcess {
+    static func run(_ process: Process, timeout: TimeInterval) async throws -> Int32 {
+        try await withCheckedThrowingContinuation { continuation in
+            let completion = Completion(continuation: continuation)
+            process.terminationHandler = { finishedProcess in
+                completion.finished(status: finishedProcess.terminationStatus)
+            }
+
+            do {
+                try process.run()
+            } catch {
+                completion.failed(error)
+                return
+            }
+
+            Task.detached {
+                try? await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                guard completion.beginTimeout() else { return }
+                if process.isRunning {
+                    process.terminate()
+                }
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if process.isRunning {
+                    kill(process.processIdentifier, SIGKILL)
+                }
+                completion.failed(TimedProcessError.timedOut)
+            }
+        }
+    }
+
+    static func stop(_ process: Process) {
+        guard process.isRunning else { return }
+        process.terminate()
+        Task.detached {
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            if process.isRunning {
+                kill(process.processIdentifier, SIGKILL)
+            }
+        }
+    }
+
+    private final class Completion: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Int32, Error>?
+        private var timedOut = false
+
+        init(continuation: CheckedContinuation<Int32, Error>) {
+            self.continuation = continuation
+        }
+
+        func beginTimeout() -> Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            guard continuation != nil else { return false }
+            timedOut = true
+            return true
+        }
+
+        func finished(status: Int32) {
+            lock.lock()
+            let pending = timedOut ? nil : continuation
+            if pending != nil { continuation = nil }
+            lock.unlock()
+            pending?.resume(returning: status)
+        }
+
+        func failed(_ error: Error) {
+            lock.lock()
+            let pending = continuation
+            continuation = nil
+            lock.unlock()
+            pending?.resume(throwing: error)
+        }
     }
 }
 
@@ -190,11 +274,17 @@ enum CodexCLIInstaller {
                 .path
         }
 
-        let result = try await CodexCLIProcessRunner.run(
-            executableURL: URL(fileURLWithPath: "/bin/sh"),
-            arguments: [scriptURL.path],
-            environment: environment
-        )
+        let result: CodexCLICommandResult
+        do {
+            result = try await CodexCLIProcessRunner.run(
+                executableURL: URL(fileURLWithPath: "/bin/sh"),
+                arguments: [scriptURL.path],
+                environment: environment,
+                timeout: 300
+            )
+        } catch TimedProcessError.timedOut {
+            throw CodexCLIInstallError.commandFailed("")
+        }
         guard result.succeeded else {
             throw CodexCLIInstallError.commandFailed(result.combinedOutput)
         }
@@ -247,8 +337,14 @@ struct CodexRateLimitClient {
         process.standardError = FileHandle.nullDevice
 
         try process.run()
+        let timeoutTask = Task.detached {
+            try? await Task.sleep(nanoseconds: 30_000_000_000)
+            guard !Task.isCancelled else { return }
+            TimedProcess.stop(process)
+        }
         let reader = JSONLineReader(fileHandle: output.fileHandleForReading)
         defer {
+            timeoutTask.cancel()
             reader.close()
             stop(process: process, input: input)
         }
@@ -281,22 +377,7 @@ struct CodexRateLimitClient {
 
     private func stop(process: Process, input: Pipe) {
         try? input.fileHandleForWriting.close()
-        guard process.isRunning else { return }
-
-        process.terminate()
-
-        DispatchQueue.global(qos: .utility).async {
-            let deadline = Date().addingTimeInterval(2)
-            while process.isRunning && Date() < deadline {
-                Thread.sleep(forTimeInterval: 0.05)
-            }
-
-            if process.isRunning {
-                kill(process.processIdentifier, SIGKILL)
-            }
-
-            process.waitUntilExit()
-        }
+        TimedProcess.stop(process)
     }
 
 }

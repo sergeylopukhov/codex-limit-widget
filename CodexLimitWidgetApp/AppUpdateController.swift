@@ -292,7 +292,7 @@ final class AppUpdateController: ObservableObject {
                 try validateHTTPResponse(response)
 
                 return try await Task.detached(priority: .userInitiated) {
-                    try Self.prepareUpdate(downloadURL: downloadURL, release: release)
+                    try await Self.prepareUpdate(downloadURL: downloadURL, release: release)
                 }.value
             } catch {
                 guard let updateError = error as? AppUpdateError,
@@ -410,7 +410,7 @@ final class AppUpdateController: ObservableObject {
     private nonisolated static func prepareUpdate(
         downloadURL: URL,
         release: AppUpdateRelease
-    ) throws -> PreparedUpdate {
+    ) async throws -> PreparedUpdate {
         let fileManager = FileManager.default
         let temporaryDirectory = fileManager.temporaryDirectory.appendingPathComponent(
             "CodexLimitWidgetUpdate-\(UUID().uuidString)",
@@ -434,7 +434,7 @@ final class AppUpdateController: ObservableObject {
 
             let extractionDirectory = temporaryDirectory.appendingPathComponent("extracted", isDirectory: true)
             try fileManager.createDirectory(at: extractionDirectory, withIntermediateDirectories: true)
-            try runProcess("/usr/bin/ditto", arguments: ["-x", "-k", archiveURL.path, extractionDirectory.path])
+            try await runProcess("/usr/bin/ditto", arguments: ["-x", "-k", archiveURL.path, extractionDirectory.path], timeout: 120)
 
             guard let appURL = findApp(in: extractionDirectory) else {
                 throw AppUpdateError.missingAppBundle
@@ -450,7 +450,7 @@ final class AppUpdateController: ObservableObject {
                 throw AppUpdateError.invalidAppBundle
             }
 
-            try runProcess("/usr/bin/codesign", arguments: ["--verify", "--deep", "--strict", appURL.path])
+            try await runProcess("/usr/bin/codesign", arguments: ["--verify", "--deep", "--strict", appURL.path], timeout: 60)
             return PreparedUpdate(appURL: appURL, temporaryDirectory: temporaryDirectory)
         } catch {
             try? fileManager.removeItem(at: temporaryDirectory)
@@ -471,15 +471,19 @@ final class AppUpdateController: ObservableObject {
         return nil
     }
 
-    private nonisolated static func runProcess(_ executable: String, arguments: [String]) throws {
+    private nonisolated static func runProcess(_ executable: String, arguments: [String], timeout: TimeInterval) async throws {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable)
         process.arguments = arguments
         process.standardOutput = FileHandle.nullDevice
         process.standardError = FileHandle.nullDevice
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
+        let status: Int32
+        do {
+            status = try await TimedProcess.run(process, timeout: timeout)
+        } catch TimedProcessError.timedOut {
+            throw AppUpdateError.updateCheckTimedOut
+        }
+        guard status == 0 else {
             throw AppUpdateError.commandFailed
         }
     }
