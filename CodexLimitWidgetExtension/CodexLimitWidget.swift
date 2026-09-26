@@ -324,7 +324,6 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func mediumBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let metricColor = heroStyle(for: metric.window.leftPercent)
         let leftWidth = max(116, width * 0.42)
 
         return VStack(alignment: .leading, spacing: 0) {
@@ -362,7 +361,30 @@ private struct TerminalLimitWidgetView: View {
             TerminalDivider(color: mutedAccent)
             fixedGap(2)
 
-            if shouldShowStaleWarning(snapshot, preferences: preferences) {
+            // The medium widget runs out of height first, so the rows below the
+            // divider give way in order instead of clipping the meters.
+            ViewThatFits(in: .vertical) {
+                mediumSecondaryRows(snapshot: snapshot, metric: metric, width: width, showsResetTime: true, showsStaleMarker: true)
+                mediumSecondaryRows(snapshot: snapshot, metric: metric, width: width, showsResetTime: false, showsStaleMarker: true)
+                mediumSecondaryRows(snapshot: snapshot, metric: metric, width: width, showsResetTime: false, showsStaleMarker: false)
+            }
+        }
+        .frame(width: width, alignment: .topLeading)
+        .frame(maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// Meter rows of the medium widget. The first row of `ViewThatFits` keeps both
+    /// optional rows, the second drops the reset time, the third drops the stale
+    /// marker as well.
+    private func mediumSecondaryRows(
+        snapshot: LimitSnapshot,
+        metric: TerminalMetric,
+        width: CGFloat,
+        showsResetTime: Bool,
+        showsStaleMarker: Bool
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if showsStaleMarker, shouldShowStaleWarning(snapshot, preferences: preferences) {
                 HStack {
                     terminalLine("STALE DATA", color: dimText, size: 11)
                     Spacer()
@@ -387,10 +409,10 @@ private struct TerminalLimitWidgetView: View {
             } else {
                 terminalMeterHeader(metric.remainingLabel, "\(metric.window.leftPercent)%", width: width)
                 fixedGap(3)
-                TerminalMeter(percent: metric.window.leftPercent, color: metricColor, emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10, glow: meterGlowColor(for: metric.window.leftPercent))
+                TerminalMeter(percent: metric.window.leftPercent, color: heroStyle(for: metric.window.leftPercent), emptyColor: meterEmpty, emptyStroke: meterEmptyStroke, blockCount: 24, height: 10, glow: meterGlowColor(for: metric.window.leftPercent))
                     .frame(width: width)
 
-                if preferences.widgetShowsResetTimes {
+                if showsResetTime, preferences.widgetShowsResetTimes {
                     fixedGap(2)
                     terminalMeterHeader(
                         "NEXT RESET",
@@ -400,9 +422,7 @@ private struct TerminalLimitWidgetView: View {
                 }
             }
         }
-        .frame(width: width, alignment: .topLeading)
-        .frame(maxHeight: .infinity, alignment: .topLeading)
-        .clipped()
+        .frame(width: width, alignment: .leading)
     }
 
     private func compactBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
@@ -438,8 +458,10 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
-        let messageWidth: CGFloat = 100
-        let leftWidth = max(150, width - messageWidth - 25)
+        // The stat column carries the widest localized values, so it takes its
+        // width from the widget and the hero column yields instead.
+        let messageWidth = max(104, width * 0.32)
+        let leftWidth = max(112, width - messageWidth - 25)
         let metricColor = heroStyle(for: metric.window.leftPercent)
 
         return VStack(alignment: .leading, spacing: 0) {
@@ -454,7 +476,7 @@ private struct TerminalLimitWidgetView: View {
                         .minimumScaleFactor(0.7)
                 }
                 .frame(width: leftWidth, alignment: .leading)
-                .layoutPriority(2)
+                .layoutPriority(1)
 
                 TerminalVerticalDivider(color: mutedAccent)
                     .frame(height: 86)
@@ -469,7 +491,7 @@ private struct TerminalLimitWidgetView: View {
                     terminalInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
                 }
                 .frame(width: messageWidth, alignment: .leading)
-                .layoutPriority(1)
+                .layoutPriority(2)
             }
             .frame(width: width, alignment: .leading)
 
@@ -506,7 +528,7 @@ private struct TerminalLimitWidgetView: View {
                 TerminalVerticalDivider(color: mutedAccent)
                 terminalStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
                 TerminalVerticalDivider(color: mutedAccent)
-                terminalStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15)
+                terminalStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, truncatesValue: true)
             }
             .fixedSize(horizontal: false, vertical: true)
 
@@ -549,12 +571,15 @@ private struct TerminalLimitWidgetView: View {
     }
 
     /// Label above value, used for the stat rows that sit in the colored grid.
+    /// `truncatesValue` keeps long values on one line with an ellipsis instead of
+    /// shrinking them below the readable size.
     private func terminalStat(
         _ label: String,
         _ value: String,
         labelSize: CGFloat,
         valueSize: CGFloat,
-        valueColor: AnyShapeStyle? = nil
+        valueColor: AnyShapeStyle? = nil,
+        truncatesValue: Bool = false
     ) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(LocalizedStringKey(label))
@@ -567,7 +592,8 @@ private struct TerminalLimitWidgetView: View {
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(valueColor ?? accent)
                 .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .truncationMode(.tail)
+                .minimumScaleFactor(truncatesValue ? 1 : 0.6)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -668,19 +694,21 @@ private struct TerminalLimitWidgetView: View {
     }
 
     /// Compact fact for the terminal large widget's side column: label above value.
+    /// The column is sized from the widget width, so both lines stay close to
+    /// their full size instead of shrinking.
     private func terminalInfoStat(_ label: String, value: Text, valueColor: AnyShapeStyle? = nil) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(LocalizedStringKey(label))
                 .font(.system(size: 8.5, weight: .bold, design: .monospaced))
                 .foregroundStyle(dimText)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.85)
 
             value
                 .font(.system(size: 12, weight: .bold, design: .monospaced))
                 .foregroundStyle(valueColor ?? accent)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1086,8 +1114,10 @@ private struct EditorialLimitWidgetView: View {
         let metric = snapshot.fiveHour ?? snapshot.weekly ?? .unavailable
         let resetLabel = snapshot.fiveHour == nil ? "WEEK RESET" : "5H RESET"
         let contentWidth = max(0, size.width - padding.leading - padding.trailing)
-        let messageWidth: CGFloat = 100
-        let leftWidth = max(150, contentWidth - messageWidth - 25)
+        // The stat column carries the widest localized values, so it takes its
+        // width from the card and the hero column yields instead.
+        let messageWidth = max(104, contentWidth * 0.32)
+        let leftWidth = max(112, contentWidth - messageWidth - 25)
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .top) {
@@ -1129,7 +1159,7 @@ private struct EditorialLimitWidgetView: View {
                         .minimumScaleFactor(0.65)
                 }
                 .frame(width: leftWidth, alignment: .leading)
-                .layoutPriority(2)
+                .layoutPriority(1)
 
                 EditorialVerticalRule(color: colors.rule)
                     .frame(width: 1, height: 86)
@@ -1142,7 +1172,7 @@ private struct EditorialLimitWidgetView: View {
                     heroInfoStat("SKILLS", value: countValue(snapshot.usage?.learnedSkillsCount))
                 }
                 .frame(width: messageWidth, alignment: .leading)
-                .layoutPriority(1)
+                .layoutPriority(2)
             }
             .frame(width: contentWidth, alignment: .leading)
 
@@ -1165,7 +1195,7 @@ private struct EditorialLimitWidgetView: View {
                 EditorialVerticalRule(color: colors.rule)
                 editorialStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 EditorialVerticalRule(color: colors.rule)
-                editorialStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, spacing: 3.5)
+                editorialStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, spacing: 3.5, truncatesValue: true)
             }
             .fixedSize(horizontal: false, vertical: true)
 
@@ -1313,7 +1343,8 @@ private struct EditorialLimitWidgetView: View {
         _ value: String,
         labelSize: CGFloat? = nil,
         valueSize: CGFloat? = nil,
-        spacing: CGFloat? = nil
+        spacing: CGFloat? = nil,
+        truncatesValue: Bool = false
     ) -> some View {
         let resolvedLabelSize: CGFloat = labelSize ?? {
             switch variant {
@@ -1342,7 +1373,8 @@ private struct EditorialLimitWidgetView: View {
                 .font(.system(size: resolvedValueSize, weight: .regular, design: .serif))
                 .foregroundStyle(colors.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.62)
+                .truncationMode(.tail)
+                .minimumScaleFactor(truncatesValue ? 1 : 0.62)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1420,13 +1452,13 @@ private struct EditorialLimitWidgetView: View {
                 .font(.system(size: 8.5, weight: .semibold))
                 .foregroundStyle(colors.mutedInk)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.85)
 
             value
                 .font(.system(size: 12, weight: .regular, design: .serif))
                 .foregroundStyle(colors.ink)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.85)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1560,3 +1592,147 @@ private func countValue(_ value: Int64?) -> Text {
     guard let value else { return Text(verbatim: "--") }
     return Text("\(value)")
 }
+
+#if DEBUG
+/// Extreme widget data for the previews: every option is on, the snapshot is
+/// stale, the plan name is long and the values reach the widest layouts.
+private enum WidgetPreviewData {
+    static var snapshot: LimitSnapshot {
+        LimitSnapshot(
+            fiveHour: LimitWindowSnapshot(
+                label: "5h",
+                usedPercent: 1,
+                windowDurationMins: 300,
+                resetsAt: Date().addingTimeInterval(2_400)
+            ),
+            weekly: LimitWindowSnapshot(
+                label: "Week",
+                usedPercent: 1,
+                windowDurationMins: 10_080,
+                resetsAt: Date().addingTimeInterval(3 * 86_400)
+            ),
+            credits: CreditsSnapshot(hasCredits: true, unlimited: false, balance: "1234.5678"),
+            planType: "Pro (Business)",
+            usage: AccountUsageSnapshot(
+                dailyTokens: dailyTokens,
+                lifetimeTokens: 987_654_321,
+                peakDailyTokens: 123_456_789,
+                longestRunningTurnSec: 45_600,
+                currentStreakDays: 128,
+                longestStreakDays: 365,
+                learnedSkillsCount: 256,
+                totalSkillUses: 1_024,
+                totalThreads: 4_096,
+                lastDailyTokens: 98_765_432,
+                lastDailyDate: nil
+            ),
+            updatedAt: Date().addingTimeInterval(-900),
+            errorMessage: nil
+        )
+    }
+
+    static func preferences(design: MenuWindowDesign, language: AppLanguage) -> LimitPreferences {
+        var preferences = LimitPreferences()
+        preferences.widgetShowsFiveHour = true
+        preferences.widgetShowsWeekly = true
+        preferences.widgetShowsResetTimes = true
+        preferences.widgetShowsLastUpdated = true
+        preferences.widgetShowsStaleWarning = true
+        preferences.menuWindowDesign = design
+        preferences.appLanguage = language
+        return preferences
+    }
+
+    /// Seven consecutive days, so the token chart has its full length. The dates
+    /// are fixed values: the chart only needs the day keys.
+    private static let dailyTokens: [DailyTokenUsage] = [
+        DailyTokenUsage(date: "2026-09-26", tokens: 10_500_000),
+        DailyTokenUsage(date: "2026-09-25", tokens: 9_000_000),
+        DailyTokenUsage(date: "2026-09-24", tokens: 7_500_000),
+        DailyTokenUsage(date: "2026-09-23", tokens: 6_000_000),
+        DailyTokenUsage(date: "2026-09-22", tokens: 4_500_000),
+        DailyTokenUsage(date: "2026-09-21", tokens: 3_000_000),
+        DailyTokenUsage(date: "2026-09-20", tokens: 1_500_000)
+    ]
+}
+
+private func widgetPreviewEntry(design: MenuWindowDesign, language: AppLanguage) -> CodexLimitEntry {
+    CodexLimitEntry(
+        date: .now,
+        snapshot: WidgetPreviewData.snapshot,
+        preferences: WidgetPreviewData.preferences(design: design, language: language)
+    )
+}
+
+#Preview("Terminal small - EN", as: .systemSmall) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .english)
+}
+
+#Preview("Terminal small - RU", as: .systemSmall) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .russian)
+}
+
+#Preview("Terminal medium - EN", as: .systemMedium) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .english)
+}
+
+#Preview("Terminal medium - RU", as: .systemMedium) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .russian)
+}
+
+#Preview("Terminal large - EN", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .english)
+}
+
+#Preview("Terminal large - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .russian)
+}
+
+#Preview("Editorial small - EN", as: .systemSmall) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .english)
+}
+
+#Preview("Editorial small - RU", as: .systemSmall) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian)
+}
+
+#Preview("Editorial medium - EN", as: .systemMedium) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .english)
+}
+
+#Preview("Editorial medium - RU", as: .systemMedium) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian)
+}
+
+#Preview("Editorial large - EN", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .english)
+}
+
+#Preview("Editorial large - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian)
+}
+#endif
