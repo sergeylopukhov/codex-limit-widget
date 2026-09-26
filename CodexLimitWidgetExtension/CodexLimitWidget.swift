@@ -464,6 +464,8 @@ private struct TerminalLimitWidgetView: View {
     }
 
     private func largeBody(snapshot: LimitSnapshot, metric: TerminalMetric, width: CGFloat) -> some View {
+        // Expired readings keep their place in the layout and drop to "--".
+        let usage = snapshot.freshUsage
         // The stat column carries the widest localized values, so it takes its
         // width from the widget and the hero column yields instead.
         let messageWidth = max(104, width * 0.32)
@@ -494,15 +496,15 @@ private struct TerminalLimitWidgetView: View {
                     if shouldShowStaleWarning(snapshot, preferences: preferences) {
                         terminalInfoStat("STATUS", value: Text(LocalizedStringKey("STALE")), valueColor: dimText)
                     }
-                    terminalInfoStat("STREAK", value: streakValue(snapshot.usage?.currentStreakDays))
-                    terminalInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
+                    terminalInfoStat("STREAK", value: streakValue(usage?.currentStreakDays))
+                    terminalInfoStat("MAX TURN", value: durationValue(usage?.longestRunningTurnSec))
                     terminalInfoStat(
                         showsWeeklyResetStamp ? "WEEK RESET" : "BEST STREAK",
                         value: showsWeeklyResetStamp
                             ? weeklyResetValue(snapshot, locale: locale)
-                            : streakValue(snapshot.usage?.longestStreakDays)
+                            : streakValue(usage?.longestStreakDays)
                     )
-                    terminalInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(snapshot.usage?.sevenDayAverageTokens)))
+                    terminalInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(usage?.sevenDayAverageTokens)))
                 }
                 .frame(width: messageWidth, alignment: .leading)
                 .layoutPriority(2)
@@ -540,7 +542,7 @@ private struct TerminalLimitWidgetView: View {
                     terminalStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15)
                 }
                 TerminalVerticalDivider(color: mutedAccent)
-                terminalStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
+                terminalStat("TOKENS", TokenCountText.make(usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15)
                 TerminalVerticalDivider(color: mutedAccent)
                 terminalStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, truncatesValue: true)
             }
@@ -552,13 +554,13 @@ private struct TerminalLimitWidgetView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     terminalStat(
                         "PEAK DAY",
-                        TokenCountText.make(snapshot.usage?.peakDailyTokens),
+                        TokenCountText.make(usage?.peakDailyTokens),
                         labelSize: 9.5,
                         valueSize: 15
                     )
                     terminalStat(
-                        snapshot.usage?.latestDayLabel ?? "LAST DAY",
-                        TokenCountText.make(snapshot.usage?.lastDailyTokens),
+                        usage?.latestDayLabel ?? "LAST DAY",
+                        TokenCountText.make(usage?.lastDailyTokens),
                         labelSize: 9.5,
                         valueSize: 15
                     )
@@ -567,7 +569,7 @@ private struct TerminalLimitWidgetView: View {
 
                 TerminalVerticalDivider(color: mutedAccent)
 
-                tokenBarChart(snapshot.usage, barsHeight: 36)
+                tokenBarChart(usage, barsHeight: 36)
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -1125,6 +1127,8 @@ private struct EditorialLimitWidgetView: View {
 
     private func large(snapshot: LimitSnapshot, size: CGSize) -> some View {
         let padding = EdgeInsets(top: 16, leading: 22, bottom: 16, trailing: 22)
+        // Expired readings keep their place in the layout and drop to "--".
+        let usage = snapshot.freshUsage
         // The five-hour window leads the card only while the preference keeps it.
         let fiveHour = preferences.widgetShowsFiveHour ? snapshot.fiveHour : nil
         let metric = fiveHour ?? snapshot.weekly ?? .unavailable
@@ -1185,15 +1189,15 @@ private struct EditorialLimitWidgetView: View {
 
                 // Side column: several short facts, centred on the vertical rule.
                 VStack(alignment: .leading, spacing: 3) {
-                    heroInfoStat("STREAK", value: streakValue(snapshot.usage?.currentStreakDays))
-                    heroInfoStat("MAX TURN", value: durationValue(snapshot.usage?.longestRunningTurnSec))
+                    heroInfoStat("STREAK", value: streakValue(usage?.currentStreakDays))
+                    heroInfoStat("MAX TURN", value: durationValue(usage?.longestRunningTurnSec))
                     heroInfoStat(
                         showsWeeklyResetStamp ? "WEEK RESET" : "BEST STREAK",
                         value: showsWeeklyResetStamp
                             ? weeklyResetValue(snapshot, locale: locale)
-                            : streakValue(snapshot.usage?.longestStreakDays)
+                            : streakValue(usage?.longestStreakDays)
                     )
-                    heroInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(snapshot.usage?.sevenDayAverageTokens)))
+                    heroInfoStat("DAILY AVG", value: Text(verbatim: TokenCountText.make(usage?.sevenDayAverageTokens)))
                 }
                 .frame(width: messageWidth, alignment: .leading)
                 .layoutPriority(2)
@@ -1217,7 +1221,7 @@ private struct EditorialLimitWidgetView: View {
                     editorialStat("WEEKLY", "\(weekly.leftPercent)%", labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 }
                 EditorialVerticalRule(color: colors.rule)
-                editorialStat("TOKENS", TokenCountText.make(snapshot.usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
+                editorialStat("TOKENS", TokenCountText.make(usage?.lifetimeTokens), labelSize: 9.5, valueSize: 15, spacing: 3.5)
                 EditorialVerticalRule(color: colors.rule)
                 editorialStat("PLAN", snapshot.planDisplayName, labelSize: 9.5, valueSize: 15, spacing: 3.5, truncatesValue: true)
             }
@@ -1227,14 +1231,14 @@ private struct EditorialLimitWidgetView: View {
 
             HStack(alignment: .bottom, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    editorialStat("PEAK DAY", TokenCountText.make(snapshot.usage?.peakDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
-                    editorialStat(snapshot.usage?.latestDayLabel ?? "LAST DAY", TokenCountText.make(snapshot.usage?.lastDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                    editorialStat("PEAK DAY", TokenCountText.make(usage?.peakDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
+                    editorialStat(usage?.latestDayLabel ?? "LAST DAY", TokenCountText.make(usage?.lastDailyTokens), labelSize: 9.5, valueSize: 15, spacing: 3)
                 }
                 .frame(width: 112, alignment: .leading)
 
                 EditorialVerticalRule(color: colors.rule)
 
-                sevenDayChart(snapshot.usage)
+                sevenDayChart(usage)
             }
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -1626,7 +1630,8 @@ private func durationValue(_ seconds: Int64?) -> Text {
 private enum WidgetPreviewData {
     /// Preview snapshot. The weekly-only variant drops the five-hour window, so
     /// the large widgets show the best streak row instead of the reset stamp.
-    static func snapshot(includingFiveHour: Bool = true) -> LimitSnapshot {
+    /// `staleUsage` ages the statistics while the limits stay current.
+    static func snapshot(includingFiveHour: Bool = true, staleUsage: Bool = false) -> LimitSnapshot {
         let fiveHour: LimitWindowSnapshot? = includingFiveHour
             ? LimitWindowSnapshot(
                 label: "5h",
@@ -1657,7 +1662,8 @@ private enum WidgetPreviewData {
                 totalSkillUses: 1_024,
                 totalThreads: 4_096,
                 lastDailyTokens: 98_765_432,
-                lastDailyDate: nil
+                lastDailyDate: nil,
+                updatedAt: staleUsage ? Date().addingTimeInterval(-7 * 60 * 60) : Date()
             ),
             updatedAt: Date().addingTimeInterval(-900),
             errorMessage: nil
@@ -1693,11 +1699,12 @@ private func widgetPreviewEntry(
     design: MenuWindowDesign,
     language: AppLanguage,
     includingFiveHour: Bool = true,
-    showsFiveHour: Bool = true
+    showsFiveHour: Bool = true,
+    staleUsage: Bool = false
 ) -> CodexLimitEntry {
     CodexLimitEntry(
         date: .now,
-        snapshot: WidgetPreviewData.snapshot(includingFiveHour: includingFiveHour),
+        snapshot: WidgetPreviewData.snapshot(includingFiveHour: includingFiveHour, staleUsage: staleUsage),
         preferences: WidgetPreviewData.preferences(design: design, language: language, showsFiveHour: showsFiveHour)
     )
 }
@@ -1806,5 +1813,19 @@ private func widgetPreviewEntry(
     CodexLimitWidget()
 } timeline: {
     widgetPreviewEntry(design: .editorial, language: .russian, showsFiveHour: false)
+}
+
+// Expired usage statistics: the limits keep their values while the statistics
+// rows fall back to "--" and the seven-day chart disappears.
+#Preview("Terminal large stale usage - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .terminal, language: .russian, staleUsage: true)
+}
+
+#Preview("Editorial large stale usage - RU", as: .systemLarge) {
+    CodexLimitWidget()
+} timeline: {
+    widgetPreviewEntry(design: .editorial, language: .russian, staleUsage: true)
 }
 #endif

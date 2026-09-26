@@ -3065,42 +3065,64 @@ private struct LimitsDetailWindowView: View {
         }
     }
 
+    /// Usage statistic row. An expired reading keeps the row but replaces the
+    /// value with "--".
+    private func usageStatistic(
+        _ title: String,
+        _ value: String,
+        isExpired: Bool,
+        palette: SettingsWindowPalette
+    ) -> some View {
+        SettingsRow(title, palette: palette) {
+            Text(isExpired ? "--" : value)
+                .font(palette.controlFont)
+                .foregroundStyle(palette.primaryText)
+        }
+    }
+
     private func usageSection(usage: AccountUsageSnapshot, palette: SettingsWindowPalette) -> some View {
         let locale = viewModel.preferences.appLanguage.locale
+        // The limits carry their own timestamp; the statistics come from the
+        // usage read, so an expired reading is hidden behind "--".
+        let isExpired = usage.isStale
 
         return VStack(alignment: .leading, spacing: 12) {
             SettingsSectionTitle("Usage", palette: palette)
 
             if let lifetimeTokens = usage.lifetimeTokens {
-                SettingsRow("Lifetime tokens", palette: palette) {
-                    Text(DetailFormatting.tokens(lifetimeTokens, locale: locale))
-                        .font(palette.controlFont)
-                        .foregroundStyle(palette.primaryText)
-                }
+                usageStatistic(
+                    "Lifetime tokens",
+                    DetailFormatting.tokens(lifetimeTokens, locale: locale),
+                    isExpired: isExpired,
+                    palette: palette
+                )
             }
 
             if let peakDailyTokens = usage.peakDailyTokens {
-                SettingsRow("Peak day", palette: palette) {
-                    Text(DetailFormatting.tokens(peakDailyTokens, locale: locale))
-                        .font(palette.controlFont)
-                        .foregroundStyle(palette.primaryText)
-                }
+                usageStatistic(
+                    "Peak day",
+                    DetailFormatting.tokens(peakDailyTokens, locale: locale),
+                    isExpired: isExpired,
+                    palette: palette
+                )
             }
 
             if let lastDailyTokens = usage.lastDailyTokens {
-                SettingsRow("Last day", palette: palette) {
-                    Text(DetailFormatting.tokens(lastDailyTokens, locale: locale))
-                        .font(palette.controlFont)
-                        .foregroundStyle(palette.primaryText)
-                }
+                usageStatistic(
+                    "Last day",
+                    DetailFormatting.tokens(lastDailyTokens, locale: locale),
+                    isExpired: isExpired,
+                    palette: palette
+                )
             }
 
             if let currentStreakDays = usage.currentStreakDays {
-                SettingsRow("Current streak", palette: palette) {
-                    Text("\(currentStreakDays)d")
-                        .font(palette.controlFont)
-                        .foregroundStyle(palette.primaryText)
-                }
+                usageStatistic(
+                    "Current streak",
+                    "\(currentStreakDays)d",
+                    isExpired: isExpired,
+                    palette: palette
+                )
             }
 
             if let totalThreads = usage.totalThreads {

@@ -57,6 +57,9 @@ final class LimitViewModel: ObservableObject {
         preferences = LimitPreferencesStore.read()
         lastSuccessfulSyncAt = snapshot?.updatedAt
         lastCLIErrorMessage = snapshot?.errorMessage
+        #if DEBUG
+        assert(LegacyUsageSnapshotCheck.passes(), "A snapshot saved before usage.updatedAt existed no longer decodes")
+        #endif
         Task { @MainActor [weak self] in
             self?.start()
         }
@@ -574,12 +577,20 @@ final class LimitViewModel: ObservableObject {
         }
     }
 
-    /// Compares two snapshots without the `updatedAt` stamp so an unchanged
-    /// reading does not trigger a widget reload on every poll.
+    /// Compares two snapshots without the stamps that every successful poll
+    /// refreshes so an unchanged reading does not trigger a widget reload.
     private static func contentChanged(from old: LimitSnapshot?, to new: LimitSnapshot) -> Bool {
         guard var previous = old else { return true }
         previous.updatedAt = new.updatedAt
-        return previous != new
+        var candidate = new
+        if previous.usage != nil, candidate.usage != nil {
+            // Only a change of the usage freshness reaches the screen; a fresh
+            // timestamp on the same numbers does not.
+            guard previous.usage?.isStale == candidate.usage?.isStale else { return true }
+            previous.usage?.updatedAt = nil
+            candidate.usage?.updatedAt = nil
+        }
+        return previous != candidate
     }
 
     private func widgetReloadIsDue() -> Bool {

@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import os
 
 struct CodexCLI: Sendable, Equatable {
     let executableURL: URL
@@ -322,6 +323,13 @@ enum CodexCLICommandError: LocalizedError, Equatable {
     }
 }
 
+/// The usage read is optional: its failure only costs the statistics block, so
+/// every failure is logged instead of being dropped silently.
+private let cliLogger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "com.sergeylopukhov.CodexLimitWidget",
+    category: "cli"
+)
+
 struct CodexRateLimitClient {
     func fetch() async throws -> LimitSnapshot {
         let cli = try CodexCLI.resolve()
@@ -356,12 +364,18 @@ struct CodexRateLimitClient {
         try send(.rateLimitsRead, to: input.fileHandleForWriting)
         let rateLimitsResponse = try await reader.response(id: 2, timeout: 15)
         try send(.usageRead, to: input.fileHandleForWriting)
-        let usageResponse = try? await reader.response(id: 3, timeout: 15)
 
         let usage: AccountUsageSnapshot?
-        if let usageResponse {
-            usage = try? JSONDecoder().decode(AccountUsageEnvelope.self, from: usageResponse).result.normalizedUsage()
-        } else {
+        do {
+            let usageResponse = try await reader.response(id: 3, timeout: 15)
+            do {
+                usage = try JSONDecoder().decode(AccountUsageEnvelope.self, from: usageResponse).result.normalizedUsage()
+            } catch {
+                cliLogger.error("account/usage/read decode failed: \(error.localizedDescription)")
+                usage = nil
+            }
+        } catch {
+            cliLogger.error("account/usage/read failed: \(error.localizedDescription)")
             usage = nil
         }
 
@@ -695,7 +709,8 @@ private struct AccountUsageResult: Decodable {
             totalSkillUses: summary.totalSkillUses,
             totalThreads: summary.totalThreads,
             lastDailyTokens: lastBucket?.tokens,
-            lastDailyDate: lastBucket?.startDate
+            lastDailyDate: lastBucket?.startDate,
+            updatedAt: Date()
         )
     }
 }

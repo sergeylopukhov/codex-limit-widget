@@ -64,6 +64,13 @@ struct LimitSnapshot: Codable, Equatable {
         Date().timeIntervalSince(updatedAt) > 300
     }
 
+    /// Usage statistics only while their reading is recent enough to present.
+    /// The limits above keep their own age indicator either way.
+    var freshUsage: AccountUsageSnapshot? {
+        guard let usage, !usage.isStale else { return nil }
+        return usage
+    }
+
     var planDisplayName: String {
         switch planType?.lowercased().replacingOccurrences(of: "_", with: "") {
         case "prolite": return "Pro 5x"
@@ -141,7 +148,8 @@ struct LimitSnapshot: Codable, Equatable {
             totalSkillUses: 570,
             totalThreads: 516,
             lastDailyTokens: 51_598_090,
-            lastDailyDate: "2026-06-10"
+            lastDailyDate: "2026-06-10",
+            updatedAt: Date()
         ),
         updatedAt: Date(),
         errorMessage: nil
@@ -263,7 +271,18 @@ struct LimitWindowSnapshot: Codable, Equatable {
 }
 
 struct AccountUsageSnapshot: Codable, Equatable {
+    /// Usage reads happen only while the CLI answers, so a reading older than
+    /// this window is treated as expired.
+    static let staleInterval: TimeInterval = 6 * 60 * 60
+
     var dailyTokens: [DailyTokenUsage]? = nil
+
+    /// True while this reading carries no timestamp or is older than
+    /// `staleInterval`.
+    var isStale: Bool {
+        guard let updatedAt else { return true }
+        return Date().timeIntervalSince(updatedAt) > Self.staleInterval
+    }
 
     var latestDayLabel: String {
         let formatter = DateFormatter()
@@ -308,6 +327,9 @@ struct AccountUsageSnapshot: Codable, Equatable {
     var totalThreads: Int64?
     var lastDailyTokens: Int64?
     var lastDailyDate: String?
+    /// Timestamp of the successful usage read behind this snapshot. Older saved
+    /// snapshots carry no value.
+    var updatedAt: Date? = nil
 }
 
 struct DailyTokenUsage: Codable, Equatable {
@@ -929,3 +951,47 @@ extension JSONEncoder {
         return encoder
     }
 }
+
+#if DEBUG
+/// Upgrade guard: snapshots saved before `AccountUsageSnapshot.updatedAt`
+/// existed must keep decoding, and their statistics must come back without a
+/// timestamp so the UI treats them as expired.
+enum LegacyUsageSnapshotCheck {
+    private static let legacySnapshotJSON = """
+    {
+      "updatedAt" : "2026-01-01T00:00:00Z",
+      "planType" : "pro",
+      "weekly" : {
+        "label" : "Week",
+        "usedPercent" : 12,
+        "windowDurationMins" : 10080
+      },
+      "usage" : {
+        "currentStreakDays" : 25,
+        "dailyTokens" : [
+          { "date" : "2025-12-31", "tokens" : 1500000 }
+        ],
+        "lastDailyDate" : "2025-12-31",
+        "lastDailyTokens" : 1500000,
+        "lifetimeTokens" : 3968663548,
+        "longestRunningTurnSec" : 3209,
+        "longestStreakDays" : 25,
+        "peakDailyTokens" : 366993630
+      }
+    }
+    """
+
+    /// Legacy usage reading, or nil when the payload no longer decodes.
+    private static var decodedUsage: AccountUsageSnapshot? {
+        let data = Data(legacySnapshotJSON.utf8)
+        return try? JSONDecoder.codexLimitDecoder.decode(LimitSnapshot.self, from: data).usage
+    }
+
+    /// True while the legacy payload still decodes into statistics that carry
+    /// no timestamp.
+    static func passes() -> Bool {
+        guard let usage = decodedUsage else { return false }
+        return usage.updatedAt == nil && usage.lifetimeTokens == 3_968_663_548
+    }
+}
+#endif
