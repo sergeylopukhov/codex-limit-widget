@@ -765,11 +765,8 @@ private struct TerminalVerticalDivider: View {
 private struct TerminalWidgetBackground: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
+            Rectangle()
                 .fill(Color(red: 0.025, green: 0.029, blue: 0.026))
-
-            RoundedRectangle(cornerRadius: 28, style: .continuous)
-                .stroke(Color(red: 0.38, green: 0.47, blue: 0.33).opacity(0.35), lineWidth: 1.2)
 
             LinearGradient(
                 colors: [
@@ -780,7 +777,6 @@ private struct TerminalWidgetBackground: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
         }
     }
 }
@@ -1467,7 +1463,7 @@ private struct EditorialHorizontalRule: View {
 private struct EditorialWidgetBackground: View {
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
+            Rectangle()
                 .fill(EditorialPalette.paper)
 
             LinearGradient(
@@ -1479,10 +1475,6 @@ private struct EditorialWidgetBackground: View {
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
-            .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .stroke(EditorialPalette.rule.opacity(0.52), lineWidth: 1)
         }
     }
 }
