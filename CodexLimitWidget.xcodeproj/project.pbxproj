@@ -28,6 +28,15 @@
 		A10100000000000000000031 /* rate-limits.json in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000032 /* rate-limits.json */; };
 		A10100000000000000000032 /* usage-read.json in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000033 /* usage-read.json */; };
 		A10100000000000000000033 /* legacy-snapshot.json in Resources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000034 /* legacy-snapshot.json */; };
+		A10100000000000000000040 /* PopoverWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000040 /* PopoverWindow.swift */; };
+		A10100000000000000000041 /* ReleaseNotes.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000041 /* ReleaseNotes.swift */; };
+		A10100000000000000000042 /* SettingsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000042 /* SettingsWindow.swift */; };
+		A10100000000000000000043 /* SettingsWindowControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000043 /* SettingsWindowControls.swift */; };
+		A10100000000000000000044 /* DetailsWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000044 /* DetailsWindow.swift */; };
+		A10100000000000000000045 /* WidgetProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000045 /* WidgetProvider.swift */; };
+		A10100000000000000000046 /* WidgetEntryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000046 /* WidgetEntryView.swift */; };
+		A10100000000000000000047 /* TerminalWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000047 /* TerminalWidget.swift */; };
+		A10100000000000000000048 /* EditorialWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200000000000000000048 /* EditorialWidget.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -88,6 +97,15 @@
 		A10200000000000000000032 /* rate-limits.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rate-limits.json"; sourceTree = "<group>"; };
 		A10200000000000000000033 /* usage-read.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "usage-read.json"; sourceTree = "<group>"; };
 		A10200000000000000000034 /* legacy-snapshot.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "legacy-snapshot.json"; sourceTree = "<group>"; };
+		A10200000000000000000040 /* PopoverWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PopoverWindow.swift; sourceTree = "<group>"; };
+		A10200000000000000000041 /* ReleaseNotes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReleaseNotes.swift; sourceTree = "<group>"; };
+		A10200000000000000000042 /* SettingsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindow.swift; sourceTree = "<group>"; };
+		A10200000000000000000043 /* SettingsWindowControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsWindowControls.swift; sourceTree = "<group>"; };
+		A10200000000000000000044 /* DetailsWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailsWindow.swift; sourceTree = "<group>"; };
+		A10200000000000000000045 /* WidgetProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProvider.swift; sourceTree = "<group>"; };
+		A10200000000000000000046 /* WidgetEntryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetEntryView.swift; sourceTree = "<group>"; };
+		A10200000000000000000047 /* TerminalWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalWidget.swift; sourceTree = "<group>"; };
+		A10200000000000000000048 /* EditorialWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorialWidget.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +157,11 @@
 			isa = PBXGroup;
 			children = (
 				A10200000000000000000001 /* CodexLimitWidgetApp.swift */,
+				A10200000000000000000044 /* DetailsWindow.swift */,
+				A10200000000000000000043 /* SettingsWindowControls.swift */,
+				A10200000000000000000042 /* SettingsWindow.swift */,
+				A10200000000000000000041 /* ReleaseNotes.swift */,
+				A10200000000000000000040 /* PopoverWindow.swift */,
 				A10200000000000000000002 /* LimitViewModel.swift */,
 				A10200000000000000000019 /* AppUpdateController.swift */,
 				A10200000000000000000003 /* CodexRateLimitClient.swift */,
@@ -155,6 +178,10 @@
 			children = (
 				A10200000000000000000006 /* CodexLimitWidgetBundle.swift */,
 				A10200000000000000000007 /* CodexLimitWidget.swift */,
+				A10200000000000000000048 /* EditorialWidget.swift */,
+				A10200000000000000000047 /* TerminalWidget.swift */,
+				A10200000000000000000046 /* WidgetEntryView.swift */,
+				A10200000000000000000045 /* WidgetProvider.swift */,
 				A10200000000000000000016 /* Assets.xcassets */,
 				A10200000000000000000018 /* AppIcon.icns */,
 				A10200000000000000000012 /* Info.plist */,
@@ -343,6 +370,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10100000000000000000044 /* DetailsWindow.swift in Sources */,
+				A10100000000000000000043 /* SettingsWindowControls.swift in Sources */,
+				A10100000000000000000042 /* SettingsWindow.swift in Sources */,
+				A10100000000000000000041 /* ReleaseNotes.swift in Sources */,
+				A10100000000000000000040 /* PopoverWindow.swift in Sources */,
 				A10100000000000000000001 /* CodexLimitWidgetApp.swift in Sources */,
 				A10100000000000000000002 /* LimitViewModel.swift in Sources */,
 				A10100000000000000000017 /* AppUpdateController.swift in Sources */,
@@ -356,6 +388,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A10100000000000000000048 /* EditorialWidget.swift in Sources */,
+				A10100000000000000000047 /* TerminalWidget.swift in Sources */,
+				A10100000000000000000046 /* WidgetEntryView.swift in Sources */,
+				A10100000000000000000045 /* WidgetProvider.swift in Sources */,
 				A10100000000000000000006 /* CodexLimitWidgetBundle.swift in Sources */,
 				A10100000000000000000007 /* CodexLimitWidget.swift in Sources */,
 				A10100000000000000000008 /* LimitModels.swift in Sources */,
