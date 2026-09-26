@@ -5,7 +5,7 @@
 </p>
 
 <div align="center">
-  <img src="assets/screenshots/readme/beige-large.png" width="520" alt="Codex Limit Widget large widget in Beige design">
+  <img src="assets/screenshots/readme/beige-large.jpg" width="520" alt="Codex Limit Widget large widget in Beige design">
 
   <p>
     A macOS menu bar app and desktop widget for keeping Codex limits visible.
@@ -18,23 +18,23 @@
   </p>
 </div>
 
-Codex Limit Widget keeps the limit windows returned for your account visible in the macOS menu bar and on the desktop. Weekly-only accounts see weekly data without a stray 5-hour label or empty 5-hour space. Accounts that still have the 5-hour window see both limits. Reset times, plan details, and usage history remain available without keeping Codex Desktop open.
+Codex Limit Widget puts your Codex limits in the macOS menu bar and on the desktop, so you can see how much is left without opening Codex. It shows whichever limit windows your account has: weekly-only accounts get just the weekly limit, with no empty 5-hour slot, and accounts that still have the 5-hour window get both. Reset times, your plan, and usage history are always one glance away.
 
-While the app is running, it refreshes the local data once per minute and passes the latest snapshot to WidgetKit.
+While the app is running, it refreshes the data once a minute and hands the latest snapshot to WidgetKit.
 
 ## What It Shows
 
-- Every limit window available to the account: weekly, plus 5-hour when Codex provides it.
-- Reset date and time for each available limit.
-- Current Codex plan, shown as a readable name such as `Pro 5x`, `Pro 20x`, or `Plus`.
-- Usage stats: total tokens, peak day, last day, streak, and max turn.
-- Remaining percent colored by level: normal, warning below 50%, and critical below 20%.
-- The time of the last successful sync in the widget, with a setting that turns the line on or off.
-- A seven-day token chart with date labels in the large Beige widget. When the newest token data is from the current UTC day, the widget labels it `TODAY` instead of `LAST DAY`.
-- Compact or detailed menu bar status.
-- One macOS widget in Small, Medium, and Large sizes.
-- Two designs: Dark and Beige.
-- A visible notice and an `Update now` button when a newer release is available.
+- Every limit window your account has: weekly, plus 5-hour when Codex reports it.
+- When each limit resets.
+- Your Codex plan under a readable name, such as `Plus`, `Pro 5x`, or `Pro 20x`.
+- Usage stats: lifetime tokens, peak day, tokens used today, current streak, longest turn, and daily average.
+- A seven-day token chart in the large widget.
+- A compact percent or a detailed readout in the menu bar, with a meter that shifts from green to dark red as the limit runs down.
+- A note when the data is more than a few minutes old, and the time of the last successful sync.
+- One widget in Small, Medium, and Large sizes.
+- Dark and Beige designs, or System to follow the macOS appearance.
+- English or Russian interface, or the system language.
+- A notice and an `Update now` button when a new release is out.
 
 ## Install
 
@@ -42,54 +42,62 @@ While the app is running, it refreshes the local data once per minute and passes
 2. Open it and drag `Codex Limit Widget.app` to `Applications`.
 3. Launch the app.
 
-Starting with version 1.1.8, later releases can be installed from inside the app.
+Once installed, the app updates itself (version 1.1.8 and later).
 
 Requirements:
 
-- macOS 14 or newer.
-- Codex CLI installed. If the CLI is missing or not authenticated, the app offers to install it and start sign-in.
+- macOS 14 or later.
+- Codex CLI. If it's missing or you're not signed in, the app offers to install it and start sign-in.
 
-Codex in the ChatGPT desktop app does not replace Codex CLI for this app: limits are read through the local CLI. The app can launch the official CLI installer after the user confirms the installation.
+Codex in the ChatGPT desktop app doesn't replace the CLI here: the app reads limits through the local Codex CLI. With your confirmation, it can run the official CLI installer for you.
 
 ## Add The Widget
 
-Open the macOS widget gallery, find `Codex Limit Widget`, and choose Small, Medium, or Large.
+Open the macOS widget gallery, find `Codex Limit Widget`, and pick Small, Medium, or Large.
 
-The widget design is controlled in the app settings. Choose `Dark` or `Beige`; already-added widgets update while the app is running.
+The widget uses the design selected in the app's settings, and widgets already on the desktop switch as soon as you change it. When a window covers the desktop, macOS turns the widget into system glass in either design.
 
 ## Menu Bar
 
-The menu bar item can show detailed limits or a compact percent indicator. Left-click and right-click actions are configured separately in Settings: the context menu, the popover, Settings, or Codex. The context menu refreshes limits, copies the current status, and quits; a refresh shows that data is loading while it runs.
+The menu bar item shows either a compact percent or a detailed readout. In percent mode, a thin meter under the number fills with the remaining limit and shifts from green to dark red as it runs out. The digits can take the same color. Both are separate switches in Settings: the meter is colored by default, the digits aren't.
 
-The popover lists the available limit windows, reset times, data freshness, and settings, and its `Copy status` button copies the plan, percentage, and reset time of each window as text. When a new release is ready, an update arrow appears next to the menu bar value and the popover shows an update card.
+<p align="center">
+  <img src="assets/screenshots/readme/percent-menu-bar.png" width="100%" alt="Menu bar percent indicator from 100% to 0% in dark and light menu bars">
+</p>
+
+Left-click and right-click each get their own action: the context menu, the popover, Settings, or Codex. The context menu refreshes limits, copies the current status, and quits the app.
+
+The popover shows each limit window with a colored meter, reset times, and your plan, plus a `Copy status` button that copies the plan, percentage, and reset time of each window as plain text. When an update is ready, an arrow appears next to the menu bar value and the popover shows an update card.
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-window-beige.png" width="100%" alt="Menu bar popover in Beige design"><br>
+      <img src="assets/screenshots/readme/popover-window-beige.jpg" width="100%" alt="Menu bar popover in Beige design"><br>
       <sub>Beige</sub>
     </td>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/popover-window-dark.png" width="100%" alt="Menu bar popover in Dark design"><br>
+      <img src="assets/screenshots/readme/popover-window-dark.jpg" width="100%" alt="Menu bar popover in Dark design"><br>
       <sub>Dark</sub>
     </td>
   </tr>
 </table>
+
+A global keyboard shortcut, set in Settings, opens a larger window with both limits and your usage stats from any app. Press it again to close the window.
 
 ## Widgets
 
 <table>
   <tr>
     <td width="40%" align="center">
-      <img src="assets/screenshots/readme/beige-large.png" width="100%" alt="Large Codex Limit Widget in Beige design"><br>
+      <img src="assets/screenshots/readme/beige-large.jpg" width="100%" alt="Large Codex Limit Widget in Beige design"><br>
       <sub>Large</sub>
     </td>
     <td width="38%" align="center">
-      <img src="assets/screenshots/readme/beige-medium.png" width="100%" alt="Medium Codex Limit Widget in Beige design"><br>
+      <img src="assets/screenshots/readme/beige-medium.jpg" width="100%" alt="Medium Codex Limit Widget in Beige design"><br>
       <sub>Medium</sub>
     </td>
     <td width="22%" align="center">
-      <img src="assets/screenshots/readme/beige-small.png" width="100%" alt="Small Codex Limit Widget in Beige design"><br>
+      <img src="assets/screenshots/readme/beige-small.jpg" width="100%" alt="Small Codex Limit Widget in Beige design"><br>
       <sub>Small</sub>
     </td>
   </tr>
@@ -98,34 +106,43 @@ The popover lists the available limit windows, reset times, data freshness, and 
 <table>
   <tr>
     <td width="40%" align="center">
-      <img src="assets/screenshots/readme/dark-large.png" width="100%" alt="Large Codex Limit Widget in Dark design"><br>
+      <img src="assets/screenshots/readme/dark-large.jpg" width="100%" alt="Large Codex Limit Widget in Dark design"><br>
       <sub>Large</sub>
     </td>
     <td width="38%" align="center">
-      <img src="assets/screenshots/readme/dark-medium.png" width="100%" alt="Medium Codex Limit Widget in Dark design"><br>
+      <img src="assets/screenshots/readme/dark-medium.jpg" width="100%" alt="Medium Codex Limit Widget in Dark design"><br>
       <sub>Medium</sub>
     </td>
     <td width="22%" align="center">
-      <img src="assets/screenshots/readme/dark-small.png" width="100%" alt="Small Codex Limit Widget in Dark design"><br>
+      <img src="assets/screenshots/readme/dark-small.jpg" width="100%" alt="Small Codex Limit Widget in Dark design"><br>
       <sub>Small</sub>
     </td>
   </tr>
 </table>
 
+A click on the widget opens the app, the detailed limits window, or Codex, whichever you choose in Settings. The line with the last sync time can be turned off there too.
+
 ## Settings
 
-Settings are split into tabs: General, Menu bar, Widgets, Notifications, Updates, and Diagnostics. The window can be moved and stays at the normal window level, so other apps can cover it. Use settings to choose the window design and menu bar mode. When both limit windows are available, you can also choose which one supplies the compact percent. In percent mode the meter under the number and the number itself can each be colored by the remaining limit, from green at a full limit to dark red near zero. The colored meter is on by default, the colored digits are off. The Updates section shows the installed version, the latest check result, and the update action.
+Settings are organized into tabs:
 
-Further settings cover the menu bar left-click and right-click actions, what a click on the widget opens (the app, the detailed limits window, or Codex), the keyboard shortcut that opens the detailed limits window from any app and closes it on a second press, quiet hours, and the widget sync line. Diagnostics show the data source, the last successful sync, and the CLI response when a refresh fails. A confirmation-protected `Reset data` button deletes the stored limit snapshot, widget data, notification history, and app settings; the Codex account and CLI sign-in are not affected.
+- **General**: design (Dark, Beige, or System), language, and the keyboard shortcut for the detailed limits window.
+- **Menu bar**: show or hide the item, percent or detailed mode, colored meter and digits, which limit feeds the percent, and the left-click and right-click actions.
+- **Widgets**: the last sync time line and what a click on the widget opens.
+- **Notifications**: low-limit alerts with separate thresholds for each limit, and quiet hours.
+- **Updates**: installed version, result of the last check, and the update button.
+- **Diagnostics**: Codex CLI status, data source, last successful sync, the CLI response when a refresh fails, and `Reset data`.
+
+`Reset data` asks for confirmation, then deletes the stored limit snapshot, widget data, notification history, and app settings. Your Codex account and CLI sign-in stay untouched.
 
 <table>
   <tr>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-window-beige.png" width="100%" alt="Settings window with Beige design selected"><br>
+      <img src="assets/screenshots/readme/settings-window-beige.jpg" width="100%" alt="Settings window in Beige design"><br>
       <sub>Beige</sub>
     </td>
     <td width="50%" align="center">
-      <img src="assets/screenshots/readme/settings-window-dark.png" width="100%" alt="Settings window with Dark design selected"><br>
+      <img src="assets/screenshots/readme/settings-window-dark.jpg" width="100%" alt="Settings window in Dark design"><br>
       <sub>Dark</sub>
     </td>
   </tr>
@@ -133,24 +150,24 @@ Further settings cover the menu bar left-click and right-click actions, what a c
 
 ## Notifications
 
-The 5-hour and weekly limits have separate switches and separate thresholds in Settings, so each window alerts at the level you choose for it. Quiet hours suppress low-limit alerts during the hours you choose; they do not affect the restored-limit message.
+The 5-hour and weekly limits each have their own switch and thresholds, so you decide when each one warns you. Quiet hours silence low-limit alerts during the hours you pick; they don't affect the restored-limit message.
 
-The restored-limit notification covers only an exhaustion the app has seen: the app has to record the window at 100% and be running when the quota comes back. It also needs notification permission in macOS, which the app asks for once and reuses for this message.
+You only get a restored-limit notification for a limit the app actually saw run out: it has to record the window at 100% used and still be running when the quota comes back. It also needs notification permission, which the app asks for once.
 
 ## Updates
 
-A check against the latest public GitHub Release runs at startup and every four hours after that. You can also run a check from Settings at any time.
+The app checks the latest public GitHub release at launch and every four hours after that. You can also check manually in Settings.
 
-If a newer version is available, the menu bar, popover, and Settings all show it. Press `Update now` to download the official macOS ZIP. Before installation, verification covers the SHA-256 digest published by GitHub, bundle identifier, version, and code signature. After verification, the copy in `Applications` is replaced and the new version opens. The updater restarts the previous widget extension so a stale process does not keep serving the old click action, and `What's New` opens after the update with the notes for the new version, including 1.2.400 notes that an earlier update skipped.
+When a new version is out, the menu bar, the popover, and Settings all say so. Press `Update now` and the app downloads the official macOS ZIP, verifies its SHA-256 digest published by GitHub, bundle identifier, version, and code signature, replaces the copy in `Applications`, and relaunches. After the update, `What's New` lists what changed since the version you had.
 
-If the `Applications` folder cannot be changed, use `Open release page` and install the DMG manually.
+If the app can't write to `Applications`, use `Open release page` and install the DMG by hand.
 
 ## Privacy
 
-Codex usage and limit data stay on your Mac. The app reads the local Codex CLI session and stores a small snapshot for widgets. Update checks include the installed version number in the request to the public GitHub Releases API; they do not include Codex usage data. The project has no server of its own.
+Your Codex usage and limit data never leave your Mac. The app reads the local Codex CLI session and keeps a small snapshot for the widget. Update checks send only the installed version number to the public GitHub Releases API, never usage data. The project has no server of its own.
 
 ## Uninstall
 
-Quit Codex Limit Widget and delete the app from Applications.
+Quit Codex Limit Widget and delete it from `Applications`.
 
-If the widget still appears after deleting the app, restart your Mac and remove any other local copies of `Codex Limit Widget.app`.
+If the widget is still there afterwards, restart your Mac and remove any other copies of `Codex Limit Widget.app`.
