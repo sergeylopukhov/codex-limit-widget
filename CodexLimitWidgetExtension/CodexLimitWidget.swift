@@ -281,6 +281,7 @@ private struct TerminalLimitWidgetView: View {
                     Text("\(metric.window.leftPercent)%")
                         .font(.system(size: 54, weight: .black, design: .monospaced))
                         .foregroundStyle(metricColor)
+                        .widgetAccentable()
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                         .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
@@ -366,6 +367,7 @@ private struct TerminalLimitWidgetView: View {
                 Text("\(metric.window.leftPercent)%")
                     .font(.system(size: 52, weight: .black, design: .monospaced))
                     .foregroundStyle(metricColor)
+                    .widgetAccentable()
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
                     .shadow(color: systemStyled ? .clear : metricColor.opacity(0.22), radius: 4)
@@ -408,6 +410,7 @@ private struct TerminalLimitWidgetView: View {
                     Text("\(metric.window.leftPercent)%")
                         .font(.system(size: 80, weight: .black, design: .monospaced))
                         .foregroundStyle(metricColor)
+                        .widgetAccentable()
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                         .shadow(color: systemStyled ? .clear : metricColor.opacity(0.24), radius: 5)
@@ -726,6 +729,7 @@ private struct TerminalMeter: View {
                 ForEach(0..<safeCount, id: \.self) { index in
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(index < filledCount ? color : emptyColor)
+                        .widgetAccentable(index < filledCount)
                         .overlay(
                             RoundedRectangle(cornerRadius: 1.5)
                                 .stroke(index < filledCount ? color.opacity(0.4) : emptyStroke, lineWidth: 0.6)
@@ -906,6 +910,7 @@ private struct EditorialLimitWidgetView: View {
                 Text("\(metric.leftPercent)%")
                     .font(.system(size: 54, weight: .regular, design: .serif))
                     .foregroundStyle(colors.heroColor(for: metric.leftPercent))
+                    .widgetAccentable()
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
 
@@ -997,6 +1002,7 @@ private struct EditorialLimitWidgetView: View {
                     Text("\(metric.leftPercent)%")
                         .font(.system(size: 50, weight: .regular, design: .serif))
                         .foregroundStyle(colors.heroColor(for: metric.leftPercent))
+                        .widgetAccentable()
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
@@ -1085,6 +1091,7 @@ private struct EditorialLimitWidgetView: View {
                     Text("\(metric.leftPercent)%")
                         .font(.system(size: 80, weight: .regular, design: .serif))
                         .foregroundStyle(colors.heroColor(for: metric.leftPercent))
+                        .widgetAccentable()
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
 
@@ -1436,6 +1443,7 @@ private struct EditorialMeter: View {
 
                 RoundedRectangle(cornerRadius: 2, style: .continuous)
                     .fill(color)
+                    .widgetAccentable()
                     .frame(width: proxy.size.width * CGFloat(max(0, min(100, percent))) / 100)
             }
         }
